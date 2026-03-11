@@ -19,12 +19,11 @@ into the DRM internals.
 Signed-off-by: Noralf Trønnes <noralf@tronnes.org>
 ---
  .../ABI/testing/configfs-usb-gadget-gud       |  13 +
- MAINTAINERS                                   |   2 +
  drivers/gpu/drm/gud/gud_gadget.c              |   2 +-
  drivers/usb/gadget/Kconfig                    |  12 +
  drivers/usb/gadget/function/Makefile          |   2 +
  drivers/usb/gadget/function/f_gud.c           | 866 ++++++++++++++++++
- 6 files changed, 896 insertions(+), 1 deletion(-)
+ 5 files changed, 894 insertions(+), 1 deletion(-)
  create mode 100644 Documentation/ABI/testing/configfs-usb-gadget-gud
  create mode 100644 drivers/usb/gadget/function/f_gud.c
 
@@ -47,20 +46,6 @@ index 000000000000..bbf32d494d98
 +		compression - 8-bit mask of compressions to include.
 +		formats - Byte string of GUD_PIXEL_FORMAT_* values to include.
 +		connectors - 32-bit mask of connectors to include.
-diff --git a/MAINTAINERS b/MAINTAINERS
-index a70443702f51..352b3a11b452 100644
---- a/MAINTAINERS
-+++ b/MAINTAINERS
-@@ -5530,7 +5530,9 @@ M:	Noralf Trønnes <noralf@tronnes.org>
- S:	Maintained
- W:	https://github.com/notro/gud/wiki
- T:	git git://anongit.freedesktop.org/drm/drm-misc
-+F:	Documentation/ABI/testing/configfs-usb-gadget-gud
- F:	drivers/gpu/drm/gud/
-+F:	drivers/usb/gadget/function/f_gud.c
- F:	include/drm/gud.h
- 
- DRM DRIVER FOR GRAIN MEDIA GM12U320 PROJECTORS
 diff --git a/drivers/gpu/drm/gud/gud_gadget.c b/drivers/gpu/drm/gud/gud_gadget.c
 index 93c197fe4354..a6e97845f2f2 100644
 --- a/drivers/gpu/drm/gud/gud_gadget.c
@@ -988,4 +973,3 @@ index 000000000000..0e0e5717c69d
 +MODULE_LICENSE("GPL");
 -- 
 2.23.0
-

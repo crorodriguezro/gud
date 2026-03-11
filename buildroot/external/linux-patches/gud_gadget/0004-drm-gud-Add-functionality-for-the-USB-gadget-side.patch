@@ -1,42 +1,21 @@
-From ca40897ed9ba7b4ffaac2f530a7922f9bd3c9bdb Mon Sep 17 00:00:00 2001
-From: =?UTF-8?q?Noralf=20Tr=C3=B8nnes?= <noralf@tronnes.org>
-Date: Tue, 28 Apr 2020 17:34:02 +0200
-Subject: [PATCH 4/5] drm/gud: Add functionality for the USB gadget side
-MIME-Version: 1.0
-Content-Type: text/plain; charset=UTF-8
-Content-Transfer-Encoding: 8bit
+From f582f3afe852f3ce78a202d9a954eda39c2d3d84 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Tue, 10 Mar 2026 15:23:48 -0500
+Subject: [PATCH] drm/gud: Add functionality for the USB gadget side
 
-Since the USB gadget/device has to reach into the DRM internals, part of
-the code is placed in the DRM subsystem as a separate module. All calls
-into this module runs in process context and are serialized, except one
-function that runs in interrupt context.
-
-Since both the gadget side and the DRM side can disable the gadget,
-special care has been taken to make that safe.
-
-Changelog:
-
-20210522:
-  Fix 64-bit build warning
-
-20210601:
-  Use async flushing, speeds up SPI panels.
-  Add configfs filters for: compression, formats, connectors
-
-Signed-off-by: Noralf Trønnes <noralf@tronnes.org>
 ---
  drivers/gpu/drm/gud/Kconfig      |    6 +
  drivers/gpu/drm/gud/Makefile     |    1 +
- drivers/gpu/drm/gud/gud_gadget.c | 1385 ++++++++++++++++++++++++++++++
+ drivers/gpu/drm/gud/gud_gadget.c | 1383 ++++++++++++++++++++++++++++++
  include/drm/gud.h                |   12 +
- 4 files changed, 1404 insertions(+)
+ 4 files changed, 1402 insertions(+)
  create mode 100644 drivers/gpu/drm/gud/gud_gadget.c
 
 diff --git a/drivers/gpu/drm/gud/Kconfig b/drivers/gpu/drm/gud/Kconfig
-index 1c8601bf4d91..d63e93683daa 100644
+index b4d2136..292bdd4 100644
 --- a/drivers/gpu/drm/gud/Kconfig
 +++ b/drivers/gpu/drm/gud/Kconfig
-@@ -12,3 +12,9 @@ config DRM_GUD
+@@ -13,3 +13,9 @@ config DRM_GUD
  	  adapters.
  
  	  If M is selected the module will be called gud.
@@ -47,7 +26,7 @@ index 1c8601bf4d91..d63e93683daa 100644
 +	select LZ4_DECOMPRESS
 +	select BACKLIGHT_CLASS_DEVICE
 diff --git a/drivers/gpu/drm/gud/Makefile b/drivers/gpu/drm/gud/Makefile
-index 68a1c622cf33..685003e79c93 100644
+index 68a1c62..685003e 100644
 --- a/drivers/gpu/drm/gud/Makefile
 +++ b/drivers/gpu/drm/gud/Makefile
 @@ -2,3 +2,4 @@
@@ -57,10 +36,10 @@ index 68a1c622cf33..685003e79c93 100644
 +obj-$(CONFIG_DRM_GUD_GADGET)	+= gud_gadget.o
 diff --git a/drivers/gpu/drm/gud/gud_gadget.c b/drivers/gpu/drm/gud/gud_gadget.c
 new file mode 100644
-index 000000000000..93c197fe4354
+index 0000000..13fdfc4
 --- /dev/null
 +++ b/drivers/gpu/drm/gud/gud_gadget.c
-@@ -0,0 +1,1385 @@
+@@ -0,0 +1,1383 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * Copyright 2020 Noralf Trønnes
@@ -78,7 +57,9 @@ index 000000000000..93c197fe4354
 +#include <drm/drm_client.h>
 +#include <drm/drm_connector.h>
 +#include <drm/drm_crtc.h>
++#include <drm/drm_edid.h>
 +#include <drm/drm_fourcc.h>
++#include <drm/drm_framebuffer.h>
 +#include <drm/drm_mode_object.h>
 +#include <drm/drm_plane.h>
 +#include <drm/drm_rect.h>
@@ -313,7 +294,7 @@ index 000000000000..93c197fe4354
 +	struct drm_connector *connector;
 +	unsigned int i, num_properties;
 +	struct drm_display_mode mode;
-+	void *vaddr;
++	struct iosys_map map;
 +	u32 format;
 +	int ret;
 +
@@ -355,10 +336,10 @@ index 000000000000..93c197fe4354
 +		if (IS_ERR(buffer))
 +			return PTR_ERR(buffer);
 +
-+		vaddr = drm_client_buffer_vmap(buffer);
-+		if (IS_ERR(vaddr)) {
++		ret = drm_client_buffer_vmap(buffer, &map);
++		if (ret) {
 +			drm_client_framebuffer_delete(buffer);
-+			return PTR_ERR(vaddr);
++			return ret;
 +		}
 +
 +		gdg->buffer_check = buffer;
@@ -466,7 +447,9 @@ index 000000000000..93c197fe4354
 +	void *dst;
 +
 +	/* Get the address, it's already mapped */
-+	dst = drm_client_buffer_vmap(buffer);
++	dst = buffer->map.vaddr;
++	if (!dst)
++		return len;
 +	dst += rect->y1 * dst_pitch;
 +	dst += rect->x1 * cpp;
 +
@@ -1418,11 +1401,7 @@ index 000000000000..93c197fe4354
 +		goto error_release;
 +	}
 +
-+	if (!drm_client_register(&gdg->client)) {
-+		pr_err("DRM device is gone\n");
-+		ret = -ENODEV;
-+		goto error_release;
-+	}
++	drm_client_register(&gdg->client);
 +
 +	gud_gadget_probe_connectors(gdg);
 +
@@ -1444,13 +1423,11 @@ index 000000000000..93c197fe4354
 +}
 +EXPORT_SYMBOL(gud_gadget_fini);
 +
-+MODULE_AUTHOR("Noralf Trønnes");
-+MODULE_LICENSE("GPL");
 diff --git a/include/drm/gud.h b/include/drm/gud.h
-index 0b46b54fe56e..2fb0ad8ad55f 100644
+index c52a8ba..0d3d57e 100644
 --- a/include/drm/gud.h
 +++ b/include/drm/gud.h
-@@ -330,4 +330,16 @@ struct gud_state_req {
+@@ -332,4 +332,16 @@ struct gud_state_req {
  /* Enable/disable display/output (DPMS), value is u8: 0/1 */
  #define GUD_REQ_SET_DISPLAY_ENABLE			0x64
  
@@ -1468,5 +1445,4 @@ index 0b46b54fe56e..2fb0ad8ad55f 100644
 +
  #endif
 -- 
-2.23.0
-
+2.53.0

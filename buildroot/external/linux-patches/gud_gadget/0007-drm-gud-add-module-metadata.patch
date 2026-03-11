@@ -1,0 +1,20 @@
+From b7704ed0d32b2fb1344e951d4490bb3d86bb8b94 Mon Sep 17 00:00:00 2001
+From: Codex <codex@openai.com>
+Date: Tue, 10 Mar 2026 16:29:00 -0500
+Subject: [PATCH] drm/gud: add module metadata for gud_gadget
+
+---
+ drivers/gpu/drm/gud/gud_gadget.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/drivers/gpu/drm/gud/gud_gadget.c b/drivers/gpu/drm/gud/gud_gadget.c
+index 9bde369..aa6bf5f 100644
+--- a/drivers/gpu/drm/gud/gud_gadget.c
++++ b/drivers/gpu/drm/gud/gud_gadget.c
+@@ -1382,0 +1383,4 @@ EXPORT_SYMBOL(gud_gadget_fini);
++
++MODULE_AUTHOR("Noralf Tronnes");
++MODULE_DESCRIPTION("GUD DRM gadget helpers");
++MODULE_LICENSE("GPL");
+-- 
+2.53.0

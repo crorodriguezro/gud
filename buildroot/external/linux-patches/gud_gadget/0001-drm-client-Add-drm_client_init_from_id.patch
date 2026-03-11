@@ -7,34 +7,19 @@ Content-Type: text/plain; charset=UTF-8
 Content-Transfer-Encoding: 8bit
 
 drm_client_init_from_id() provides a way for clients to add a client based
-on the minor. drm_client_register() is changed to return whether it was
-registered or not depending on the unplugged status of the DRM device.
-Its only caller drm_fbdev_generic_setup() runs inside probe() so it
-doesn't have to check.
-
-v2:
-- Move drm_client_modeset_set() to a separate patch with added functions.
-- Previous version had drm_client_init_from_id() call
-  drm_client_register(). This put the client in a position where it could
-  receive hotplugs during init in addition to akward error paths. Instead
-  let drm_client_register() return status so clients can know if the DRM
-  device is gone or not.
-
-v3:
-- Forgot to remove locking with the change in the previous version.
-  No need for locking when drm_client_register() is not called.
+on the minor.
 
 Signed-off-by: Noralf Trønnes <noralf@tronnes.org>
 ---
- drivers/gpu/drm/drm_client.c | 44 +++++++++++++++++++++++++++++++++++-
- include/drm/drm_client.h     |  4 +++-
- 2 files changed, 46 insertions(+), 2 deletions(-)
+ drivers/gpu/drm/drm_client.c | 30 ++++++++++++++++++++++++++++++
+ include/drm/drm_client.h     |  2 ++
+ 2 files changed, 32 insertions(+)
 
 diff --git a/drivers/gpu/drm/drm_client.c b/drivers/gpu/drm/drm_client.c
-index 495f47d23d87..21345045fd06 100644
+index 80d25d781cf6..92a3c67772ec 100644
 --- a/drivers/gpu/drm/drm_client.c
 +++ b/drivers/gpu/drm/drm_client.c
-@@ -112,6 +112,36 @@ int drm_client_init(struct drm_device *dev, struct drm_client_dev *client,
+@@ -107,6 +107,36 @@ int drm_client_init(struct drm_device *dev, struct drm_client_dev *client,
  }
  EXPORT_SYMBOL(drm_client_init);
  
@@ -57,7 +42,7 @@ index 495f47d23d87..21345045fd06 100644
 +	struct drm_minor *minor;
 +	int ret;
 +
-+	minor = drm_minor_acquire(minor_id);
++	minor = drm_minor_acquire(&drm_minors_xa, minor_id);
 +	if (IS_ERR(minor))
 +		return PTR_ERR(minor);
 +
@@ -71,50 +56,18 @@ index 495f47d23d87..21345045fd06 100644
  /**
   * drm_client_register - Register client
   * @client: DRM client
-@@ -121,14 +151,26 @@ EXPORT_SYMBOL(drm_client_init);
-  * drm_client_register() it is no longer permissible to call drm_client_release()
-  * directly (outside the unregister callback), instead cleanup will happen
-  * automatically on driver unload.
-+ *
-+ * Returns:
-+ * True if the client has been registered, false if the DRM device has already
-+ * been unregistered.
-  */
--void drm_client_register(struct drm_client_dev *client)
-+bool drm_client_register(struct drm_client_dev *client)
- {
- 	struct drm_device *dev = client->dev;
-+	int idx;
-+
-+	if (!drm_dev_enter(client->dev, &idx))
-+		return false;
- 
- 	mutex_lock(&dev->clientlist_mutex);
- 	list_add(&client->list, &dev->clientlist);
- 	mutex_unlock(&dev->clientlist_mutex);
-+
-+	drm_dev_exit(idx);
-+
-+	return true;
- }
- EXPORT_SYMBOL(drm_client_register);
- 
 diff --git a/include/drm/drm_client.h b/include/drm/drm_client.h
-index 7aaea665bfc2..c190baa09d57 100644
+index 90c8522976eb..d4e1e9b9a741 100644
 --- a/include/drm/drm_client.h
 +++ b/include/drm/drm_client.h
-@@ -109,8 +109,10 @@ struct drm_client_dev {
+@@ -218,6 +218,8 @@ struct drm_client_dev {
  
  int drm_client_init(struct drm_device *dev, struct drm_client_dev *client,
  		    const char *name, const struct drm_client_funcs *funcs);
 +int drm_client_init_from_id(unsigned int minor_id, struct drm_client_dev *client,
 +			    const char *name, const struct drm_client_funcs *funcs);
  void drm_client_release(struct drm_client_dev *client);
--void drm_client_register(struct drm_client_dev *client);
-+bool drm_client_register(struct drm_client_dev *client);
+ void drm_client_register(struct drm_client_dev *client);
  
- void drm_client_dev_unregister(struct drm_device *dev);
- void drm_client_dev_hotplug(struct drm_device *dev);
 -- 
 2.23.0
-
