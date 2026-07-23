@@ -58,9 +58,8 @@ The GEM free callback releases resources in reverse acquisition order:
 
 1. `vunmap()` the cached kernel mapping, if present.
 2. `drm_gem_put_pages(..., false, false)` the backing pages, if present.
-3. `drm_gem_free_mmap_offset()` the VMA offset, if allocated.
-4. `drm_gem_object_release()` the embedded GEM state.
-5. `kfree()` the wrapper.
+3. `drm_gem_object_release()` the embedded GEM state and its VMA offset.
+4. `kfree()` the wrapper.
 
 The allocation and mapping helpers may be called only while the owning DRM
 device remains valid. Ticket 3 introduces no asynchronous work and no new USB
@@ -71,7 +70,7 @@ lifetime interactions.
 Ticket 3 supplies callbacks and helpers that Ticket 4 attaches to the future
 `struct drm_driver`:
 
-- `gud_gem_free_object()` for `gem_free_object`.
+- `gud_gem_free_object()` for `gem_free_object_unlocked`.
 - `gud_gem_dumb_create()` for `dumb_create`.
 - `gud_gem_dumb_map_offset()` for `dumb_map_offset`; it looks up the handle,
   rejects imported buffers, ensures backing pages and a VMA offset exist, and
