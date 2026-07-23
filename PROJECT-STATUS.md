@@ -75,11 +75,11 @@ Implement Linux 4.9-native GEM and dumb-buffer support before any DRM/KMS regist
 
 1. Model CPU-readable backing storage on Linux 4.9 `udl`.
 2. Define `struct gud_gem_object` around `struct drm_gem_object`.
-3. Implement allocation, destruction, dumb-buffer creation, mmap, and a CPU mapping helper.
+3. Implement allocation, destruction, dumb-buffer and mmap callback contracts, and a cached CPU mapping helper.
 4. Reject unsupported imported dma-buf objects in the MVP.
 5. Build against the exact phone kernel ABI and use only exported Linux 4.9 GEM interfaces.
 
-Ticket 4 may not begin until Ticket 3 exposes usable GUD-owned buffers to DRM userspace.
+Ticket 3 cannot expose DRM userspace buffers because no DRM node exists. Ticket 4 attaches the callbacks, registers `/dev/dri/cardX`, and owns the first create/map/write/destroy dumb-buffer validation.
 
 ## Constraints
 

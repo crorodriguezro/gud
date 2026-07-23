@@ -42,7 +42,7 @@
 
 Use the Linux 4.9 `udl` DisplayLink driver as the main reference for CPU-readable USB-display framebuffer memory.
 
-**Done when:** userspace can allocate/map a framebuffer owned by the GUD DRM device.
+**Done when:** the page-backed local GEM layer builds using exported target-kernel symbols and provides the callback contract Ticket 4 needs to expose userspace buffers. The first userspace allocation/map/write test is Ticket 4 acceptance after `/dev/dri/cardX` exists.
 
 ## P0 — Register DRM simple display pipe
 
