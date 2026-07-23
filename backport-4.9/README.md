@@ -88,9 +88,12 @@ The deploy script rejects any output matching `Invalid module format`,
 bash tests/env/test-env-scripts.sh
 bash tests/env/test-prepare-kernel.sh
 bash tests/env/test-deploy-test.sh
+bash tests/env/test-capture-pi-usb.sh
+bash tests/env/test-probe-test.sh
+bash tests/test-usb-probe-contract.sh
 ```
 
-All three test scripts are hermetic and do not require a phone or kernel tree.
+All test scripts are hermetic and do not require a phone or kernel tree.
 
 ## Ticket 2 Pi USB Capture
 
@@ -117,3 +120,35 @@ GUD_USB_PRODUCT_ID=0x614d
 ```
 
 This evidence is required by `probe-test.sh` before any ADB operations.
+
+## Ticket 2 Phone Probe And Cable Cycle
+
+After a successful Ticket 1 acceptance and Pi USB capture:
+
+```bash
+cd backport-4.9
+make MANIFEST="$PWD/env/target-manifest.env" modules
+./env/probe-test.sh
+adb shell dmesg -w
+# Remove and reattach the Pi USB data cable five times while recording console output.
+adb shell 'sudo rmmod gud'
+adb shell dmesg > env/local/evidence/probe-unload-dmesg.txt
+```
+
+Retain the following evidence files under `env/local/`:
+
+| File | Must contain |
+| --- | --- |
+| `probe/module-metadata.txt` | `modinfo` and undefined symbol list for `gud.ko` |
+| `probe/probe-load-dmesg.txt` | `GUD probe complete for 1d50:614d` |
+| `evidence/probe-cycle-dmesg.txt` | Complete five-cycle console log |
+| `evidence/probe-unload-dmesg.txt` | `GUD disconnected` |
+
+Acceptance criteria:
+
+- Every attach must log `GUD probe complete for 1d50:614d`.
+- Every removal must log `GUD disconnected`.
+- None of the logs may contain: `Invalid module format`, `Required key not available`,
+  `module verification failed`, `BUG:`, `Oops`, `WARNING:`, `lockdep`, or `use-after-free`.
+
+Do not update `BACKLOG.md` until all real-device conditions above are met.

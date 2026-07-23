@@ -13,16 +13,16 @@ assert_file() {
 
 assert_file backport-4.9/Makefile
 assert_file backport-4.9/Kbuild
-assert_file backport-4.9/gud_stub.c
+assert_file backport-4.9/gud_drv.c
 assert_file backport-4.9/env/.gitignore
 assert_file backport-4.9/env/target-manifest.env.example
 
-for text in 'gud: build probe loaded' 'gud: build probe unloaded' 'MODULE_LICENSE("GPL")'; do
-    grep -Fq "$text" "$repo_root/backport-4.9/gud_stub.c" || failures=$((failures + 1))
+for text in 'USB_DEVICE(0x1d50, 0x614d)' 'MODULE_LICENSE("GPL")' 'module_usb_driver'; do
+    grep -Fq "$text" "$repo_root/backport-4.9/gud_drv.c" || failures=$((failures + 1))
 done
-if grep -Eq 'usb_register|usb_register_driver|drm_dev_register|alloc_workqueue|device_create' \
-    "$repo_root/backport-4.9/gud_stub.c"; then
-    printf 'stub contains forbidden driver registration\n' >&2
+if grep -Eq 'alloc_workqueue|drm_dev_register' \
+    "$repo_root/backport-4.9/gud_drv.c"; then
+    printf 'gud_drv.c contains forbidden driver registration\n' >&2
     failures=$((failures + 1))
 fi
 for key in PHONE_KERNEL_RELEASE PHONE_CONFIG_SHA256 PHONE_ARCH KERNEL_SOURCE_URL \
@@ -159,7 +159,7 @@ if [ ! -f "$repo_root/backport-4.9/README.md" ]; then
     printf 'missing file: backport-4.9/README.md\n' >&2
     failures=$((failures + 1))
 else
-    for pattern in 'gud: build probe loaded' 'gud: build probe unloaded' 'Invalid module format'; do
+    for pattern in 'GUD probe complete for 1d50:614d' 'GUD disconnected' 'Invalid module format'; do
         grep -qF "$pattern" "$repo_root/backport-4.9/README.md" || {
             printf 'README.md missing expected string: %s\n' "$pattern" >&2
             failures=$((failures + 1))
