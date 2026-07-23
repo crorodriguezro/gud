@@ -123,16 +123,62 @@ This evidence is required by `probe-test.sh` before any ADB operations.
 
 ## Ticket 2 Phone Probe And Cable Cycle
 
+### Phone connection topology (single USB-C port)
+
+Because the OnePlus 6 has one USB-C port, you cannot keep both:
+
+- Pi gadget connected to phone (required for GUD probe), and
+- USB ADB cable connected to laptop
+
+at the same time.
+
+Use this flow:
+
+1. Connect phone directly to laptop over USB and complete build/deploy.
+2. Configure wireless remote access.
+3. Disconnect USB cable from laptop.
+4. Connect Pi gadget to phone and collect probe/cycle logs remotely.
+
+### Remote access setup (ADB over Wi-Fi attempt + Wi-Fi fallback used)
+
+Try ADB over Wi-Fi first:
+
+```bash
+adb devices
+adb shell 'ip addr show wlan0 | grep "inet " | awk "{print \$2}" | cut -d/ -f1'
+adb -s <serial> tcpip 5555
+adb connect <phone-ip>:5555
+```
+
+On this Ubuntu Touch setup, `adb tcpip` did not stay available. The working
+fallback was SSH over Wi-Fi:
+
+```bash
+# one-time, while USB ADB is connected
+adb shell 'echo <sudo-password> | sudo -S systemctl start ssh'
+pubkey=$(cat ~/.ssh/id_ed25519.pub)
+adb shell "mkdir -p /home/phablet/.ssh && chmod 700 /home/phablet/.ssh"
+adb shell "echo '$pubkey' >> /home/phablet/.ssh/authorized_keys && chmod 600 /home/phablet/.ssh/authorized_keys"
+ssh -o StrictHostKeyChecking=no phablet@<phone-ip> 'uname -r'
+```
+
+When Pi is attached to phone, use SSH for monitoring/control:
+
+```bash
+ssh phablet@<phone-ip> 'dmesg | tail -n 50'
+ssh phablet@<phone-ip> 'echo <sudo-password> | sudo -S rmmod gud'
+```
+
 After a successful Ticket 1 acceptance and Pi USB capture:
 
 ```bash
 cd backport-4.9
 make MANIFEST="$PWD/env/target-manifest.env" modules
 ./env/probe-test.sh
-adb shell dmesg -w
+ssh phablet@<phone-ip> 'dmesg -w'
 # Remove and reattach the Pi USB data cable five times while recording console output.
-adb shell 'sudo rmmod gud'
-adb shell dmesg > env/local/evidence/probe-unload-dmesg.txt
+ssh phablet@<phone-ip> 'echo <sudo-password> | sudo -S rmmod gud'
+ssh phablet@<phone-ip> 'dmesg' > env/local/evidence/probe-unload-dmesg.txt
 ```
 
 Retain the following evidence files under `env/local/`:
