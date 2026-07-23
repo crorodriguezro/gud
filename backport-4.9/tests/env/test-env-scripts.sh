@@ -31,4 +31,120 @@ for key in PHONE_KERNEL_RELEASE PHONE_CONFIG_SHA256 PHONE_ARCH KERNEL_SOURCE_URL
     grep -Eq "^${key}=" "$repo_root/backport-4.9/env/target-manifest.env.example" || failures=$((failures + 1))
 done
 
+# ---------------------------------------------------------------------------
+# Task 2: mock-ADB tests for capture-phone.sh
+# ---------------------------------------------------------------------------
+run_capture_test() {
+    local test_name="$1"
+    local mock_adb_body="$2"
+    local expected_status="$3"
+    local expected_message="$4"
+
+    local tmp
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' RETURN
+
+    cat > "$tmp/adb" <<EOF
+#!/usr/bin/env bash
+$mock_adb_body
+EOF
+    chmod +x "$tmp/adb"
+
+    local actual_output actual_status
+    actual_output=$(ADB="$tmp/adb" CAPTURE_DIR="$tmp/capture" bash "$repo_root/backport-4.9/env/capture-phone.sh" 2>&1) || actual_status=$?
+    actual_status=${actual_status:-0}
+
+    if [ "$actual_status" -ne "$expected_status" ]; then
+        printf 'FAIL [%s]: expected exit %s got %s\n' "$test_name" "$expected_status" "$actual_status" >&2
+        failures=$((failures + 1))
+        return
+    fi
+    if [ -n "$expected_message" ] && ! printf '%s' "$actual_output" | grep -qF "$expected_message"; then
+        printf 'FAIL [%s]: expected message %q not found in output: %s\n' "$test_name" "$expected_message" "$actual_output" >&2
+        failures=$((failures + 1))
+        return
+    fi
+}
+
+# Test: multiple ADB devices → error
+run_capture_test "multiple-devices" \
+    'case "$1" in
+  devices) printf "List of devices attached\nserial1\tdevice\nserial2\tdevice\n" ;;
+  *) exit 1 ;;
+esac' \
+    2 \
+    "multiple ADB devices found; set ADB_SERIAL"
+
+# Test: success path – one device, modules enabled, config.gz available
+run_capture_test_success() {
+    local tmp
+    tmp=$(mktemp -d)
+    trap 'rm -rf "$tmp"' RETURN
+
+    # Pre-generate a config.gz the mock adb pull will "provide"
+    printf 'CONFIG_MODULES=y\nCONFIG_MODVERSIONS=y\nCONFIG_MODULE_SIG=n\nCONFIG_MODULE_SIG_FORCE=n\nCONFIG_MODULE_COMPRESS=n\n' \
+        | gzip > "$tmp/fake-config.gz"
+
+    # The mock adb: args are like: adb -s serial <subcmd> [args...]
+    cat > "$tmp/adb" <<MOCK
+#!/usr/bin/env bash
+# shift past -s serial when present
+if [ "\$1" = "-s" ]; then shift 2; fi
+subcmd="\$1"; shift
+case "\$subcmd" in
+  devices)   printf 'List of devices attached\ntest123\tdevice\n'; exit 0 ;;
+  get-state) printf 'device\n'; exit 0 ;;
+  shell)
+    cmd="\$*"
+    case "\$cmd" in
+      'uname -r')              printf '4.9.337-OnePlus\n'; exit 0 ;;
+      'test -r /proc/config.gz') exit 0 ;;
+      *)                       printf ''; exit 0 ;;
+    esac ;;
+  pull)
+    # pull /proc/config.gz /dest/path
+    dest="\$2"
+    cp "$tmp/fake-config.gz" "\$dest"
+    exit 0 ;;
+  *) exit 0 ;;
+esac
+MOCK
+    chmod +x "$tmp/adb"
+
+    local actual_output actual_status=0
+    actual_output=$(ADB="$tmp/adb" CAPTURE_DIR="$tmp/capture" \
+        bash "$repo_root/backport-4.9/env/capture-phone.sh" 2>&1) || actual_status=$?
+
+    if [ "$actual_status" -ne 0 ]; then
+        printf 'FAIL [success-path]: expected exit 0 got %s\nOutput: %s\n' "$actual_status" "$actual_output" >&2
+        failures=$((failures + 1))
+        return
+    fi
+    # CAPTURE_DIR sets local_dir; the script appends /capture internally
+    for f in phone.config phone.config.sha256 module-policy.txt; do
+        if [ ! -f "$tmp/capture/capture/$f" ]; then
+            printf 'FAIL [success-path]: missing %s\n' "$f" >&2
+            failures=$((failures + 1))
+        fi
+    done
+    printf '%s' "$actual_output" | grep -q 'PHONE_KERNEL_RELEASE=' || {
+        printf 'FAIL [success-path]: stdout missing PHONE_KERNEL_RELEASE=\n' >&2
+        failures=$((failures + 1))
+    }
+    printf '%s' "$actual_output" | grep -q 'PHONE_CONFIG_SHA256=' || {
+        printf 'FAIL [success-path]: stdout missing PHONE_CONFIG_SHA256=\n' >&2
+        failures=$((failures + 1))
+    }
+}
+run_capture_test_success
+
+# Test: no devices → error
+run_capture_test "no-devices" \
+    'case "$1" in
+  devices) printf "List of devices attached\n" ;;
+  *) exit 1 ;;
+esac' \
+    2 \
+    "no authorized ADB device found"
+
 exit "$failures"
