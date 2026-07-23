@@ -1,0 +1,21 @@
+filename:       /home/cristianr/Projects/linux-mobile/gud/backport-4.9/gud.ko
+license:        GPL
+description:    OnePlus 6 GUD USB probe backport
+alias:          usb:v1D50p614Dd*dc*dsc*dp*ic*isc*ip*in*
+depends:        
+vermagic:       4.9.112-g6b190d86b SMP preempt mod_unload modversions aarch64
+                 U dev_err
+                 U _dev_info
+                 U kfree
+                 U kmalloc_caches
+                 U kmem_cache_alloc_trace
+                 U __mutex_init
+                 U mutex_lock
+                 U mutex_unlock
+                 U __stack_chk_fail
+                 U __stack_chk_guard
+                 U usb_control_msg
+                 U usb_deregister
+                 U usb_get_dev
+                 U usb_put_dev
+                 U usb_register_driver

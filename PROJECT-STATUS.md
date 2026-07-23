@@ -2,117 +2,88 @@
 
 ## Objective
 
-Backport the host-side Generic USB Display (GUD) DRM driver to the OnePlus 6 Ubuntu Touch / Halium 9 Linux 4.9 kernel as a standalone `gud.ko` module. The phone is the USB host; the already-validated Raspberry Pi Zero 2 W is the GUD USB gadget and HDMI endpoint.
+Backport the host-side Generic USB Display (GUD) DRM driver to the OnePlus 6 Ubuntu Touch / Halium 9 Linux 4.9 kernel as a standalone `gud.ko` module. The phone is the USB host; the Raspberry Pi Zero 2 W is the GUD USB gadget and HDMI endpoint.
 
-The MVP is a real DRM/KMS external output: one connector, XRGB8888, full-frame USB transfers, and a static 1280x720 test pattern. It must not require a replacement kernel image or DRM core changes unless a documented blocker proves them unavoidable.
+The MVP is one DRM/KMS external output using XRGB8888, full-frame USB transfers, and a static 1280x720 test pattern. It must not require a replacement kernel image or DRM core changes unless a documented blocker proves them unavoidable.
 
-## Current Branch
+## Current State
 
 - Branch: `linux-4.9-backport`
-- Current implementation commit: `b0c6856` (`build: address code review findings F1-F8`)
-- Scope completed in source: Ticket 1 external-module environment and no-op module skeleton.
-- Scope not completed: Ticket 1 real-phone acceptance and every GUD driver feature.
+- Latest implementation/documentation commit before this status update: `6e39e27` (`docs: add phone Wi-Fi connection workflow`)
+- Ticket 1 build environment is implemented and its practical ABI gate is surpassed: the Ticket 2 driver built for and loaded on the phone's exact kernel ABI.
+- Ticket 2 USB probe and disconnect implementation is complete and hardware-validated.
+- Ticket 3, Linux 4.9 GEM and dumb-buffer support, has not started.
 
-Read these first:
+Read first:
 
 - `AGENTS.md`: project constraints and verification expectations.
 - `LINUX-4.9-BACKPORT.md`: architecture, MVP, and compatibility strategy.
-- `BACKLOG.md`: ordered milestones. All items remain unchecked until their hardware evidence exists.
-- `docs/superpowers/specs/2026-07-23-oneplus6-external-module-environment-design.md`: Ticket 1 requirements.
-- `docs/superpowers/plans/2026-07-23-oneplus6-external-module-environment.md`: Ticket 1 implementation plan.
+- `BACKLOG.md`: ordered milestones; update only with evidence-backed completion.
+- `docs/superpowers/specs/2026-07-23-oneplus6-gud-usb-probe-design.md`: Ticket 2 requirements.
+- `docs/superpowers/plans/2026-07-23-oneplus6-gud-usb-probe.md`: Ticket 2 implementation and acceptance procedure.
 - `docs/superpowers/plans/2026-07-23-oneplus6-gud-host-backport.md`: full driver ticket sequence.
 
 ## Implemented
 
-`backport-4.9/` now contains the Ticket 1 build probe:
+`backport-4.9/` now contains:
 
-- `Kbuild` and `Makefile` build the out-of-tree `gud.ko` module.
-- `gud_stub.c` is intentionally a no-op module. It only logs `gud: build probe loaded` and `gud: build probe unloaded`; it does not register USB, DRM, workqueues, sysfs, or device nodes.
-- `env/capture-phone.sh` captures the running phone's kernel identity, exported configuration when available, module policy, and raw ADB evidence over USB.
-- `env/prepare-kernel.sh` validates an ignored target manifest, checks out a pinned public kernel source, verifies the captured configuration, prepares generated headers, verifies the release, and blocks on configuration drift or forced module signing.
-- `env/deploy-test.sh` captures module metadata, guards against an already-loaded module or unreadable module state, pushes with ADB, performs `insmod`/`rmmod`, and preserves dmesg evidence on errors.
-- `env/target-manifest.env.example` defines the required non-secret build inputs.
-- `tests/env/` contains hermetic shell tests for the scripts.
+- Ticket 1 scripts for target capture, pinned kernel preparation, external-module build, and guarded deployment.
+- `gud.ko` composed from `gud_drv.c`, not the removed no-op stub.
+- Fixed USB matching for the validated Pi GUD gadget, `1d50:614d`.
+- Packed GUD v1 display-descriptor definitions and explicit little-endian conversion.
+- USB probe that locates bulk-out endpoint `0x01`, reads and validates the GUD display descriptor, and logs its capability limits.
+- Disconnect that clears USB interface data before marking the private state unavailable and releasing it.
+- Laptop-side Pi USB capture and phone-side probe deployment/evidence scripts, with hermetic shell tests.
+- A Wi-Fi SSH workflow for phone testing when the Pi occupies the OnePlus 6's only USB-C port.
 
-Generated Kbuild artifacts in `backport-4.9/` and all target-specific data below `backport-4.9/env/local/` are ignored. Do not commit device captures, kernel source/build trees, `Module.symvers`, module binaries, or runtime logs.
+Ticket 2 intentionally contains no DRM/KMS/GEM objects, framebuffers, display modes, workqueues, asynchronous USB transfers, or framebuffer uploads.
 
-## Validation Status
+## Hardware Evidence
 
-Validated locally:
+The following selected raw evidence is intentionally versioned at its existing `env/local/` paths for future debugging. Other captures, kernel trees, build artifacts, modules, and unrelated runtime logs remain ignored.
 
-- The hermetic environment tests passed after `b0c6856`: `test-env-scripts.sh`, `test-prepare-kernel.sh`, and `test-deploy-test.sh`.
-- The implementation was reviewed and follow-up fixes were committed in `b0c6856`.
+- `backport-4.9/env/local/pi-usb/identity.env`: captured Pi USB identity `1d50:614d`.
+- `backport-4.9/env/local/pi-usb/lsusb-v.txt`, `usb-devices.txt`, and `device-descriptors.bin`: raw laptop-side Pi descriptor capture.
+- `backport-4.9/env/local/evidence/module-metadata.txt`: `gud.ko` metadata and unresolved-symbol list.
+- `backport-4.9/env/local/evidence/probe-cycle-dmesg.txt`: full phone dmesg capture for the cable cycle.
+- `backport-4.9/env/local/evidence/probe-unload-dmesg.txt`: focused GUD probe/disconnect and unload record.
 
-Not yet validated on hardware:
+The module was built for and loaded on:
 
-- No phone kernel identity or configuration capture has been retained for this project.
-- No public OnePlus 6 Ubuntu Touch kernel repository and immutable matching commit has been selected.
-- No arm64 toolchain has been confirmed compatible with the installed phone kernel.
-- No matching generated headers or trusted `Module.symvers` have been obtained.
-- No `gud.ko` has been built against the exact target kernel.
-- No real-device `insmod`/`rmmod` evidence exists.
-
-Do not check any item in `BACKLOG.md` until those facts are captured and the real phone passes the load/unload test.
-
-## Active Gate: Ticket 1 Hardware Acceptance
-
-Use an authorized ADB USB connection to the OnePlus 6. The intended workflow is:
-
-```bash
-cd backport-4.9
-bash tests/env/test-env-scripts.sh
-bash tests/env/test-prepare-kernel.sh
-bash tests/env/test-deploy-test.sh
-
-./env/capture-phone.sh
-cp env/target-manifest.env.example env/target-manifest.env
+```text
+4.9.112-g6b190d86b SMP preempt mod_unload modversions aarch64
 ```
 
-Then populate the ignored `env/target-manifest.env` from the capture output and a public-source investigation:
+The focused GUD record shows:
 
-- `PHONE_KERNEL_RELEASE` and `PHONE_CONFIG_SHA256` from `capture-phone.sh`.
-- A public OnePlus 6 Ubuntu Touch/Halium Linux 4.9 source URL and a full 40-character `KERNEL_SOURCE_COMMIT`.
-- `KERNEL_SOURCE_REF`, `CROSS_COMPILE`, and the observed `TOOLCHAIN_VERSION`.
-- Captured values for `CONFIG_MODVERSIONS`, `CONFIG_MODULE_SIG`, and `CONFIG_MODULE_SIG_FORCE`.
+- Six successful probes of `1d50:614d`.
+- Five cable-removal disconnects followed by successful re-probes.
+- A final disconnect during `usbcore: deregistering interface driver gud`.
+- Descriptor values: GUD v1, bulk-out endpoint `0x01`, maximum buffer `8294400`, width `640-1920`, height `400-1080`.
 
-Record candidate-selection rationale and rejected candidates under `env/local/evidence/`. Do not choose a generic OnePlus 6 or LineageOS tree merely because it compiles; the exact installed-kernel release and module ABI must match.
+The full dmesg capture has one `WARNING: CPU` in `dwc3_send_gadget_ep_cmd` at timestamp `70261`, before `gud` registered at `70940` and before the first Pi probe at `72066`. It is an unrelated pre-test USB-gadget warning, not a GUD driver warning. The GUD test interval from driver registration through unload has no `BUG:`, `Oops`, `WARNING:`, `lockdep`, or `use-after-free` entry.
 
-Continue only after source selection:
+## Ticket 2 Acceptance
 
-```bash
-./env/prepare-kernel.sh
-make MANIFEST="$PWD/env/target-manifest.env" modules
-./env/deploy-test.sh
-```
+Ticket 2 is complete: the OnePlus 6 recognizes the Pi gadget, validates its GUD v1 descriptor, and survives five remove/reconnect cycles plus final module unload without a GUD-related failure.
 
-Ticket 1 passes only if `deploy-test.sh` retains `module-metadata.txt`, `load-dmesg.txt`, and `unload-dmesg.txt`, with the expected stub messages and no module-format, signing, oops, warning, or lock-safety failure.
+Do not overstate this result: Ticket 2 proves USB enumeration and lifetime handling only. It does not expose `/dev/dri/cardX`, create a framebuffer, enumerate a display mode, or display pixels.
 
-## Hard Stops
+## Next: Ticket 3
 
-Stop and preserve evidence instead of working around any of these conditions:
+Implement Linux 4.9-native GEM and dumb-buffer support before any DRM/KMS registration:
 
-- `CONFIG_MODULES` is disabled.
-- `/proc/config.gz` is unavailable and no matching configuration can be obtained from source/build artifacts.
-- `CONFIG_MODULE_SIG_FORCE=y` without an existing signing key trusted by the installed kernel image. Creating a new key is not sufficient.
-- The selected source cannot reproduce the phone's kernel release and normalized configuration.
-- `CONFIG_MODVERSIONS=y` without a trustworthy matching `Module.symvers`. `modules_prepare` alone does not create it; use target build artifacts or a full matching kernel-module build.
-- The external module fails to build, has incompatible vermagic/symbol versions, fails `insmod`, fails `rmmod`, or emits kernel warnings.
+1. Model CPU-readable backing storage on Linux 4.9 `udl`.
+2. Define `struct gud_gem_object` around `struct drm_gem_object`.
+3. Implement allocation, destruction, dumb-buffer creation, mmap, and a CPU mapping helper.
+4. Reject unsupported imported dma-buf objects in the MVP.
+5. Build against the exact phone kernel ABI and use only exported Linux 4.9 GEM interfaces.
 
-Never replace the installed kernel, flash a boot image, or patch DRM core to bypass Ticket 1.
+Ticket 4 may not begin until Ticket 3 exposes usable GUD-owned buffers to DRM userspace.
 
-## Next After Ticket 1
+## Constraints
 
-Only after the no-op module completes a real load/unload cycle, start Ticket 2:
-
-1. Audit GUD protocol/API dependencies against the exact Linux 4.9 source and exported symbols.
-2. Add GUD protocol v1 definitions, `struct gud_device`, USB ID matching, probe, descriptor parsing, and disconnect cleanup.
-3. Validate that the connected Pi Zero 2 W gadget enumerates and survives repeated attach/detach cycles.
-
-Do not begin GEM, DRM/KMS, framebuffer transfers, compression, damage tracking, or Lomiri integration before the applicable preceding ticket is accepted.
-
-## Collaboration Rules
-
-- Preserve unrelated working-tree changes. At the last status update, `opencode.json` and `docs/superpowers/plans/` were untracked user/session files.
-- Use `apply_patch` for manual edits and do not reset/revert changes made by others.
-- For any implementation or bug fix, use the required process skills and verify with fresh command output before making success claims.
-- Update `BACKLOG.md` only with evidence-backed completion. Runtime milestones require phone logs; first-pixels and unplug safety also require hardware observation.
+- Do not patch DRM core unless a concrete, documented standalone-module blocker proves it necessary.
+- Do not replace the installed kernel or flash a boot image.
+- Preserve unrelated working-tree changes, including `opencode.json` and untracked plan files.
+- Keep `BACKLOG.md` evidence-backed. Runtime logs are required for hardware milestones; first pixels and hot-unplug hardening also require hardware observation.

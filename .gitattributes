@@ -1,0 +1,6 @@
+# Preserve raw hardware captures byte-for-byte; their device-produced spacing is evidence.
+backport-4.9/env/local/evidence/module-metadata.txt -whitespace
+backport-4.9/env/local/evidence/probe-cycle-dmesg.txt -whitespace
+backport-4.9/env/local/evidence/probe-unload-dmesg.txt -whitespace
+backport-4.9/env/local/pi-usb/lsusb-v.txt -whitespace
+backport-4.9/env/local/pi-usb/usb-devices.txt -whitespace

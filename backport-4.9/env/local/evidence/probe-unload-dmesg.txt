@@ -1,0 +1,27 @@
+[70940.482638] gud: loading out-of-tree module taints kernel.
+[70940.484743] usbcore: registered new interface driver gud
+[72066.630513] usb 1-1.4: New USB device found, idVendor=1d50, idProduct=614d
+[72066.634983] gud 1-1.4:1.0: GUD v1 bulk-out=0x01 buffer=8294400 width=640-1920 height=400-1080
+[72066.635006] gud 1-1.4:1.0: GUD probe complete for 1d50:614d
+[72209.504389] gud 1-1.4:1.0: GUD disconnected
+[72246.380966] usb 1-1.4: New USB device found, idVendor=1d50, idProduct=614d
+[72246.384635] gud 1-1.4:1.0: GUD v1 bulk-out=0x01 buffer=8294400 width=640-1920 height=400-1080
+[72246.384652] gud 1-1.4:1.0: GUD probe complete for 1d50:614d
+[72254.560264] gud 1-1.4:1.0: GUD disconnected
+[72291.434360] usb 1-1.4: New USB device found, idVendor=1d50, idProduct=614d
+[72291.438007] gud 1-1.4:1.0: GUD v1 bulk-out=0x01 buffer=8294400 width=640-1920 height=400-1080
+[72291.438030] gud 1-1.4:1.0: GUD probe complete for 1d50:614d
+[72298.850375] gud 1-1.4:1.0: GUD disconnected
+[72333.932259] usb 1-1.4: New USB device found, idVendor=1d50, idProduct=614d
+[72333.940737] gud 1-1.4:1.0: GUD v1 bulk-out=0x01 buffer=8294400 width=640-1920 height=400-1080
+[72333.940770] gud 1-1.4:1.0: GUD probe complete for 1d50:614d
+[72336.223786] gud 1-1.4:1.0: GUD disconnected
+[72371.817419] usb 1-1.4: New USB device found, idVendor=1d50, idProduct=614d
+[72371.821189] gud 1-1.4:1.0: GUD v1 bulk-out=0x01 buffer=8294400 width=640-1920 height=400-1080
+[72371.821215] gud 1-1.4:1.0: GUD probe complete for 1d50:614d
+[72373.343992] gud 1-1.4:1.0: GUD disconnected
+[72408.171001] usb 1-1.4: New USB device found, idVendor=1d50, idProduct=614d
+[72408.174696] gud 1-1.4:1.0: GUD v1 bulk-out=0x01 buffer=8294400 width=640-1920 height=400-1080
+[72408.174718] gud 1-1.4:1.0: GUD probe complete for 1d50:614d
+[72438.660391] usbcore: deregistering interface driver gud
+[72438.660493] gud 1-1.4:1.0: GUD disconnected
