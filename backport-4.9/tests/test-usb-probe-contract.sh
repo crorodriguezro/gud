@@ -37,6 +37,16 @@ for text in \
     fi
 done
 
+# ── Kbuild must name gud_drv.o (always checked) ──────────────────────────────
+expected_kbuild="obj-m += gud.o
+gud-y := gud_drv.o"
+actual_kbuild=$(cat "$repo_root/backport-4.9/Kbuild" 2>/dev/null || true)
+if [ "$actual_kbuild" != "$expected_kbuild" ]; then
+    printf 'FAIL [kbuild]: Kbuild content does not match expected\nExpected:\n%s\nActual:\n%s\n' \
+        "$expected_kbuild" "$actual_kbuild" >&2
+    failures=$((failures + 1))
+fi
+
 # ── Required symbols in gud_drv.c (only checked when it exists) ──────────────
 if [ -f "$repo_root/backport-4.9/gud_drv.c" ]; then
     for text in \
@@ -73,15 +83,6 @@ if [ -f "$repo_root/backport-4.9/gud_drv.c" ]; then
         fi
     done
 
-    # Kbuild must name gud_drv.o
-    expected_kbuild="obj-m += gud.o
-gud-y := gud_drv.o"
-    actual_kbuild=$(cat "$repo_root/backport-4.9/Kbuild")
-    if [ "$actual_kbuild" != "$expected_kbuild" ]; then
-        printf 'FAIL [kbuild]: Kbuild content does not match expected\nExpected:\n%s\nActual:\n%s\n' \
-            "$expected_kbuild" "$actual_kbuild" >&2
-        failures=$((failures + 1))
-    fi
 fi
 
 printf 'usb-probe-contract tests: %s failures\n' "$failures"

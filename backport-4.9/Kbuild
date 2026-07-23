@@ -1,2 +1,2 @@
 obj-m += gud.o
-gud-y := gud_stub.o
+gud-y := gud_drv.o
