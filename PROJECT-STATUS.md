@@ -9,7 +9,7 @@ The MVP is one DRM/KMS external output using XRGB8888, full-frame USB transfers,
 ## Current State
 
 - Branch: `linux-4.9-backport`
-- Latest implementation/documentation commit before this status update: `6e39e27` (`docs: add phone Wi-Fi connection workflow`)
+- Latest implementation/documentation commit: `c318005` (`docs: record GUD USB probe evidence`)
 - Ticket 1 build environment is implemented and its practical ABI gate is surpassed: the Ticket 2 driver built for and loaded on the phone's exact kernel ABI.
 - Ticket 2 USB probe and disconnect implementation is complete and hardware-validated.
 - Ticket 3, Linux 4.9 GEM and dumb-buffer support, has not started.
