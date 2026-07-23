@@ -18,8 +18,9 @@ run_prepare_test() {
     local xc="aarch64-linux-gnu-"
     local commit="${MOCK_COMMIT:-abcdef1234567890abcdef1234567890abcdef12}"
     local mock_release="${MOCK_KERNELRELEASE:-4.9.337-OnePlus}"
+    local source_url="https://example.com/kernel.git"
 
-    # Mock git
+    # Mock git — handles clone, fetch, checkout, rev-parse, and remote get-url
     cat > "$tmp/git" <<MOCK
 #!/usr/bin/env bash
 subcmd="\$1"; shift
@@ -32,13 +33,15 @@ case "\$subcmd" in
       fetch)    exit 0 ;;
       checkout) exit 0 ;;
       rev-parse) printf '%s\n' "$commit"; exit 0 ;;
+      remote)   printf '%s\n' "$source_url"; exit 0 ;;
     esac ;;
 esac
 exit 0
 MOCK
     chmod +x "$tmp/git"
 
-    # Mock make
+    # Mock make — creates required artifacts; does NOT modify .config so config-drift
+    # diff passes; returns mock_release for the kernelrelease target
     cat > "$tmp/make" <<MOCK
 #!/usr/bin/env bash
 build_dir=""
@@ -70,7 +73,7 @@ exit 0
 MOCK
     chmod +x "$tmp/${xc}gcc"
 
-    # Build phone.config
+    # Build phone.config — no MODULE_SIG_FORCE by default
     mkdir -p "$tmp/capture"
     printf 'CONFIG_MODULES=y\nCONFIG_MODVERSIONS=y\nCONFIG_MODULE_SIG=n\nCONFIG_MODULE_SIG_FORCE=n\nCONFIG_MODULE_COMPRESS=n\n' \
         > "$tmp/capture/phone.config"
@@ -83,7 +86,7 @@ MOCK
 PHONE_KERNEL_RELEASE=$mock_release
 PHONE_CONFIG_SHA256=$actual_sha
 PHONE_ARCH=arm64
-KERNEL_SOURCE_URL=https://example.com/kernel.git
+KERNEL_SOURCE_URL=$source_url
 KERNEL_SOURCE_COMMIT=$commit
 KERNEL_SOURCE_REF=refs/heads/test
 CROSS_COMPILE=${xc}
@@ -102,6 +105,17 @@ EOF
             sed -i "s|^${key}=.*|${key}=${val}|" "$tmp/manifest.env"
         else
             printf '%s=%s\n' "$key" "$val" >> "$tmp/manifest.env"
+        fi
+        # Also update phone.config for CONFIG_* overrides so SHA still matches
+        if printf '%s' "$key" | grep -q '^CONFIG_'; then
+            if grep -q "^${key}=" "$tmp/capture/phone.config"; then
+                sed -i "s|^${key}=.*|${key}=${val}|" "$tmp/capture/phone.config"
+            else
+                printf '%s=%s\n' "$key" "$val" >> "$tmp/capture/phone.config"
+            fi
+            # Recompute SHA after config change
+            actual_sha=$(sha256sum "$tmp/capture/phone.config" | awk '{print $1}')
+            sed -i "s|^PHONE_CONFIG_SHA256=.*|PHONE_CONFIG_SHA256=$actual_sha|" "$tmp/manifest.env"
         fi
     done
 
@@ -127,22 +141,28 @@ EOF
         failures=$((failures + 1))
         return
     fi
-    # For success: check log file exists
+    # For success: check log file exists and records the pinned SHA
     if [ "$expected_status" -eq 0 ]; then
         if [ ! -f "$tmp/local/evidence/prepare-kernel.log" ]; then
             printf 'FAIL [%s]: missing prepare-kernel.log\n' "$test_name" >&2
             failures=$((failures + 1))
+            return
+        fi
+        if ! grep -qF "$commit" "$tmp/local/evidence/prepare-kernel.log"; then
+            printf 'FAIL [%s]: log does not record pinned SHA\n' "$test_name" >&2
+            failures=$((failures + 1))
+            return
         fi
     fi
     printf 'PASS [%s]\n' "$test_name"
 }
 
-# Test 1: empty KERNEL_SOURCE_COMMIT → reject
+# Test 1: empty / non-SHA KERNEL_SOURCE_COMMIT → reject
 run_prepare_test "empty-commit" 2 \
     "KERNEL_SOURCE_COMMIT must be a full 40-character Git SHA" \
     "KERNEL_SOURCE_COMMIT=not-a-sha"
 
-# Test 2: bad SHA format (too short) → reject
+# Test 2: short SHA → reject
 run_prepare_test "bad-sha-format" 2 \
     "KERNEL_SOURCE_COMMIT must be a full 40-character Git SHA" \
     "KERNEL_SOURCE_COMMIT=abc123"
@@ -150,11 +170,16 @@ run_prepare_test "bad-sha-format" 2 \
 # Test 3: success path
 run_prepare_test "success" 0 ""
 
-# Test 4: release mismatch → reject
+# Test 4: release mismatch → reject with exact message
 MOCK_KERNELRELEASE="4.9.999-wrong" \
 run_prepare_test "release-mismatch" 2 \
     "prepared kernel release does not match phone release" \
     "PHONE_KERNEL_RELEASE=4.9.337-OnePlus"
+
+# Test 5: CONFIG_MODULE_SIG_FORCE=y → hard block
+run_prepare_test "sig-force-blocked" 2 \
+    "CONFIG_MODULE_SIG_FORCE=y" \
+    "CONFIG_MODULE_SIG_FORCE=y"
 
 printf 'prepare-kernel tests: %s failures\n' "$failures"
 exit "$failures"

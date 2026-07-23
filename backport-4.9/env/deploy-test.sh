@@ -57,22 +57,55 @@ mkdir -p "$evidence_dir"
     nm -u "$module_path" || true
 } > "$evidence_dir/module-metadata.txt" 2>&1
 
-# Guard: refuse to replace an already-loaded module
-if "$adb_bin" -s "$serial" shell 'cat /proc/modules' 2>/dev/null | grep -q '^gud '; then
+# Guard: refuse to replace an already-loaded module.
+# Any ADB failure reading /proc/modules is itself a hard error — do not proceed
+# in an unknown state.
+modules_output=$("$adb_bin" -s "$serial" shell 'cat /proc/modules' 2>/dev/null) || {
+    printf 'failed to read /proc/modules from device; cannot confirm module state\n' >&2
+    exit 2
+}
+if printf '%s' "$modules_output" | grep -q '^gud '; then
     printf 'refusing to replace an already-loaded gud module\n' >&2
     exit 2
 fi
 
+# From here, always capture dmesg to evidence even if subsequent steps fail.
+# Use a trap so that a set -e abort still preserves whatever dmesg is available.
+_deploy_stage=pre-push
+cleanup_on_error() {
+    local rc=$?
+    # Capture dmesg into whichever stage file is appropriate
+    case "$_deploy_stage" in
+        post-load|post-rmmod)
+            "$adb_bin" -s "$serial" shell 'dmesg' > "$evidence_dir/load-dmesg.txt" 2>&1 || true ;;
+    esac
+    case "$_deploy_stage" in
+        post-rmmod)
+            "$adb_bin" -s "$serial" shell 'dmesg' > "$evidence_dir/unload-dmesg.txt" 2>&1 || true ;;
+    esac
+    printf 'deploy-test.sh failed at stage: %s (exit %s)\n' "$_deploy_stage" "$rc" >&2
+    printf 'evidence preserved in: %s\n' "$evidence_dir" >&2
+    exit "$rc"
+}
+trap cleanup_on_error ERR
+
 # Deploy
+_deploy_stage=push
 "$adb_bin" -s "$serial" push "$module_path" /home/phablet/gud.ko
 
 # Load
+_deploy_stage=insmod
 "$adb_bin" -s "$serial" shell 'sudo insmod /home/phablet/gud.ko'
+_deploy_stage=post-load
 "$adb_bin" -s "$serial" shell 'dmesg' > "$evidence_dir/load-dmesg.txt" 2>&1
 
 # Unload
+_deploy_stage=rmmod
 "$adb_bin" -s "$serial" shell 'sudo rmmod gud'
+_deploy_stage=post-rmmod
 "$adb_bin" -s "$serial" shell 'dmesg' > "$evidence_dir/unload-dmesg.txt" 2>&1
+
+trap - ERR
 
 # Assert load message
 if ! grep -qF 'gud: build probe loaded' "$evidence_dir/load-dmesg.txt"; then

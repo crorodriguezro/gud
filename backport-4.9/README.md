@@ -43,8 +43,11 @@ Do not proceed to `prepare-kernel.sh` if source matching is unresolved.
 Stop and do not continue if any of the following is true:
 
 - `CONFIG_MODULES` is not `y` — module loading is disabled on this kernel.
-- `CONFIG_MODULE_SIG_FORCE=y` — modules must be signed; obtain or build
-  a matching key before loading.
+- `CONFIG_MODULE_SIG_FORCE=y` — the kernel refuses to load any unsigned module.
+  This is a **hard stop**. Loading is only possible if you already control a
+  signing key that is embedded in and trusted by the **installed kernel image**.
+  Building a new key does not help. Do not attempt to work around this without
+  a trusted key already present in the installed kernel.
 - The `uname -r` of the prepared source tree does not match
   `PHONE_KERNEL_RELEASE` — the build would produce an ABI-incompatible module.
 - `Module.symvers` is absent when `CONFIG_MODVERSIONS=y` — symbol version
@@ -55,9 +58,11 @@ Do **not** modify the phone boot image, installed kernel, or device configuratio
 
 ## Local artifacts
 
-All captures, source trees, build output, modules, and evidence logs are
-written under `env/local/` which is git-ignored.  Nothing in `env/local/`
-is ever committed.
+All captures, source trees, build output, and evidence logs are
+written under `env/local/` which is git-ignored.  The built `gud.ko`
+and Kbuild object files are written directly under `backport-4.9/`
+and are git-ignored by `backport-4.9/.gitignore`.  Nothing in either
+location is ever committed.
 
 | Path | Content |
 | --- | --- |
@@ -80,9 +85,9 @@ The deploy script rejects any output matching `Invalid module format`,
 ## Tests
 
 ```bash
-bash backport-4.9/tests/env/test-env-scripts.sh
-bash backport-4.9/tests/env/test-prepare-kernel.sh
-bash backport-4.9/tests/env/test-deploy-test.sh
+bash tests/env/test-env-scripts.sh
+bash tests/env/test-prepare-kernel.sh
+bash tests/env/test-deploy-test.sh
 ```
 
 All three test scripts are hermetic and do not require a phone or kernel tree.

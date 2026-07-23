@@ -173,4 +173,23 @@ else
     done
 fi
 
+# Fix 7: verify backport-4.9/.gitignore exists and covers *.ko
+if [ ! -f "$repo_root/backport-4.9/.gitignore" ]; then
+    printf 'missing file: backport-4.9/.gitignore\n' >&2
+    failures=$((failures + 1))
+else
+    grep -qF '*.ko' "$repo_root/backport-4.9/.gitignore" || {
+        printf 'backport-4.9/.gitignore does not ignore *.ko\n' >&2
+        failures=$((failures + 1))
+    }
+fi
+
+# Fix 8: verify README test paths are correct relative to cd backport-4.9
+if [ -f "$repo_root/backport-4.9/README.md" ]; then
+    if grep -q 'backport-4.9/tests/' "$repo_root/backport-4.9/README.md"; then
+        printf 'README.md uses wrong test path (backport-4.9/tests/ inside cd backport-4.9 section)\n' >&2
+        failures=$((failures + 1))
+    fi
+fi
+
 exit "$failures"
