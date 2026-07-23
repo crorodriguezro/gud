@@ -42,7 +42,7 @@ mkdir -p "$capture_dir"
 "$usb_devices_bin" > "$capture_dir/usb-devices.txt"
 cp "$device_dir/descriptors" "$capture_dir/device-descriptors.bin"
 
-# Copy every interface descriptor
+# Copy every interface descriptor (best-effort: not all host kernels expose per-interface descriptor files)
 iface_count=0
 for iface_dir in "$sysfs_root/$device_name":*; do
     [ -d "$iface_dir" ] || continue
@@ -54,8 +54,7 @@ for iface_dir in "$sysfs_root/$device_name":*; do
 done
 
 if [ "$iface_count" -eq 0 ]; then
-    printf 'no interface descriptors found under %s\n' "$sysfs_root/$device_name" >&2
-    exit 2
+    printf 'note: no per-interface descriptor files found (device-descriptors.bin contains all descriptors)\n'
 fi
 
 # Write identity.env
