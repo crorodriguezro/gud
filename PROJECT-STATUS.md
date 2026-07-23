@@ -9,10 +9,10 @@ The MVP is one DRM/KMS external output using XRGB8888, full-frame USB transfers,
 ## Current State
 
 - Branch: `linux-4.9-backport`
-- Latest implementation/documentation commit: `c318005` (`docs: record GUD USB probe evidence`)
+- Latest implementation commit: `c31af10` (`feat: add Linux 4.9 GUD GEM layer`)
 - Ticket 1 build environment is implemented and its practical ABI gate is surpassed: the Ticket 2 driver built for and loaded on the phone's exact kernel ABI.
 - Ticket 2 USB probe and disconnect implementation is complete and hardware-validated.
-- Ticket 3, Linux 4.9 GEM and dumb-buffer support, has not started.
+- Ticket 3, Linux 4.9 GEM and dumb-buffer support, is implemented and build-validated against the exact target kernel tree. Its userspace validation is deferred to Ticket 4 because no DRM node exists yet.
 
 Read first:
 
@@ -35,8 +35,11 @@ Read first:
 - Disconnect that clears USB interface data before marking the private state unavailable and releasing it.
 - Laptop-side Pi USB capture and phone-side probe deployment/evidence scripts, with hermetic shell tests.
 - A Wi-Fi SSH workflow for phone testing when the Pi occupies the OnePlus 6's only USB-C port.
+- A Linux 4.9-native local GEM layer with page-backed objects, lazy page pinning, cached CPU `vmap()`, 32-bpp dumb-buffer creation, mmap-offset and fault callbacks, and explicit teardown.
+- Rejection of imported dma-buf-backed objects with `-EOPNOTSUPP`; no PRIME import/export callbacks are present.
+- Ticket 3 shell contract coverage and an ABI/symbol-audit workflow. Kbuild `.cmd` metadata is ignored rather than versioned.
 
-Ticket 2 intentionally contains no DRM/KMS/GEM objects, framebuffers, display modes, workqueues, asynchronous USB transfers, or framebuffer uploads.
+Ticket 2 intentionally contains no DRM/KMS objects, framebuffers, display modes, workqueues, asynchronous USB transfers, or framebuffer uploads. Ticket 3 adds reusable GEM primitives only; it does not register DRM/KMS objects or transfer framebuffer data.
 
 ## Hardware Evidence
 
@@ -69,17 +72,27 @@ Ticket 2 is complete: the OnePlus 6 recognizes the Pi gadget, validates its GUD 
 
 Do not overstate this result: Ticket 2 proves USB enumeration and lifetime handling only. It does not expose `/dev/dri/cardX`, create a framebuffer, enumerate a display mode, or display pixels.
 
-## Next: Ticket 3
+## Ticket 3 Acceptance
 
-Implement Linux 4.9-native GEM and dumb-buffer support before any DRM/KMS registration:
+Ticket 3 is complete at the source/build boundary:
 
-1. Model CPU-readable backing storage on Linux 4.9 `udl`.
-2. Define `struct gud_gem_object` around `struct drm_gem_object`.
-3. Implement allocation, destruction, dumb-buffer and mmap callback contracts, and a cached CPU mapping helper.
-4. Reject unsupported imported dma-buf objects in the MVP.
-5. Build against the exact phone kernel ABI and use only exported Linux 4.9 GEM interfaces.
+- `gud.ko` builds against the captured `4.9.112-g6b190d86b` target tree with `gud_gem_4_9.o` linked.
+- The GEM and USB contract tests pass, along with the existing environment/probe test suite.
+- The module's new GEM and VM dependencies are audited against the matching target build and captured phone symbols.
+- The local-only GEM callbacks are ready for Ticket 4 registration: `gem_free_object_unlocked`, `dumb_create`, `dumb_map_offset`, file `mmap`, and VM operations.
 
-Ticket 3 cannot expose DRM userspace buffers because no DRM node exists. Ticket 4 attaches the callbacks, registers `/dev/dri/cardX`, and owns the first create/map/write/destroy dumb-buffer validation.
+No phone runtime result is claimed for Ticket 3. It cannot expose or map a userspace buffer until Ticket 4 registers `/dev/dri/cardX`.
+
+## Next: Ticket 4
+
+Register one Linux 4.9 DRM/KMS device and validate the first userspace GEM path:
+
+1. Attach Ticket 3 GEM callbacks to the DRM driver and register the DRM device.
+2. Initialize one simple display pipe and connector, advertising XRGB8888 only.
+3. Expose a 1280x720@60 mode without transferring pixels.
+4. Verify `/dev/dri/cardX` and use a phone-side utility to create, map, write, and destroy a 1280x720 XRGB8888 dumb buffer.
+
+Ticket 5 must not begin until Ticket 4 provides this real-device userspace evidence.
 
 ## Constraints
 
