@@ -95,6 +95,30 @@ bash tests/test-usb-probe-contract.sh
 
 All test scripts are hermetic and do not require a phone or kernel tree.
 
+## Ticket 3 GEM Build And Symbol Audit
+
+Ticket 3 adds page-backed local GEM helpers but does not register a DRM device.
+Build against the captured target ABI:
+
+```bash
+cd backport-4.9
+make MANIFEST="$PWD/env/target-manifest.env" modules
+nm -u gud.ko | sort
+grep -E 'drm_gem_(object_init|get_pages|put_pages|mmap|handle_create|object_release|object_unreference_unlocked|create_mmap_offset)|\b(vmap|vunmap|vm_insert_page)\b' \
+  env/local/kernel/build/Module.symvers
+grep -E '\b(vmap|vunmap|vm_insert_page)\b' env/local/capture/kallsyms.txt
+```
+
+The generated module must reference only target-exported GEM and VM symbols.
+The `gud_gem_4_9.o` object is expected in the module link.
+In particular, verify `drm_gem_get_pages`, `drm_gem_put_pages`,
+`drm_gem_mmap`, and `drm_gem_handle_create` remain target-exported.
+
+Ticket 3 has no `/dev/dri/cardX`, so it has no phone-side userspace test.
+Ticket 4 registers the DRM device and must create, map, write, and destroy a
+1280x720 XRGB8888 dumb buffer while retaining `dmesg` evidence with no kernel
+warning.
+
 ## Ticket 2 Pi USB Capture
 
 Before deploying the GUD USB driver, capture and validate the exact Pi Zero 2 W

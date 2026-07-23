@@ -33,12 +33,12 @@
 
 ## P0 — Implement Linux 4.9 GEM/framebuffer layer
 
-- [ ] Define `struct gud_gem_object` around `struct drm_gem_object`.
-- [ ] Implement allocation and destruction.
-- [ ] Implement dumb-buffer creation.
-- [ ] Implement CPU mapping using 4.9-era GEM/page APIs and `vmap()`.
-- [ ] Implement mmap support required by DRM userspace.
-- [ ] Handle imported buffers conservatively or reject unsupported imports in the MVP.
+- [x] Define `struct gud_gem_object` around `struct drm_gem_object`.
+- [x] Implement allocation and destruction.
+- [x] Implement dumb-buffer creation.
+- [x] Implement CPU mapping using 4.9-era GEM/page APIs and `vmap()`.
+- [x] Implement mmap support required by DRM userspace.
+- [x] Handle imported buffers conservatively or reject unsupported imports in the MVP.
 
 Use the Linux 4.9 `udl` DisplayLink driver as the main reference for CPU-readable USB-display framebuffer memory.
 

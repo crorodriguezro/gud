@@ -25,7 +25,6 @@ done
 
 # ── Forbidden patterns in the two headers ────────────────────────────────────
 for text in \
-    'drm_' \
     'work_struct' \
     'usb_anchor' \
     'module_param'; do
@@ -40,12 +39,14 @@ done
 # ── Kbuild must name gud_drv.o (always checked) ──────────────────────────────
 # Check that both required lines are present (allow ccflags-y additions)
 kbuild_file="$repo_root/backport-4.9/Kbuild"
-for kbuild_line in 'obj-m += gud.o' 'gud-y := gud_drv.o'; do
-    grep -qxF "$kbuild_line" "$kbuild_file" 2>/dev/null || {
-        printf 'FAIL [kbuild]: "%s" not found in Kbuild\n' "$kbuild_line" >&2
-        failures=$((failures + 1))
-    }
-done
+grep -qxF 'obj-m += gud.o' "$kbuild_file" 2>/dev/null || {
+    printf 'FAIL [kbuild]: "%s" not found in Kbuild\n' 'obj-m += gud.o' >&2
+    failures=$((failures + 1))
+}
+grep -qE '^gud-y := .*gud_drv\.o($| )' "$kbuild_file" 2>/dev/null || {
+    printf 'FAIL [kbuild]: "%s" does not include gud_drv.o\n' 'gud-y :=' >&2
+    failures=$((failures + 1))
+}
 
 # ── Required symbols in gud_drv.c (only checked when it exists) ──────────────
 if [ -f "$repo_root/backport-4.9/gud_drv.c" ]; then
