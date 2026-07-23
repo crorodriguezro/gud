@@ -1,2 +1,5 @@
 obj-m += gud.o
 gud-y := gud_drv.o
+# GCC 14+ emits -Werror=missing-attributes for init_module/cleanup_module
+# aliases in Linux 4.9 module.h; suppress it for this out-of-tree build.
+ccflags-y += -Wno-missing-attributes

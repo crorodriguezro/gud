@@ -38,14 +38,14 @@ for text in \
 done
 
 # ── Kbuild must name gud_drv.o (always checked) ──────────────────────────────
-expected_kbuild="obj-m += gud.o
-gud-y := gud_drv.o"
-actual_kbuild=$(cat "$repo_root/backport-4.9/Kbuild" 2>/dev/null || true)
-if [ "$actual_kbuild" != "$expected_kbuild" ]; then
-    printf 'FAIL [kbuild]: Kbuild content does not match expected\nExpected:\n%s\nActual:\n%s\n' \
-        "$expected_kbuild" "$actual_kbuild" >&2
-    failures=$((failures + 1))
-fi
+# Check that both required lines are present (allow ccflags-y additions)
+kbuild_file="$repo_root/backport-4.9/Kbuild"
+for kbuild_line in 'obj-m += gud.o' 'gud-y := gud_drv.o'; do
+    grep -qxF "$kbuild_line" "$kbuild_file" 2>/dev/null || {
+        printf 'FAIL [kbuild]: "%s" not found in Kbuild\n' "$kbuild_line" >&2
+        failures=$((failures + 1))
+    }
+done
 
 # ── Required symbols in gud_drv.c (only checked when it exists) ──────────────
 if [ -f "$repo_root/backport-4.9/gud_drv.c" ]; then

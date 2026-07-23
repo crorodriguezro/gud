@@ -20,7 +20,7 @@ fi
 
 # Validate required fields
 for field in PHONE_KERNEL_RELEASE PHONE_CONFIG_SHA256 KERNEL_SOURCE_URL \
-             KERNEL_SOURCE_COMMIT CROSS_COMPILE TOOLCHAIN_VERSION; do
+             KERNEL_SOURCE_COMMIT TOOLCHAIN_VERSION; do
     eval "val=\${${field}:-}"
     if [ -z "$val" ]; then
         printf '%s is required but not set in %s\n' "$field" "$MANIFEST" >&2
@@ -110,7 +110,20 @@ if ! diff -u \
 fi
 log "config unchanged after olddefconfig"
 
-make -C "$source_dir" O="$build_dir" ARCH=arm64 CROSS_COMPILE="$CROSS_COMPILE" prepare modules_prepare 2>&1 | tee -a "$log_file"
+# Linux 4.9 scripts/extract-cert.c uses the OpenSSL ENGINE API which was
+# removed in OpenSSL 3.x.  Inject a local compat shim via HOSTCFLAGS so
+# the host tool compiles without modifying the kernel source.  The ENGINE
+# code path is only reached when CONFIG_SYSTEM_TRUSTED_KEYS is non-empty;
+# the target kernel has it set to "" so the shim is never called.
+openssl_compat_dir="$script_dir/openssl-compat"
+extra_host_cflags=""
+if [ -d "$openssl_compat_dir" ]; then
+    extra_host_cflags="HOSTCFLAGS=-I$openssl_compat_dir"
+    log "injecting OpenSSL ENGINE compat shim from $openssl_compat_dir"
+fi
+
+make -C "$source_dir" O="$build_dir" ARCH=arm64 CROSS_COMPILE="$CROSS_COMPILE" \
+    ${extra_host_cflags} prepare modules_prepare 2>&1 | tee -a "$log_file"
 
 # Check kernel release
 actual_release=$(make -s -C "$source_dir" O="$build_dir" kernelrelease 2>/dev/null | tr -d '\n')
