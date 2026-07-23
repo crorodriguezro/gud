@@ -147,4 +147,30 @@ esac' \
     2 \
     "no authorized ADB device found"
 
+# Task 5: verify README references only implemented commands
+for script in capture-phone.sh prepare-kernel.sh deploy-test.sh; do
+    if [ ! -x "$repo_root/backport-4.9/env/$script" ]; then
+        printf 'missing or non-executable: backport-4.9/env/%s\n' "$script" >&2
+        failures=$((failures + 1))
+    fi
+done
+
+if [ ! -f "$repo_root/backport-4.9/README.md" ]; then
+    printf 'missing file: backport-4.9/README.md\n' >&2
+    failures=$((failures + 1))
+else
+    for pattern in 'gud: build probe loaded' 'gud: build probe unloaded' 'Invalid module format'; do
+        grep -qF "$pattern" "$repo_root/backport-4.9/README.md" || {
+            printf 'README.md missing expected string: %s\n' "$pattern" >&2
+            failures=$((failures + 1))
+        }
+    done
+    for script in capture-phone.sh prepare-kernel.sh deploy-test.sh; do
+        grep -qF "$script" "$repo_root/backport-4.9/README.md" || {
+            printf 'README.md does not mention: %s\n' "$script" >&2
+            failures=$((failures + 1))
+        }
+    done
+fi
+
 exit "$failures"
