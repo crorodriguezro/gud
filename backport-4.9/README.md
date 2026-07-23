@@ -91,3 +91,29 @@ bash tests/env/test-deploy-test.sh
 ```
 
 All three test scripts are hermetic and do not require a phone or kernel tree.
+
+## Ticket 2 Pi USB Capture
+
+Before deploying the GUD USB driver, capture and validate the exact Pi Zero 2 W
+GUD gadget identity from a laptop host:
+
+```bash
+ls /sys/bus/usb/devices/
+./env/capture-pi-usb.sh <selected-sysfs-usb-device-name>
+cat env/local/pi-usb/identity.env
+```
+
+The selected name is a **device** directory such as `3-1`, not an interface
+directory such as `3-1:1.0`.  The capture script validates that the selected
+device is `1d50:614d` (the configured Pi GUD gadget VID/PID) and exits `2` with
+an error if the identity does not match.
+
+Raw capture output is written to `env/local/pi-usb/` (git-ignored).  The
+reviewed `identity.env` must contain:
+
+```
+GUD_USB_VENDOR_ID=0x1d50
+GUD_USB_PRODUCT_ID=0x614d
+```
+
+This evidence is required by `probe-test.sh` before any ADB operations.
