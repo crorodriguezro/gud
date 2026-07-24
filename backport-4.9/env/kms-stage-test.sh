@@ -12,8 +12,8 @@ scp_bin=${SCP:-scp}
 evidence_dir=${EVIDENCE_DIR:-$script_dir/local/evidence}
 
 case "$stage" in
-caps|dumb|fb|atomic) ;;
-*) printf 'STAGE must be caps, dumb, fb, or atomic\n' >&2; exit 2 ;;
+caps|dumb|fb|resources|connector|encoder-crtc|planes|properties|atomic-build|atomic-test|atomic-commit) ;;
+*) printf 'STAGE must be caps, dumb, fb, resources, connector, encoder-crtc, planes, properties, atomic-build, atomic-test, or atomic-commit\n' >&2; exit 2 ;;
 esac
 
 if [ -z "$phone_host" ] || [ -z "$phone_password" ]; then
@@ -40,8 +40,18 @@ remote_stage=/home/phablet/gud-kms-stage
 
 "$ssh_bin" -o BatchMode=yes "$phone_host" \
 	"printf '%s\\n' '$phone_password' | sudo -S dmesg -C; \
+	 found_pi=0; \
+	 for path in /sys/bus/usb/devices/*; do \
+	   test -r \"\$path/idVendor\" || continue; \
+	   test \"\$(cat \"\$path/idVendor\")\" = 1d50 || continue; \
+	   test \"\$(cat \"\$path/idProduct\")\" = 614d || continue; \
+	   found_pi=1; \
+	 done; \
+	 test \$found_pi = 1 || { echo 'Pi GUD 1d50:614d is not enumerated' >&2; exit 2; }; \
 	 printf '%s\\n' '$phone_password' | sudo -S rmmod gud 2>/dev/null || true; \
 	 printf '%s\\n' '$phone_password' | sudo -S insmod $remote_module; \
+	 sleep 1; \
+	 printf '%s\\n' '$phone_password' | sudo -S dmesg | grep -qF 'GUD probe complete for 1d50:614d'; \
 	 test -e /dev/dri/card1"
 
 "$ssh_bin" -o BatchMode=yes -o ServerAliveInterval=2 -o ServerAliveCountMax=3 \
@@ -59,5 +69,11 @@ set -e
 printf '%s\n' "$rc" >"$status"
 kill "$watcher" 2>/dev/null || true
 wait "$watcher" 2>/dev/null || true
+
+if [ "$rc" -eq 0 ] && ! grep -qFx "stage=$stage complete" "$stdout"; then
+	printf 'missing completion marker for stage %s\n' "$stage" >>"$stderr"
+	rc=1
+	printf '%s\n' "$rc" >"$status"
+fi
 
 exit "$rc"

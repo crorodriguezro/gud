@@ -90,12 +90,18 @@ int main(int argc, char **argv)
 	int fd = -1, i, rc = 1;
 
 	if (argc != 3) {
-		fprintf(stderr, "usage: %s <caps|dumb|fb|atomic> <card-path>\n", argv[0]);
+		fprintf(stderr,
+			"usage: %s <caps|dumb|fb|resources|connector|encoder-crtc|planes|properties|atomic-build|atomic-test|atomic-commit> <card-path>\n",
+			argv[0]);
 		return 2;
 	}
 	stage = argv[1];
 	if (strcmp(stage, "caps") && strcmp(stage, "dumb") &&
-	    strcmp(stage, "fb") && strcmp(stage, "atomic")) {
+	    strcmp(stage, "fb") && strcmp(stage, "resources") &&
+	    strcmp(stage, "connector") && strcmp(stage, "encoder-crtc") &&
+	    strcmp(stage, "planes") && strcmp(stage, "properties") &&
+	    strcmp(stage, "atomic-build") && strcmp(stage, "atomic-test") &&
+	    strcmp(stage, "atomic-commit")) {
 		fprintf(stderr, "invalid stage: %s\n", stage);
 		return 2;
 	}
@@ -159,12 +165,15 @@ int main(int argc, char **argv)
 		rc = 0;
 		goto out;
 	}
-	if (strcmp(stage, "atomic") != 0)
-		goto out;
 
 	resources = drmModeGetResources(fd);
 	if (!resources) {
 		fprintf(stderr, "drmModeGetResources failed\n");
+		goto out;
+	}
+	if (strcmp(stage, "resources") == 0) {
+		printf("stage=%s complete\n", stage);
+		rc = 0;
 		goto out;
 	}
 	for (i = 0; i < resources->count_connectors; i++) {
@@ -194,6 +203,11 @@ int main(int argc, char **argv)
 		goto out;
 	}
 	connector_id = connector->connector_id;
+	if (strcmp(stage, "connector") == 0) {
+		printf("stage=%s complete\n", stage);
+		rc = 0;
+		goto out;
+	}
 	encoder = drmModeGetEncoder(fd, connector->encoder_id);
 	if (!encoder && connector->count_encoders)
 		encoder = drmModeGetEncoder(fd, connector->encoders[0]);
@@ -210,6 +224,11 @@ int main(int argc, char **argv)
 			crtc_index = i;
 	if (!crtc_id) {
 		fprintf(stderr, "no compatible CRTC\n");
+		goto out;
+	}
+	if (strcmp(stage, "encoder-crtc") == 0) {
+		printf("stage=%s complete\n", stage);
+		rc = 0;
 		goto out;
 	}
 	plane_res = drmModeGetPlaneResources(fd);
@@ -241,6 +260,11 @@ next_plane:
 		fprintf(stderr, "no compatible primary plane\n");
 		goto out;
 	}
+	if (strcmp(stage, "planes") == 0) {
+		printf("stage=%s complete\n", stage);
+		rc = 0;
+		goto out;
+	}
 
 	props.crtc_id = get_prop_id(fd, connector_id, DRM_MODE_OBJECT_CONNECTOR,
 				    "CRTC_ID");
@@ -259,6 +283,11 @@ next_plane:
 	    !props.src_x || !props.src_y || !props.src_w || !props.src_h ||
 	    !props.crtc_x || !props.crtc_y || !props.crtc_w || !props.crtc_h) {
 		fprintf(stderr, "missing atomic properties\n");
+		goto out;
+	}
+	if (strcmp(stage, "properties") == 0) {
+		printf("stage=%s complete\n", stage);
+		rc = 0;
 		goto out;
 	}
 	if (drmModeCreatePropertyBlob(fd, mode, sizeof(*mode), &mode_blob_id)) {
@@ -286,12 +315,34 @@ next_plane:
 		fprintf(stderr, "drmModeAtomicAddProperty failed\n");
 		goto out;
 	}
-	if (drmModeAtomicCommit(fd, request, DRM_MODE_ATOMIC_ALLOW_MODESET, NULL)) {
-		rc = fail("drmModeAtomicCommit");
+	if (strcmp(stage, "atomic-build") == 0) {
+		printf("stage=%s complete\n", stage);
+		rc = 0;
 		goto out;
 	}
-	printf("stage=%s complete\n", stage);
-	rc = 0;
+	if (strcmp(stage, "atomic-test") == 0) {
+		if (drmModeAtomicCommit(fd, request,
+					DRM_MODE_ATOMIC_TEST_ONLY | DRM_MODE_ATOMIC_ALLOW_MODESET,
+					NULL)) {
+			rc = fail("drmModeAtomicCommit(test)");
+			goto out;
+		}
+		printf("stage=%s complete\n", stage);
+		rc = 0;
+		goto out;
+	}
+	if (strcmp(stage, "atomic-commit") == 0) {
+		if (drmModeAtomicCommit(fd, request,
+					DRM_MODE_ATOMIC_ALLOW_MODESET, NULL)) {
+			rc = fail("drmModeAtomicCommit(commit)");
+			goto out;
+		}
+		printf("stage=%s complete\n", stage);
+		rc = 0;
+		goto out;
+	}
+	fprintf(stderr, "internal stage error: %s\n", stage);
+	goto out;
 
 out:
 	if (request)

@@ -182,11 +182,28 @@ cc -Wall -Wextra -Werror -O2 -o tests/gud-kms-stage \
 export PHONE_HOST=phablet@192.168.1.120
 export PHONE_SUDO_PASSWORD='<phone sudo password>'
 export STAGE_BINARY="$PWD/tests/gud-kms-stage"
-for STAGE in caps dumb fb atomic; do
+for STAGE in caps dumb fb resources connector encoder-crtc planes properties \
+             atomic-build atomic-test atomic-commit; do
   export STAGE
   ./env/kms-stage-test.sh || break
 done
 ```
+
+Substage meanings:
+
+- `resources`: query DRM resources only.
+- `connector`: select the connected 1280x720 connector only.
+- `encoder-crtc`: select its encoder and compatible CRTC only.
+- `planes`: select a compatible primary plane only.
+- `properties`: query all later-modeset property IDs only.
+- `atomic-build`: additionally create mode blob and build atomic request only.
+- `atomic-test`: run kernel atomic validation path using
+  `DRM_MODE_ATOMIC_TEST_ONLY | DRM_MODE_ATOMIC_ALLOW_MODESET` without applying
+  display state.
+- `atomic-commit`: run real `DRM_MODE_ATOMIC_ALLOW_MODESET` commit path.
+
+If `atomic-test` is the first failing stage, the fault is in the kernel atomic
+check/property-validation path before display-state application.
 
 Before each stage, confirm the Pi is enumerated as `1d50:614d`, set controller
 mode to `host`, and verify the GUD card exists. The runner writes local ignored
