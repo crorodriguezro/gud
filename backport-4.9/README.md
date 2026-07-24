@@ -169,6 +169,31 @@ Required evidence must show one connector/CRTC/encoder topology, XRGB8888,
 preferred `1280x720@60`, and `atomic modeset succeeded`. Reject logs containing
 `BUG:`, `Oops`, `WARNING:`, `lockdep`, or `use-after-free`.
 
+## Ticket 4 KMS Reset Diagnostic
+
+If `gud-kms-smoke` resets the phone before producing output, isolate the first
+failing DRM boundary without changing the kernel driver. Build the stage tool,
+then run stages strictly in this order:
+
+```bash
+cd backport-4.9
+cc -Wall -Wextra -Werror -O2 -o tests/gud-kms-stage \
+  tests/gud-kms-stage.c $(pkg-config --cflags --libs libdrm)
+export PHONE_HOST=phablet@192.168.1.120
+export PHONE_SUDO_PASSWORD='<phone sudo password>'
+export STAGE_BINARY="$PWD/tests/gud-kms-stage"
+for STAGE in caps dumb fb atomic; do
+  export STAGE
+  ./env/kms-stage-test.sh || break
+done
+```
+
+Before each stage, confirm the Pi is enumerated as `1d50:614d`, set controller
+mode to `host`, and verify the GUD card exists. The runner writes local ignored
+evidence as `drm-kms-stage-<stage>-{stdout,stderr,exit,dmesg}.txt`. If a stage
+resets the phone, stop the sequence, recover USB/SSH, capture pstore and PMIC
+reset reason, and do not run a later stage.
+
 ## Ticket 2 Pi USB Capture
 
 Before deploying the GUD USB driver, capture and validate the exact Pi Zero 2 W
