@@ -9,10 +9,11 @@ The MVP is one DRM/KMS external output using XRGB8888, full-frame USB transfers,
 ## Current State
 
 - Branch: `linux-4.9-backport`
-- Latest implementation commit: `c31af10` (`feat: add Linux 4.9 GUD GEM layer`)
+- Latest implementation commit: `26edd28` (`feat: add Linux 4.9 GUD DRM/KMS registration`)
 - Ticket 1 build environment is implemented and its practical ABI gate is surpassed: the Ticket 2 driver built for and loaded on the phone's exact kernel ABI.
 - Ticket 2 USB probe and disconnect implementation is complete and hardware-validated.
 - Ticket 3, Linux 4.9 GEM and dumb-buffer support, is implemented and build-validated against the exact target kernel tree. Its userspace validation is deferred to Ticket 4 because no DRM node exists yet.
+- Ticket 4 DRM/KMS registration is implemented and build-validated against the exact target kernel tree. Its required phone-side DRM node, dumb-buffer, and atomic-modeset evidence remains pending.
 
 Read first:
 
@@ -38,8 +39,12 @@ Read first:
 - A Linux 4.9-native local GEM layer with page-backed objects, lazy page pinning, cached CPU `vmap()`, 32-bpp dumb-buffer creation, mmap-offset and fault callbacks, and explicit teardown.
 - Rejection of imported dma-buf-backed objects with `-EOPNOTSUPP`; no PRIME import/export callbacks are present.
 - Ticket 3 shell contract coverage and an ABI/symbol-audit workflow. Kbuild `.cmd` metadata is ignored rather than versioned.
+- Ticket 4 DRM registration: one `DRIVER_ATOMIC` GUD card, one virtual connector, one simple display pipe, XRGB8888 only, and one preferred 1280x720@60 mode.
+- A local GEM-backed framebuffer path that validates XRGB8888 layout and backing-object bounds before an atomic modeset can reference it.
+- Linux 4.9 USB unplug lifetime handling through `drm_unplug_dev()`, retaining private state until the final DRM file release.
+- Ticket 4 contract coverage and a libdrm phone smoke utility for dumb-buffer create/map/write/destroy plus atomic modeset validation.
 
-Ticket 2 intentionally contains no DRM/KMS objects, framebuffers, display modes, workqueues, asynchronous USB transfers, or framebuffer uploads. Ticket 3 adds reusable GEM primitives only; it does not register DRM/KMS objects or transfer framebuffer data.
+Ticket 4 intentionally contains no GUD connector/EDID query, display-state request, framebuffer upload, USB bulk transfer, workqueue, asynchronous USB transfer, or visible output. Its fixed virtual mode is only a host-side KMS integration contract; it does not claim that the gadget accepts or displays the mode.
 
 ## Hardware Evidence
 
@@ -83,16 +88,24 @@ Ticket 3 is complete at the source/build boundary:
 
 No phone runtime result is claimed for Ticket 3. It cannot expose or map a userspace buffer until Ticket 4 registers `/dev/dri/cardX`.
 
-## Next: Ticket 4
+## Ticket 4 Status
 
-Register one Linux 4.9 DRM/KMS device and validate the first userspace GEM path:
+Ticket 4 is complete at the source/build boundary:
 
-1. Attach Ticket 3 GEM callbacks to the DRM driver and register the DRM device.
-2. Initialize one simple display pipe and connector, advertising XRGB8888 only.
-3. Expose a 1280x720@60 mode without transferring pixels.
-4. Verify `/dev/dri/cardX` and use a phone-side utility to create, map, write, and destroy a 1280x720 XRGB8888 dumb buffer.
+- `gud.ko` builds against the captured `4.9.112-g6b190d86b` target tree with the DRM/KMS objects linked.
+- The USB, GEM, DRM/KMS, and environment/probe contract suites pass.
+- New DRM/KMS and helper symbol references are exported by the matching target kernel build.
+- The phone smoke utility compiles with `-Wall -Wextra -Werror` and libdrm.
+- Review findings were corrected: the driver advertises `DRIVER_ATOMIC`, USB disconnect uses `drm_unplug_dev()` to defer final private-state release, and framebuffer creation verifies its memory extent.
 
-Ticket 5 must not begin until Ticket 4 provides this real-device userspace evidence.
+No phone runtime result is claimed for Ticket 4. The remaining acceptance evidence is:
+
+1. Load the module with the Pi attached and confirm the `gud` `/dev/dri/cardX` node.
+2. Capture `modetest` output showing one connected virtual connector, one CRTC/encoder, XRGB8888, and preferred 1280x720@60.
+3. Run `gud-kms-smoke` against that GUD card and retain its successful dumb-buffer and atomic-modeset output.
+4. Capture the corresponding `dmesg` interval with no `BUG:`, `Oops`, `WARNING:`, `lockdep`, or `use-after-free` record.
+
+Ticket 5 must not begin until this real-device userspace evidence is captured. Ticket 5 will add GUD state programming and the first full-frame USB transfer; it is the first-pixels milestone.
 
 ## Constraints
 
