@@ -71,7 +71,6 @@ if [ -f "$repo_root/backport-4.9/gud_drv.c" ]; then
 
     # Forbidden patterns in gud_drv.c
     for text in \
-        'drm_' \
         'alloc_workqueue' \
         'INIT_WORK' \
         'queue_work' \

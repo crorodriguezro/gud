@@ -6,6 +6,98 @@
 #include "gud_internal.h"
 #include "gud_protocol.h"
 
+static const struct file_operations gud_drm_fops = {
+	.owner = THIS_MODULE,
+	.open = drm_open,
+	.mmap = gud_drm_gem_mmap,
+	.poll = drm_poll,
+	.read = drm_read,
+	.unlocked_ioctl = drm_ioctl,
+	.release = drm_release,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = drm_compat_ioctl,
+#endif
+	.llseek = noop_llseek,
+};
+
+static int gud_drm_unload(struct drm_device *drm)
+{
+	struct gud_device *gud = drm->dev_private;
+
+	drm_mode_config_cleanup(drm);
+	if (gud) {
+		usb_put_dev(gud->usb);
+		kfree(gud);
+	}
+
+	return 0;
+}
+
+static struct drm_driver gud_drm_driver = {
+	.driver_features = DRIVER_MODESET | DRIVER_GEM | DRIVER_ATOMIC,
+	.gem_free_object_unlocked = gud_gem_free_object,
+	.gem_vm_ops = &gud_gem_vm_ops,
+	.dumb_create = gud_gem_dumb_create,
+	.dumb_map_offset = gud_gem_dumb_map_offset,
+	.dumb_destroy = drm_gem_dumb_destroy,
+	.unload = gud_drm_unload,
+	.fops = &gud_drm_fops,
+	.name = "gud",
+	.desc = "OnePlus 6 GUD DRM backport",
+	.date = "20260723",
+	.major = 1,
+	.minor = 0,
+};
+
+int gud_drm_init(struct gud_device *gud)
+{
+	int ret;
+
+	gud->drm = drm_dev_alloc(&gud_drm_driver, &gud->intf->dev);
+	if (IS_ERR(gud->drm)) {
+		ret = PTR_ERR(gud->drm);
+		gud->drm = NULL;
+		return ret;
+	}
+	gud->drm->dev_private = gud;
+
+	ret = gud_pipe_init(gud);
+	if (ret)
+		goto err_unref;
+
+	ret = drm_dev_register(gud->drm, 0);
+	if (ret)
+		goto err_mode_config;
+
+	return 0;
+
+err_mode_config:
+	drm_mode_config_cleanup(gud->drm);
+err_unref:
+	drm_dev_unref(gud->drm);
+	gud->drm = NULL;
+	return ret;
+}
+
+void gud_drm_fini(struct gud_device *gud)
+{
+	struct drm_device *drm;
+
+	if (!gud->drm)
+		return;
+	drm = gud->drm;
+
+	if (drm->registered) {
+		drm_dev_unregister(drm);
+		drm_dev_unref(drm);
+		return;
+	}
+
+	drm_mode_config_cleanup(drm);
+	drm_dev_unref(drm);
+	gud->drm = NULL;
+}
+
 int gud_get_display_descriptor(struct gud_device *gud)
 {
 	struct gud_display_descriptor_req desc;
@@ -92,6 +184,10 @@ static int gud_probe(struct usb_interface *intf,
 	if (ret)
 		goto err_put_usb;
 
+	ret = gud_drm_init(gud);
+	if (ret)
+		goto err_put_usb;
+
 	usb_set_intfdata(intf, gud);
 	dev_info(&intf->dev, "GUD probe complete for %04x:%04x\n",
 		le16_to_cpu(gud->usb->descriptor.idVendor),
@@ -117,8 +213,12 @@ static void gud_disconnect(struct usb_interface *intf)
 	mutex_unlock(&gud->lock);
 
 	dev_info(&intf->dev, "GUD disconnected\n");
-	usb_put_dev(gud->usb);
-	kfree(gud);
+	if (gud->drm)
+		drm_unplug_dev(gud->drm);
+	else {
+		usb_put_dev(gud->usb);
+		kfree(gud);
+	}
 }
 
 static const struct usb_device_id gud_id_table[] = {

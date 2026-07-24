@@ -19,6 +19,9 @@ struct gud_device {
 	u32 max_height;
 	bool disconnected;
 	struct mutex lock;
+	struct drm_device *drm;
+	struct drm_simple_display_pipe pipe;
+	struct drm_connector connector;
 };
 
 struct gud_gem_object {
@@ -27,7 +30,14 @@ struct gud_gem_object {
 	void *vaddr;
 };
 
+struct gud_framebuffer {
+	struct drm_framebuffer base;
+	struct drm_gem_object *obj;
+};
+
 #define to_gud_gem(gem) container_of(gem, struct gud_gem_object, base)
+#define to_gud_framebuffer(fb) \
+	container_of(fb, struct gud_framebuffer, base)
 
 struct gud_gem_object *gud_gem_create(struct drm_device *dev, size_t size);
 int gud_gem_get_pages(struct gud_gem_object *obj);
@@ -41,5 +51,9 @@ int gud_drm_gem_mmap(struct file *filp, struct vm_area_struct *vma);
 extern const struct vm_operations_struct gud_gem_vm_ops;
 
 int gud_get_display_descriptor(struct gud_device *gud);
+int gud_connector_init(struct gud_device *gud);
+int gud_pipe_init(struct gud_device *gud);
+int gud_drm_init(struct gud_device *gud);
+void gud_drm_fini(struct gud_device *gud);
 
 #endif

@@ -91,6 +91,8 @@ bash tests/env/test-deploy-test.sh
 bash tests/env/test-capture-pi-usb.sh
 bash tests/env/test-probe-test.sh
 bash tests/test-usb-probe-contract.sh
+bash tests/test-gem-contract.sh
+bash tests/test-drm-kms-contract.sh
 ```
 
 All test scripts are hermetic and do not require a phone or kernel tree.
@@ -118,6 +120,54 @@ Ticket 3 has no `/dev/dri/cardX`, so it has no phone-side userspace test.
 Ticket 4 registers the DRM device and must create, map, write, and destroy a
 1280x720 XRGB8888 dumb buffer while retaining `dmesg` evidence with no kernel
 warning.
+
+Before the first Ticket 4 build, confirm required DRM symbols are exported by
+the exact target tree:
+
+```bash
+grep -E 'drm_(dev_alloc|dev_register|dev_unregister|dev_unref|unplug_dev|mode_config_init|mode_config_cleanup|connector_init|connector_cleanup|simple_display_pipe_init|atomic_helper_check|atomic_helper_commit|framebuffer_init|framebuffer_cleanup|gem_object_lookup|gem_handle_create)' \
+    env/local/kernel/build/Module.symvers
+```
+
+Build the phone smoke utility on a host with libdrm development headers:
+
+```bash
+cc -Wall -Wextra -Werror -O2 -o tests/gud-kms-smoke tests/gud-kms-smoke.c -ldrm
+```
+
+If the distribution installs libdrm headers outside the default include path,
+use pkg-config:
+
+```bash
+cc -Wall -Wextra -Werror -O2 $(pkg-config --cflags libdrm) \
+  -o tests/gud-kms-smoke tests/gud-kms-smoke.c $(pkg-config --libs libdrm)
+```
+
+Phone runtime evidence workflow:
+
+```bash
+# Build and load while attached over ADB, then switch to Wi-Fi SSH before
+# attaching the Pi to the phone's only USB-C port.
+cd backport-4.9
+make MANIFEST="$PWD/env/target-manifest.env" modules
+adb push gud.ko /home/phablet/
+adb push tests/gud-kms-smoke /home/phablet/
+ssh phablet@<phone-ip> 'sudo insmod /home/phablet/gud.ko'
+ssh phablet@<phone-ip> 'ls -l /dev/dri && modetest -c -p'
+ssh phablet@<phone-ip> '/home/phablet/gud-kms-smoke /dev/dri/cardX'
+ssh phablet@<phone-ip> 'dmesg' > env/local/evidence/drm-kms-dmesg.txt
+```
+
+Choose `cardX` from `modetest` as the card named `gud`. Save evidence under
+`env/local/evidence/` as:
+
+- `drm-kms-modetest.txt`
+- `drm-kms-smoke.txt`
+- `drm-kms-dmesg.txt`
+
+Required evidence must show one connector/CRTC/encoder topology, XRGB8888,
+preferred `1280x720@60`, and `atomic modeset succeeded`. Reject logs containing
+`BUG:`, `Oops`, `WARNING:`, `lockdep`, or `use-after-free`.
 
 ## Ticket 2 Pi USB Capture
 

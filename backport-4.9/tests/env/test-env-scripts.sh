@@ -20,7 +20,7 @@ assert_file backport-4.9/env/target-manifest.env.example
 for text in 'USB_DEVICE(0x1d50, 0x614d)' 'MODULE_LICENSE("GPL")' 'module_usb_driver'; do
     grep -Fq "$text" "$repo_root/backport-4.9/gud_drv.c" || failures=$((failures + 1))
 done
-if grep -Eq 'alloc_workqueue|drm_dev_register' \
+if grep -Eq 'alloc_workqueue' \
     "$repo_root/backport-4.9/gud_drv.c"; then
     printf 'gud_drv.c contains forbidden driver registration\n' >&2
     failures=$((failures + 1))
