@@ -20,6 +20,16 @@ for text in \
 done
 
 for text in \
+    'GUD connector: detect enter' \
+    'GUD connector: detect status=' \
+    'GUD connector: get_modes enter' \
+    'GUD connector: mode created' \
+    'GUD connector: mode probed' \
+    'GUD connector: get_modes complete'; do
+    require backport-4.9/gud_connector.c "$text"
+done
+
+for text in \
 	'struct drm_device *drm;' \
 	'struct drm_simple_display_pipe pipe;' \
 	'struct drm_connector connector;' \

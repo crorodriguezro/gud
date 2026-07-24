@@ -10,21 +10,26 @@ gud_connector_detect(struct drm_connector *connector, bool force)
 
 	(void)force;
 
+	dev_info(&gud->intf->dev, "GUD connector: detect enter\n");
 	mutex_lock(&gud->lock);
 	status = gud->disconnected ? connector_status_disconnected :
 				     connector_status_connected;
 	mutex_unlock(&gud->lock);
+	dev_info(&gud->intf->dev, "GUD connector: detect status=%d\n", status);
 
 	return status;
 }
 
 static int gud_connector_get_modes(struct drm_connector *connector)
 {
+	struct gud_device *gud = container_of(connector, struct gud_device, connector);
 	struct drm_display_mode *mode;
 
+	dev_info(&gud->intf->dev, "GUD connector: get_modes enter\n");
 	mode = drm_mode_create(connector->dev);
 	if (!mode)
 		return 0;
+	dev_info(&gud->intf->dev, "GUD connector: mode created\n");
 
 	mode->clock = 74250;
 	mode->hdisplay = 1280;
@@ -39,7 +44,9 @@ static int gud_connector_get_modes(struct drm_connector *connector)
 	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
 	drm_mode_set_name(mode);
 	drm_mode_probed_add(connector, mode);
+	dev_info(&gud->intf->dev, "GUD connector: mode probed\n");
 
+	dev_info(&gud->intf->dev, "GUD connector: get_modes complete\n");
 	return 1;
 }
 
