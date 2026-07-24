@@ -28,11 +28,12 @@ same time.
 ## Working Host-Mode Control
 
 On this kernel, the controller mode attribute is writable and forces host
-mode:
+mode. Use interactive `sudo` (do not store passwords in scripts or shell
+history):
 
 ```bash
-ssh phablet@<phone-ip> \
-  "echo <sudo-password> | sudo -S sh -c 'printf host > /sys/bus/platform/devices/a600000.ssusb/mode'"
+ssh -t phablet@<phone-ip> \
+  "printf host | sudo tee /sys/bus/platform/devices/a600000.ssusb/mode >/dev/null"
 ssh phablet@<phone-ip> 'cat /sys/bus/platform/devices/a600000.ssusb/mode'
 ```
 
@@ -115,17 +116,28 @@ The corresponding connector is `/sys/class/drm/card1-Virtual-2`. It can report
 `status=unknown` and an empty `modes` file before userspace probes it; this is
 not evidence that USB enumeration or DRM registration failed.
 
-## Separate Atomic-Modeset Failure
+## Atomic KMS Status
 
-The USB-host, Pi-enumeration, GUD-probe, and DRM-node milestones succeeded.
-The first `gud-kms-smoke /dev/dri/card1` attempt then did not return within two
-minutes. The SSH service subsequently became unreachable. This is an unresolved
-Ticket 4 KMS issue, likely related to the simple pipe's lack of a hardware
-vblank/completion source, not an OTG or GUD USB probe failure.
+The initial connector query reset the phone because the GUD simple pipe lacked
+the initial atomic connector, CRTC, and plane state required by Linux 4.9.
+Calling `drm_mode_config_reset()` after simple-pipe construction fixed that
+query path. The phone now completes DRM resource, connector, encoder/CRTC,
+plane, property, dumb-buffer, framebuffer, atomic-request build, and atomic
+test-only stages.
 
-Until the cause is fixed, do not treat a stalled smoke utility as a reason to
-change cables or host-mode settings. After the phone is reachable again,
-capture the complete kernel log before retrying the modeset.
+The remaining state-applying `atomic-commit` stage does not reset the phone but
+does not complete. Its captured dmesg contains:
+
+```text
+WARNING at drm_atomic_helper_commit_hw_done
+[CRTC:27:crtc-0] flip_done timed out
+```
+
+This is a no-transfer pipe completion problem, not an OTG, USB enumeration, or
+GUD probe problem. Do not change cable or host-mode settings in response to the
+commit timeout. The next kernel change must supply the Linux 4.9 atomic helper
+with a synchronous completion path appropriate for Ticket 4, before any GUD
+frame transfer is added.
 
 ## Evidence Handling
 

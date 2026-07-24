@@ -98,6 +98,7 @@ Ticket 4 is complete at the source/build boundary:
 - New DRM/KMS and helper symbol references are exported by the matching target kernel build.
 - The phone smoke utility compiles with `-Wall -Wextra -Werror` and libdrm.
 - Review findings were corrected: the driver advertises `DRIVER_ATOMIC`, USB disconnect uses `drm_unplug_dev()` to defer final private-state release, and framebuffer creation verifies its memory extent.
+- The Linux 4.9 atomic state initialization gap is corrected with `drm_mode_config_reset()` after simple-pipe construction and before DRM registration.
 
 No phone runtime result is claimed for Ticket 4. The remaining acceptance evidence is:
 
@@ -110,23 +111,33 @@ Ticket 5 must not begin until this real-device userspace evidence is captured. T
 
 ## Ticket 4 Atomic Diagnostic
 
-The first full smoke attempt reset the phone before writing userspace output.
-The staged diagnostic at `backport-4.9/tests/gud-kms-stage.c` narrowed the
-hardware failure boundary with fresh phone evidence:
+The initial connector query reset the phone because the simple pipe's atomic
+connector, CRTC, and plane state had not been initialized. Adding
+`drm_mode_config_reset()` after simple-pipe construction corrected that Linux
+4.9 initialization gap.
 
-- `caps` completed: opening the GUD card and enabling universal-plane and
-  atomic client capabilities are safe.
-- `dumb` completed: 1280x720 32-bpp dumb-buffer create, mmap, write, unmap,
-  and destroy are safe.
-- `fb` completed: XRGB8888 `drmModeAddFB2()` and framebuffer removal are safe.
-- `atomic` reset the phone before any completion output; the live dmesg stream
-  ended with the SSH connection after the GUD re-probe, with no preserved
-  panic, Oops, or watchdog record.
+Fresh phone evidence now passes these stages without a kernel failure record:
 
-The reset is therefore isolated to the atomic stage's KMS resource/property
-setup or `drmModeAtomicCommit()`, not USB enumeration, GEM mmap, or framebuffer
-creation. Do not modify the driver until a second diagnostic splits atomic
-resource discovery/property setup from the actual commit.
+- `caps`: open the GUD DRM card and enable universal-plane and atomic clients.
+- `dumb`: create, map, write, unmap, and destroy a 1280x720 32-bpp dumb buffer.
+- `fb`: create and remove an XRGB8888 framebuffer.
+- `resources`, `connector`, `encoder-crtc`, `planes`, and `properties`: complete
+  DRM/KMS object, fixed-mode, primary-plane, and property enumeration.
+- `atomic-build`: create the mode blob and build the atomic request.
+- `atomic-test`: execute Linux 4.9 atomic property validation without state
+  application.
+
+The remaining first failure is `atomic-commit`. It does not reset the phone,
+but the runner times out after 20 seconds. The captured dmesg contains
+`drm_atomic_helper_commit_hw_done` warnings and repeated
+`[CRTC:27:crtc-0] flip_done timed out` messages. The Ticket 4 no-transfer pipe
+does not currently signal the atomic commit completion expected by the Linux
+4.9 helper.
+
+Do not mark Ticket 4 hardware-complete: a real state-applying atomic commit
+must complete without `WARNING:` or flip-completion timeout evidence. The next
+fix must provide a Ticket 4-appropriate synchronous commit completion path;
+it must not add GUD USB transfer or claim pixels.
 
 ## Constraints
 

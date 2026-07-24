@@ -46,14 +46,18 @@ Use the Linux 4.9 `udl` DisplayLink driver as the main reference for CPU-readabl
 
 ## P0 — Register DRM simple display pipe
 
-- [ ] Initialize `drm_device` using 4.9 APIs.
-- [ ] Initialize `drm_mode_config`.
-- [ ] Register one `drm_simple_display_pipe`.
-- [ ] Support XRGB8888 first.
-- [ ] Replace modern format helpers with a minimal local format layer.
-- [ ] Implement atomic check/update callbacks compatible with 4.9.
+- [x] Initialize `drm_device` using 4.9 APIs.
+- [x] Initialize `drm_mode_config`.
+- [x] Register one `drm_simple_display_pipe`.
+- [x] Support XRGB8888 first.
+- [x] Replace modern format helpers with a minimal local format layer.
+- [x] Implement atomic check/update callbacks compatible with 4.9.
 
-**Done when:** `/dev/dri/cardX` appears and basic DRM ioctls succeed.
+**Source/basic-ioctl evidence:** the Pi hardware test creates `/dev/dri/card1`;
+the GUD card passes caps, dumb-buffer map/write/destroy, XRGB8888 framebuffer,
+KMS enumeration, atomic-request build, and atomic test-only validation. The
+real atomic commit remains blocked on Linux 4.9 `flip_done` completion timeout;
+Ticket 4 is not hardware-complete until that path is fixed without warnings.
 
 ## P0 — Connector and mode enumeration
 
