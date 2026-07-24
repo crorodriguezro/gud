@@ -23,6 +23,7 @@ Read first:
 - `docs/superpowers/specs/2026-07-23-oneplus6-gud-usb-probe-design.md`: Ticket 2 requirements.
 - `docs/superpowers/plans/2026-07-23-oneplus6-gud-usb-probe.md`: Ticket 2 implementation and acceptance procedure.
 - `docs/superpowers/plans/2026-07-23-oneplus6-gud-host-backport.md`: full driver ticket sequence.
+- `docs/oneplus6-usb-host-gud-troubleshooting.md`: validated USB host-mode procedure and the separate Ticket 4 atomic-modeset failure record.
 
 ## Implemented
 
