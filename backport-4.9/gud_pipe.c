@@ -167,6 +167,7 @@ int gud_pipe_init(struct gud_device *gud)
 	if (ret)
 		goto err_mode_config;
 
+	drm_mode_config_reset(gud->drm);
 	return 0;
 
 err_mode_config:

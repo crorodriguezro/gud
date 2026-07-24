@@ -19,6 +19,18 @@ for text in \
 	require backport-4.9/gud_compat_4_9.h "$text"
 done
 
+require backport-4.9/gud_pipe.c 'drm_mode_config_reset(gud->drm);'
+
+pipe_file="$repo_root/backport-4.9/gud_pipe.c"
+pipe_init_line=$(grep -nF 'ret = drm_simple_display_pipe_init' "$pipe_file" | cut -d: -f1)
+reset_line=$(grep -nF 'drm_mode_config_reset(gud->drm);' "$pipe_file" | cut -d: -f1)
+return_line=$(grep -nF 'return 0;' "$pipe_file" | tail -n 1 | cut -d: -f1)
+if [ -z "$pipe_init_line" ] || [ -z "$reset_line" ] || [ -z "$return_line" ] ||
+   [ "$reset_line" -le "$pipe_init_line" ] || [ "$reset_line" -ge "$return_line" ]; then
+    printf 'FAIL [pipe reset ordering]\n' >&2
+    failures=$((failures + 1))
+fi
+
 for text in \
     'GUD connector: detect enter' \
     'GUD connector: detect status=' \
