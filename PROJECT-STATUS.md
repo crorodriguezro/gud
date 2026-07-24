@@ -108,6 +108,26 @@ No phone runtime result is claimed for Ticket 4. The remaining acceptance eviden
 
 Ticket 5 must not begin until this real-device userspace evidence is captured. Ticket 5 will add GUD state programming and the first full-frame USB transfer; it is the first-pixels milestone.
 
+## Ticket 4 Atomic Diagnostic
+
+The first full smoke attempt reset the phone before writing userspace output.
+The staged diagnostic at `backport-4.9/tests/gud-kms-stage.c` narrowed the
+hardware failure boundary with fresh phone evidence:
+
+- `caps` completed: opening the GUD card and enabling universal-plane and
+  atomic client capabilities are safe.
+- `dumb` completed: 1280x720 32-bpp dumb-buffer create, mmap, write, unmap,
+  and destroy are safe.
+- `fb` completed: XRGB8888 `drmModeAddFB2()` and framebuffer removal are safe.
+- `atomic` reset the phone before any completion output; the live dmesg stream
+  ended with the SSH connection after the GUD re-probe, with no preserved
+  panic, Oops, or watchdog record.
+
+The reset is therefore isolated to the atomic stage's KMS resource/property
+setup or `drmModeAtomicCommit()`, not USB enumeration, GEM mmap, or framebuffer
+creation. Do not modify the driver until a second diagnostic splits atomic
+resource discovery/property setup from the actual commit.
+
 ## Constraints
 
 - Do not patch DRM core unless a concrete, documented standalone-module blocker proves it necessary.
