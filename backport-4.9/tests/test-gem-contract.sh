@@ -65,9 +65,9 @@ for text in \
 done
 
 for text in \
-    'if (args->bpp != 32)' \
+    'if (args->bpp != 16)' \
     'if (!args->width || !args->height)' \
-    'if (args->width > U32_MAX / 4)' \
+    'if (args->width > U32_MAX / 2)' \
     'if (args->height > SIZE_MAX / pitch)' \
     'ret = drm_gem_handle_create(file, &obj->base, &args->handle);' \
     'drm_gem_object_unreference_unlocked(&obj->base);' \

@@ -70,17 +70,36 @@ for text in \
 done
 
 for text in \
-	'DRM_FORMAT_XRGB8888' \
+	'DRM_FORMAT_RGB565' \
 	'drm_simple_display_pipe_init' \
 	'if (plane_state->fb &&' \
-	'plane_state->fb->pixel_format != DRM_FORMAT_XRGB8888' \
+	'plane_state->fb->pixel_format != DRM_FORMAT_RGB565' \
 	'min_size + line_bytes > obj->size' \
 	'drm_framebuffer_init' \
 	'drm_gem_object_lookup' \
 	'drm_atomic_helper_check' \
-	'drm_atomic_helper_commit'; do
+	'drm_atomic_helper_commit' \
+	'GUD_REQ_SET_STATE_CHECK' \
+	'GUD_REQ_SET_STATE_COMMIT' \
+	'GUD_REQ_SET_CONTROLLER_ENABLE' \
+	'GUD_REQ_SET_DISPLAY_ENABLE' \
+	'GUD_REQ_SET_BUFFER' \
+	'gud_gem_vmap' \
+	'gud_usb_bulk_write' \
+	'URB_NO_TRANSFER_DMA_MAP' \
+	'usb_submit_urb' \
+	'GUD_DISPLAY_FLAG_STATUS_ON_SET' \
+	'drm_crtc_send_vblank_event' \
+	'crtc->state->event = NULL;' \
+	'spin_lock_irqsave(&crtc->dev->event_lock, flags);'; do
 	require backport-4.9/gud_pipe.c "$text"
 done
+
+if grep -qE 'usb_bulk_msg[[:space:]]*\(' "$repo_root/backport-4.9/gud_pipe.c"; then
+	printf 'FAIL [coherent bulk transfer bypasses its DMA address]: %s\n' \
+		backport-4.9/gud_pipe.c >&2
+	failures=$((failures + 1))
+fi
 
 for text in \
 	'connector_status_connected' \
@@ -93,7 +112,7 @@ for text in \
 	require backport-4.9/gud_connector.c "$text"
 done
 
-for file in backport-4.9/gud_pipe.c backport-4.9/gud_connector.c; do
+for file in backport-4.9/gud_connector.c; do
 	if grep -qE 'usb_(control_msg|bulk_msg)|GUD_REQ_|gud_gem_vmap' "$repo_root/$file"; then
 		printf 'FAIL [forbidden transfer]: %s\n' "$file" >&2
 		failures=$((failures + 1))

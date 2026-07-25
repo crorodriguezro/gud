@@ -49,15 +49,22 @@ Use the Linux 4.9 `udl` DisplayLink driver as the main reference for CPU-readabl
 - [x] Initialize `drm_device` using 4.9 APIs.
 - [x] Initialize `drm_mode_config`.
 - [x] Register one `drm_simple_display_pipe`.
-- [x] Support XRGB8888 first.
+- [x] Support RGB565 for the active USB-transfer MVP.
 - [x] Replace modern format helpers with a minimal local format layer.
 - [x] Implement atomic check/update callbacks compatible with 4.9.
 
 **Source/basic-ioctl evidence:** the Pi hardware test creates `/dev/dri/card1`;
 the GUD card passes caps, dumb-buffer map/write/destroy, XRGB8888 framebuffer,
-KMS enumeration, atomic-request build, and atomic test-only validation. The
-real atomic commit remains blocked on Linux 4.9 `flip_done` completion timeout;
-Ticket 4 is not hardware-complete until that path is fixed without warnings.
+KMS enumeration, atomic-request build, atomic test-only validation, and a real
+state-applying atomic commit. The synchronous no-transfer completion path now
+passes on Linux 4.9 without `WARNING:` or `flip_done` timeout evidence.
+`modetest -M gud -c -p` reports one connected virtual connector, one CRTC and
+primary plane, `XR24` (XRGB8888), and preferred 1280x720@60; the full
+`gud-kms-smoke` run completes its atomic modeset. The matching `dmesg` interval
+contains no `BUG:`, `Oops`, `WARNING:`, `lockdep`, or `use-after-free` record.
+Ticket 4 hardware acceptance is complete for the earlier XRGB8888 build. The
+active Ticket 5 source has since changed the buffer and wire format to RGB565;
+that format change still needs its own phone runtime evidence.
 
 ## P0 — Connector and mode enumeration
 
@@ -70,16 +77,32 @@ Ticket 4 is not hardware-complete until that path is fixed without warnings.
 
 **Done when:** `modetest` or equivalent reports the external connector and valid modes.
 
-## P0 — First framebuffer transfer
+## P0 — First framebuffer transfer (Ticket 5)
 
-- [ ] Implement GUD state check/commit requests.
-- [ ] Implement display/controller enable requests.
-- [ ] Map the current framebuffer for CPU access.
-- [ ] Send a full framebuffer with `GUD_REQ_SET_BUFFER` plus USB bulk transfer.
-- [ ] Split transfers when the GUD device's maximum buffer size requires it.
+- [x] Implement GUD state check/commit requests.
+- [x] Implement display/controller enable requests.
+- [x] Map the current framebuffer for CPU access.
+- [x] Send a full framebuffer with `GUD_REQ_SET_BUFFER` plus USB bulk transfer.
+- [x] Split transfers on complete-row rectangles when the GUD device's maximum buffer size requires it.
 - [ ] Skip DRM damage helpers initially.
 
-**Done when:** a static test pattern appears on the external display.
+**Current evidence:** the active RGB565 source builds and contract tests pass.
+The Pi accepts RGB565 state-check, state-commit, controller/display-enable, and
+`SET_BUFFER`, then waits for its payload. The former host transfer used
+`usb_bulk_msg()`, which discarded the DMA address of its coherent bounce
+buffer and caused the OnePlus 6 xHCI mapping path to return `-EAGAIN`. The
+active source now submits an explicit DMA-mapped URB and needs phone retesting;
+no pixels have appeared yet.
+
+**2026-07-24 retest:** the first two module probes timed out reading the GUD
+descriptor (`-110`). Rebooting the phone restored Pi enumeration and a
+successful GUD descriptor probe; `/dev/dri/card1` was created. The RGB565
+color-bar commit no longer returned `-EAGAIN`, but its first bulk URB timed out
+after three seconds with `-110`. The Pi stayed USB-enumerated, so the next
+diagnostic target is its FunctionFS payload-read path and lost SSH service.
+
+**Done when:** a static RGB565 test pattern appears on the external display
+with a clean matching kernel-log interval.
 
 ## P1 — Lifetime and hot-unplug safety
 
@@ -113,7 +136,7 @@ Ticket 4 is not hardware-complete until that path is fixed without warnings.
 ## P2 — Performance improvements
 
 - [ ] Add damage tracking / partial framebuffer transfers.
-- [ ] Add RGB565 if beneficial for USB bandwidth.
+- [x] Use RGB565 for the active MVP to reduce USB-transfer bandwidth.
 - [ ] Add LZ4 compression.
 - [ ] Benchmark CPU usage and frame rate on OnePlus 6.
 - [ ] Investigate asynchronous USB transfers if synchronous bulk transfer becomes a bottleneck.

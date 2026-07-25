@@ -60,6 +60,19 @@ The phone is not required for normal compile iterations.
 
 Do not claim runtime success based only on compilation.
 
+Before every phone/Pi hardware-test session, read and follow
+`docs/oneplus6-usb-host-gud-troubleshooting.md`. Its start-of-session USB gate
+is mandatory: force the phone controller to `host`, then poll every
+`/sys/bus/usb/devices/*/idVendor` path until `1d50:614d` is found. Do not
+hardcode a USB topology; validated sessions have assigned the Pi both `1-1.2`
+and `1-1.4`. Do not declare enumeration failure from one empty scan, and do not
+let an unrelated sudo check short-circuit the VID/PID scan.
+
+Only after the gate prints `FOUND:` may a session load `gud.ko` or run the KMS
+stages. Use the checked-in `env/kms-stage-test.sh` loop in the troubleshooting
+document so every stage rechecks the Pi, reloads the intended module, and
+captures fresh evidence.
+
 Runtime milestones require testing on the real OnePlus 6 and GUD hardware. Expected manual/local workflow:
 
 ```bash

@@ -12,6 +12,7 @@ struct gud_device {
 	struct usb_interface *intf;
 	u8 bulk_out_endpoint;
 	u8 protocol_version;
+	u32 flags;
 	u32 max_buffer_size;
 	u32 min_width;
 	u32 max_width;

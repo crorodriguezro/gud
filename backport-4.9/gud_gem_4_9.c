@@ -87,14 +87,14 @@ int gud_gem_dumb_create(struct drm_file *file, struct drm_device *dev,
 	size_t pitch, size;
 	int ret;
 
-	if (args->bpp != 32)
+	if (args->bpp != 16)
 		return -EINVAL;
 	if (!args->width || !args->height)
 		return -EINVAL;
-	if (args->width > U32_MAX / 4)
+	if (args->width > U32_MAX / 2)
 		return -EINVAL;
 
-	pitch = ALIGN((size_t)args->width * 4, 4);
+	pitch = ALIGN((size_t)args->width * 2, 4);
 	if (args->height > SIZE_MAX / pitch)
 		return -EINVAL;
 

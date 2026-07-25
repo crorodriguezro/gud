@@ -16,6 +16,14 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
+#ifndef GUD_KMS_COLOR_BARS
+#define GUD_KMS_COLOR_BARS 0
+#endif
+
+#ifndef GUD_KMS_HOLD_SECONDS
+#define GUD_KMS_HOLD_SECONDS 0
+#endif
+
 struct object_props {
 	uint32_t crtc_id;
 	uint32_t mode_id;
@@ -87,6 +95,26 @@ static int get_prop_value(int fd, uint32_t object_id, uint32_t object_type,
 	drmModeFreeObjectProperties(props);
 	return ret;
 }
+
+#if GUD_KMS_COLOR_BARS
+static void paint_test_pattern(void *pixels, uint32_t pitch,
+			       uint32_t width, uint32_t height)
+{
+	static const uint16_t bars[] = {
+		0xffff, 0xffe0, 0x07ff, 0x07e0,
+		0xf81f, 0xf800, 0x001f, 0x0000,
+	};
+	uint32_t y;
+
+	for (y = 0; y < height; y++) {
+		uint16_t *line = (uint16_t *)((uint8_t *)pixels + y * pitch);
+		uint32_t x;
+
+		for (x = 0; x < width; x++)
+			line[x] = bars[(x * 8) / width];
+	}
+}
+#endif
 
 int main(int argc, char **argv)
 {
@@ -263,7 +291,7 @@ int main(int argc, char **argv)
 
 	create.width = 1280;
 	create.height = 720;
-	create.bpp = 32;
+	create.bpp = 16;
 	if (drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &create) < 0) {
 		rc = fail("DRM_IOCTL_MODE_CREATE_DUMB");
 		goto out;
@@ -279,14 +307,18 @@ int main(int argc, char **argv)
 		rc = fail("mmap");
 		goto out;
 	}
+#if GUD_KMS_COLOR_BARS
+	paint_test_pattern(pixels, create.pitch, create.width, create.height);
+#else
 	memset(pixels, 0x5a, create.size);
+#endif
 
 	{
 		uint32_t handles[4] = { create.handle, 0, 0, 0 };
 		uint32_t pitches[4] = { create.pitch, 0, 0, 0 };
 		uint32_t offsets[4] = { 0, 0, 0, 0 };
 
-		if (drmModeAddFB2(fd, create.width, create.height, DRM_FORMAT_XRGB8888,
+		if (drmModeAddFB2(fd, create.width, create.height, DRM_FORMAT_RGB565,
 				  handles, pitches, offsets, &fb_id, 0) != 0) {
 			rc = fail("drmModeAddFB2");
 			goto out;
@@ -330,6 +362,11 @@ int main(int argc, char **argv)
 	       " dumb_handle=%" PRIu32 " fb_id=%" PRIu32 "\n",
 	       card, connector_id, crtc_id, plane_id, create.handle, fb_id);
 	printf("atomic modeset succeeded\n");
+	if (GUD_KMS_HOLD_SECONDS) {
+		printf("holding test pattern for %u seconds\n",
+		       (unsigned int)GUD_KMS_HOLD_SECONDS);
+		sleep(GUD_KMS_HOLD_SECONDS);
+	}
 	rc = 0;
 
 out:

@@ -113,6 +113,40 @@ grep -E '\b(vmap|vunmap|vm_insert_page)\b' env/local/capture/kallsyms.txt
 
 The generated module must reference only target-exported GEM and VM symbols.
 The `gud_gem_4_9.o` object is expected in the module link.
+
+## Ticket 5 First-Pixels Test
+
+Ticket 5 uses a synchronous, full-frame RGB565 DRM framebuffer after an atomic
+modeset. RGB565 matches the validated Pi gadget's transfer format and halves
+the upload size. It accepts only tightly packed 16-bit framebuffers; this
+deliberately avoids row repacking until damage tracking is added. The Pi descriptor's
+`max_buffer_size` limits each `SET_BUFFER` rectangle and bulk USB request. The
+Linux 4.9 xHCI host additionally uses conservative 64 KiB complete-row
+rectangles; a smaller descriptor limit reduces that further. Every USB request
+uses a DMA-coherent bounce buffer because a GEM `vmap()` address is not
+DMA-capable on the target host. The bounce buffer is submitted with an explicit
+URB carrying `URB_NO_TRANSFER_DMA_MAP` and its `usb_alloc_coherent()` DMA
+address; do not replace that with `usb_bulk_msg()`, which cannot preserve this
+mapping on the target xHCI implementation.
+
+Build the deterministic color-bar runner with libdrm:
+
+```bash
+cc -Wall -Wextra -Werror -O2 $(pkg-config --cflags libdrm) \
+  -o tests/gud-kms-fill tests/gud-kms-fill.c $(pkg-config --libs libdrm)
+```
+
+After completing the mandatory USB host-mode and `1d50:614d` enumeration gate,
+push the freshly built module and runner to the phone and run:
+
+```bash
+ssh phablet@<phone-ip> '/home/phablet/gud-kms-fill /dev/dri/cardX'
+```
+
+The runner commits eight vertical color bars and keeps them visible for 30
+seconds. Record its output, the matching `dmesg`, and an observed or photographed
+HDMI pattern. Do not mark Ticket 5 complete until that hardware evidence shows
+no GUD transfer error or kernel warning.
 In particular, verify `drm_gem_get_pages`, `drm_gem_put_pages`,
 `drm_gem_mmap`, and `drm_gem_handle_create` remain target-exported.
 
@@ -171,6 +205,12 @@ preferred `1280x720@60`, and `atomic modeset succeeded`. Reject logs containing
 
 ## Ticket 4 KMS Reset Diagnostic
 
+Before any KMS test in a new session, use the mandatory host-mode and bounded
+VID/PID enumeration gate in
+`../docs/oneplus6-usb-host-gud-troubleshooting.md`. Continue only after it prints
+`FOUND:` for `1d50:614d`. USB paths are dynamic: successful runs have used both
+`1-1.2` and `1-1.4`, so never hardcode either path.
+
 If `gud-kms-smoke` resets the phone before producing output, isolate the first
 failing DRM boundary without changing the kernel driver. Build the stage tool,
 then run stages strictly in this order:
@@ -182,10 +222,10 @@ cc -Wall -Wextra -Werror -O2 -o tests/gud-kms-stage \
 export PHONE_HOST=phablet@192.168.1.120
 export PHONE_SUDO_PASSWORD='<phone sudo password>'
 export STAGE_BINARY="$PWD/tests/gud-kms-stage"
+export MODULE_PATH="$PWD/gud.ko"
 for STAGE in caps dumb fb resources connector encoder-crtc planes properties \
              atomic-build atomic-test atomic-commit; do
-  export STAGE
-  ./env/kms-stage-test.sh || break
+  STAGE="$STAGE" ./env/kms-stage-test.sh || break
 done
 ```
 
@@ -205,8 +245,9 @@ Substage meanings:
 If `atomic-test` is the first failing stage, the fault is in the kernel atomic
 check/property-validation path before display-state application.
 
-Before each stage, confirm the Pi is enumerated as `1d50:614d`, set controller
-mode to `host`, and verify the GUD card exists. The runner writes local ignored
+Before the loop, confirm the Pi is enumerated as `1d50:614d` using the bounded
+gate; do not infer failure from one empty scan. The runner rechecks VID/PID
+before each stage, verifies the GUD card, and writes local ignored
 evidence as `drm-kms-stage-<stage>-{stdout,stderr,exit,dmesg}.txt`. If a stage
 resets the phone, stop the sequence, recover USB/SSH, capture pstore and PMIC
 reset reason, and do not run a later stage.

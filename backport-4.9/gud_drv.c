@@ -128,6 +128,7 @@ int gud_get_display_descriptor(struct gud_device *gud)
 	}
 
 	gud->protocol_version = desc.version;
+	gud->flags = le32_to_cpu(desc.flags);
 	gud->max_buffer_size = le32_to_cpu(desc.max_buffer_size);
 	gud->min_width = le32_to_cpu(desc.min_width);
 	gud->max_width = le32_to_cpu(desc.max_width);
