@@ -39,7 +39,7 @@ Use these states consistently:
 
 | ID | Priority | Owner | State | Required acceptance evidence |
 | --- | --- | --- | --- | --- |
-| `XDISP-P0.1` | Make the Pi FunctionFS first bulk transfer reliable after a gadget rebind or phone reconnect. | `gud-gadget` | blocked | Ten fresh rebind/reconnect cycles complete the first 64 KiB payload without host `-110` timeout. |
+| `XDISP-P0.1` | Make the Pi FunctionFS first bulk transfer reliable after a gadget rebind or phone reconnect. See `docs/superpowers/specs/2026-07-25-xdisp-p0-1-functionfs-rebind-design.md` and its implementation plan. | `gud-gadget` | blocked | Ten fresh rebind/reconnect cycles complete the first 64 KiB payload without host `-110` timeout. |
 | `XDISP-P0.2` | Move GUD presentation off Mir's compositor commit path; retain only the newest pending frame on overload. | `mir-android2-platform-gud` | planned | Phone input and internal display remain responsive while the Pi is slow, absent, or returns an I/O error. |
 | `XDISP-P0.3` | Discover the live GUD DRM card and handle remove/re-add; do not hard-code `card1` or use a symlink. | `mir-android2-platform-gud`, `gud` | planned | Reconnect succeeds when the card number changes, with no manual node changes or compositor restart. |
 | `XDISP-P1.1` | Validate external-output geometry and Lomiri placement, including the intermittent narrow/cropped image. | `mir-android2-platform-gud`, `gud-gadget` | planned | A 1280x720 extended desktop fills the selected output correctly across repeated enable/disable cycles. |
