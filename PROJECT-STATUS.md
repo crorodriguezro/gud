@@ -197,6 +197,25 @@ change or rebuild the OnePlus kernel, `gud.ko`, or Mir. The executable
 procedure and source references are in
 `../gud-gadget/docs/XDISP-P0.1-FUNCTIONFS-REBIND-TEST.md`.
 
+A non-disruptive modern-laptop control materially narrows that decision. After
+physical recovery, the same Pi binary ran at high speed with `g_dma=1` against
+the laptop's upstream Linux 7.0 GUD/xHCI host and appeared in KDE as a
+1920x1080 extended monitor. The Pi completed 953 compressed payloads,
+432,606,856 transfer bytes, and 27,053 of 27,053 FunctionFS reads with zero
+short reads, poisoned transitions, or impossible lengths. Receive processing
+averaged 14.86 ms and total Pi processing averaged 32.48 ms; neither side
+logged a transport or kernel failure.
+
+This proves that 16 KiB reads and DWC2 buffer DMA are not universally broken
+on this Pi. The OnePlus failure is conditional on host, transfer shape,
+timing, or their interaction. The laptop used upstream GUD/xHCI and compressed
+full-screen payloads, whereas the OnePlus uses the Linux 4.9 backport and
+uncompressed 64,000-byte tiles. Keep four reads as the candidate; do not
+restore the 125-read loop. `g_dma=0` remains an OnePlus-specific isolation
+test, not a general laptop requirement. The control is not an OnePlus
+acceptance cycle and does not change the **blocked** status. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-laptop-16k-live-2026-07-25T2256BST/`.
+
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the
 phone because it did synchronous USB work in Mir's commit path, and it has
