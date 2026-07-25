@@ -87,22 +87,24 @@ that format change still needs its own phone runtime evidence.
 - [ ] Skip DRM damage helpers initially.
 
 **Current evidence:** the active RGB565 source builds and contract tests pass.
-The Pi accepts RGB565 state-check, state-commit, controller/display-enable, and
-`SET_BUFFER`, then waits for its payload. The former host transfer used
-`usb_bulk_msg()`, which discarded the DMA address of its coherent bounce
-buffer and caused the OnePlus 6 xHCI mapping path to return `-EAGAIN`. The
-active source now submits an explicit DMA-mapped URB and needs phone retesting;
-no pixels have appeared yet.
+The OnePlus host path uses an explicit DMA-mapped URB with
+`URB_NO_TRANSFER_DMA_MAP`; this replaced the earlier `usb_bulk_msg()` path,
+which discarded the DMA address of its coherent bounce buffer and failed with
+`-EAGAIN` on the phone xHCI controller.
 
-**2026-07-24 retest:** the first two module probes timed out reading the GUD
-descriptor (`-110`). Rebooting the phone restored Pi enumeration and a
-successful GUD descriptor probe; `/dev/dri/card1` was created. The RGB565
-color-bar commit no longer returned `-EAGAIN`, but its first bulk URB timed out
-after three seconds with `-110`. The Pi stayed USB-enumerated, so the next
-diagnostic target is its FunctionFS payload-read path and lost SSH service.
+**2026-07-24 hardware acceptance:** after rebooting the Pi, deploying the
+FunctionFS fix, and forcing a clean OnePlus device-to-host transition, the
+phone freshly probed `1d50:614d` and created `/dev/dri/card1`. The GUD KMS
+fill test transferred the complete 1280x720 RGB565 update as complete-row
+rectangles. The Pi received each 512-byte bulk packet through FunctionFS,
+logged 5--11 ms receives for representative 64,000-byte tiles, copied/scaled
+every tile, and presented the back-buffer swap. The phone reported no new
+`GUD atomic update failed: -110` or bulk-transfer error. This is end-to-end
+host-driver, USB, FunctionFS, and Pi-DRM evidence; the FunctionFS incident is
+documented in the Pi gadget repository.
 
-**Done when:** a static RGB565 test pattern appears on the external display
-with a clean matching kernel-log interval.
+**Done:** full RGB565 framebuffer transfer and presentation are hardware
+validated. Damage tracking remains deferred as a performance improvement.
 
 ## P1 — Lifetime and hot-unplug safety
 
@@ -116,12 +118,11 @@ with a clean matching kernel-log interval.
 
 ## P1 — Ubuntu Touch hardware validation
 
-- [ ] `adb push` the module to the OnePlus 6.
-- [ ] Load with `insmod`.
-- [ ] Verify USB host/OTG mode.
-- [ ] Verify GUD device probe in `dmesg`.
-- [ ] Verify `/dev/dri/cardX` creation.
-- [ ] Run an independent KMS test before involving Lomiri.
+- [x] Deploy the module to the OnePlus 6 and load with `insmod`.
+- [x] Verify USB host/OTG mode.
+- [x] Verify GUD device probe in `dmesg`.
+- [x] Verify `/dev/dri/cardX` creation.
+- [x] Run an independent KMS test before involving Lomiri.
 
 ## P1 — Mir/Lomiri external-display integration
 

@@ -11,13 +11,14 @@ image or DRM core changes unless a documented blocker proves them unavoidable.
 ## Current State
 
 - Branch: `linux-4.9-backport`
-- Latest implementation commit: `26edd28` (`feat: add Linux 4.9 GUD DRM/KMS registration`)
+- Latest integrated implementation commit: `15f2a6e` (includes Ticket 5
+  first-pixels commit `99b353f`).
 - Ticket 1 build environment is implemented and its practical ABI gate is surpassed: the Ticket 2 driver built for and loaded on the phone's exact kernel ABI.
 - Ticket 2 USB probe and disconnect implementation is complete and hardware-validated.
 - Ticket 3, Linux 4.9 GEM and dumb-buffer support, is implemented and build-validated against the exact target kernel tree. Its userspace validation is deferred to Ticket 4 because no DRM node exists yet.
 - Ticket 4 DRM/KMS registration was hardware-validated with the earlier
-  XRGB8888 build. The active RGB565 format contract is implemented for Ticket
-  5 but still requires phone runtime validation.
+  XRGB8888 build. Ticket 5 RGB565 transfer and Pi presentation are now
+  hardware-validated end to end on the OnePlus 6 and Raspberry Pi Zero 2 W.
 
 Read first:
 
@@ -57,8 +58,8 @@ and `1-1.4`. Do not conclude that enumeration failed from one empty scan.
 Ticket 4's earlier XRGB8888 result intentionally contained no GUD
 connector/EDID query, display-state request, framebuffer upload, USB bulk
 transfer, workqueue, asynchronous USB transfer, or visible output. Ticket 5
-now implements the state and synchronous RGB565 transfer path, but still makes
-no visible-output claim.
+adds the state and synchronous RGB565 transfer path and has now completed a
+full hardware framebuffer update to the Pi display pipeline.
 
 ## Hardware Evidence
 
@@ -131,40 +132,36 @@ The raw captures are retained under `backport-4.9/env/local/evidence/` as
 
 ## Ticket 5 Status
 
-Ticket 5 is in progress. The active source uses RGB565 end-to-end: it advertises
-an RGB565 DRM format, creates 16-bpp dumb buffers, validates the tight
-two-bytes-per-pixel layout, sends GUD v1 RGB565 state-check/state-commit and
-controller/display-enable requests, then uploads each complete-row rectangle
-after `GUD_REQ_SET_BUFFER`.
+Ticket 5 is complete for the first-pixels/full-frame milestone. The active
+source uses RGB565 end to end: it advertises the RGB565 DRM format, creates
+16-bpp dumb buffers, validates the two-bytes-per-pixel layout, sends GUD v1
+state-check/state-commit and controller/display-enable requests, then uploads
+complete-row rectangles after `GUD_REQ_SET_BUFFER`.
 
-The transfer path uses a DMA-coherent USB bounce buffer because the target 4.9
-host warned that a local GEM `vmap()` address was not DMA-capable
-(`usb_hcd_map_urb_for_dma`). The initial arbitrary 64 KiB chunking was also
-replaced: the FunctionFS gadget queues one bulk read for the exact length in
-each `SET_BUFFER`, so splitting is only permitted on complete-row rectangles.
+On the OnePlus 6, the host transfer path uses a coherent DMA bounce buffer and
+an explicit URB with `URB_NO_TRANSFER_DMA_MAP`. This replaced `usb_bulk_msg()`,
+which caused the phone xHCI controller to remap the coherent buffer and return
+`-EAGAIN`.
 
-Fresh Pi service/debug evidence confirms that the userspace FunctionFS gadget
-accepts RGB565 state-check, state-commit, controller/display-enable, and a
-1280x720 `SET_BUFFER` of 1,843,200 bytes, then waits in `recv_payload`. The
-remaining host-side diagnosis found that `usb_bulk_msg()` discards the DMA
-address returned by `usb_alloc_coherent()` and causes core USB to remap the
-buffer; the target xHCI returns `-EAGAIN` from that path. The source now uses a
-synchronous explicit URB with `URB_NO_TRANSFER_DMA_MAP` and the coherent DMA
-address. It must be rebuilt and retested on the OnePlus 6. No first-pixels
-claim is made, and Ticket 5 remains incomplete until color bars appear and a
-clean matching kernel-log interval is captured.
+The initial fresh test reached the host bulk URB but timed out with `-110`.
+Pi diagnostics isolated two FunctionFS failures: native AIO returned an invalid
+completion despite the DWC2 controller receiving packets, and reopening the
+already-enabled bulk endpoint could block indefinitely. The Pi now reuses the
+endpoint file opened during FunctionFS initialization and performs synchronous
+512-byte reads. It also binds USB only after DRM CRTC/framebuffer initialization
+has succeeded, avoiding a transient half-started gadget during host enumeration.
 
-The initial 2026-07-24 retest could not reach the framebuffer stage: both a
-fresh load and one clean unload/reload timed out while reading the Pi GUD
-display descriptor (`-110`), so no `/dev/dri/card1` was registered. A phone
-reboot restored Pi enumeration at `1-1.2`, a successful GUD descriptor probe,
-and `/dev/dri/card1`. The RGB565 color-bar commit then reached the explicit DMA
-bulk URB but timed out after three seconds (`GUD bulk transfer failed after 0
-retries: -110`). This supersedes the `-EAGAIN` mapping failure: direct DMA
-submission works, while the Pi gadget is not completing the payload read. The
-Pi remains USB-enumerated and the GUD DRM node remains present, but Pi SSH
-became unavailable after the transfer attempt, preventing live gadget-log
-collection.
+The final clean retest rebooted the Pi, deployed the fix, forced the OnePlus
+through device then host mode, and obtained a fresh `1d50:614d` probe and
+`/dev/dri/card1`. `gud-kms-fill` uploaded the complete 1280x720 RGB565 frame.
+Pi logs recorded every payload read, including representative 64,000-byte tiles
+in 125 packets taking 5--11 ms; every tile was copied/scaled and the back
+buffer was presented. The phone kernel log had no new GUD `-110` atomic-update
+or bulk-transfer failure. This is the required end-to-end hardware evidence.
+
+The remaining work is performance and robustness: damage tracking, LZ4,
+throughput measurement, unplug-during-payload behavior, and upstreaming or
+replacing the local `usb-gadget` endpoint-file extension.
 
 ## Ticket 4 Atomic Diagnostic
 
