@@ -155,6 +155,15 @@ creates the output is not sufficient.
 - [ ] `XDISP-P2.1` — record end-to-end frame rate, latency, CPU use, and
   frame-drop behavior for the extended-display path before claiming it is
   usable.
+  - Run a controlled 512-byte versus 16 KiB FunctionFS read benchmark only
+    after `XDISP-P0.1` is stable; the user currently reports no noticeable
+    subjective difference.
+  - Hold host, mode, compression, content, and duration constant; record
+    presented FPS, dropped frames, median/tail latency, Pi and host CPU, USB
+    throughput, and errors.
+  - Implement any 512-byte comparison with the current poison/teardown
+    containment; do not redeploy the old artifact or treat it as the
+    reliability fallback or normal default.
 - [ ] Add damage tracking / partial framebuffer transfers.
 - [x] Use RGB565 for the active MVP to reduce USB-transfer bandwidth.
 - [ ] Add LZ4 compression.

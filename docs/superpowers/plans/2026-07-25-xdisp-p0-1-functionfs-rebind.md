@@ -90,6 +90,13 @@ Execute the following plan in order:
    official ten-cycle matrix from cycle 1, retaining evidence through the
    `gud` procedures.
 
+Actual execution order is now recorded separately from the original numbered
+proposal: Steps 1, 2, and 5 are implemented and hardware-exercised; the modern
+laptop transfer-shape control inserted below is next; Step 3 (`g_dma=0`) is
+conditional on that result; Step 4 remains conditional; and Step 6 is blocked.
+The unchecked baseline tasks above are historical planning text and must not
+be interpreted as authorization to repeat an unchanged failing payload.
+
 Step 1 is containment, not verification. It must not change the status or
 authorize `XDISP-P0.2`.
 
@@ -237,17 +244,16 @@ logged fresh bulk/atomic `-110` and control request `0x64` `-110`, so tool
 return status is not transfer proof. Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step5-16k-first-hardware-2026-07-25T2214BST/`.
 
-Keep `XDISP-P0.1` blocked. Do not stop/restart or retry any read size on the
-poisoned boot. Recover only by physical/hardware/watchdog reset. The next
-diagnostic is DWC2 gadget DMA isolation with `g_dma=0`; do not run the 64 KiB
-A/B, return to 512 bytes, or begin the acceptance matrix first.
+Keep `XDISP-P0.1` blocked. That failed boot was poisoned and was subsequently
+physically recovered. Any future poisoned boot permits no stop/restart or
+read-size retry and requires physical/hardware/watchdog reset. Do not run the
+old 64 KiB A/B, return to 512 bytes, or begin the acceptance matrix.
 
-**Read-count and DMA-isolation decision (2026-07-25):** retain the
+**Initial read-count and DMA-isolation decision (2026-07-25):** retain the
 configurable four-read 16 KiB implementation, but do not accept it as the
-normal default until the DMA-isolation gate passes. Do not restore the
-historical 125-read loop as a fix. The next experiment keeps the four-read
-userspace binary and host/wire behavior constant and changes only Pi DWC2
-gadget data movement from `g_dma=1` buffer DMA to `g_dma=0` slave/PIO mode.
+normal default until the changed-variable reliability gates pass. Do not
+restore the historical 125-read loop as a fix. DMA isolation was initially
+next; the later laptop result and revision below supersede that ordering.
 
 Read-only inspection of the exact Pi established
 `6.12.47+rpt-rpi-v8`, `CONFIG_USB_DWC2=y`, no `g_dma` module parameter, no
@@ -259,6 +265,44 @@ with `p->g_dma = false` in the Broadcom callback in
 This does not modify the OnePlus kernel. The exact safety and verification
 procedure is maintained in
 `../../../../gud-gadget/docs/XDISP-P0.1-FUNCTIONFS-REBIND-TEST.md`.
+
+**Revision after the modern-laptop control (2026-07-25):** do not compile the
+Pi `g_dma=0` kernel first. The laptop proved 16 KiB reads and `g_dma=1` can
+complete sustained traffic, and the user noticed no visible-performance
+difference from the old 512-byte read granularity. Performance benchmarking is
+out of scope here and is deferred to `XDISP-P2.1`.
+
+Run userspace-only transfer-shape controls first. Add test-only gadget
+descriptor controls for compression disabled and optional
+`max_buffer_size=64000`, leaving the normal LZ4/natural-size defaults
+unchanged. Descriptor changes require fresh enumeration. After the current
+laptop session ends cleanly, use a fresh Pi boot with the same 16 KiB binary
+and `g_dma=1`, then run two single-payload gates at RGB565 1280x720:
+
+1. Advertise `max_buffer_size=64000` with LZ4 retained. This isolates the
+   25-row `SET_BUFFER` tiling/control cadence while actual bulk data remains
+   compressed.
+2. Only after a clean first gate and a new boot/enumeration, disable
+   compression with the same maximum. This produces the OnePlus-shaped
+   64,000-byte normal bulk payloads and 51,200-byte tail at the protocol level.
+
+Capture usbmon and full host/Pi logs for each gate. Usbmon must prove the
+underlying laptop URB count and length: upstream uses an SG-backed buffer,
+while the OnePlus backport uses one linear DMA-coherent URB with
+`URB_NO_TRANSFER_DMA_MAP`.
+
+- If the first gate fails, tiling/control cadence is implicated.
+- If the first passes and the second fails, uncompressed 64,000-byte bulk
+  behavior is implicated.
+- If both pass, leave the Pi kernel unchanged and compare the laptop upstream
+  GUD/xHCI path against separately named OnePlus diagnostic module variants
+  for chunk size and DMA mapping. Preserve the normal module and reconsider
+  `g_dma=0` only after those no-Pi-kernel-build controls.
+
+Any anomaly is terminal for that boot. Neither outcome starts the mini-cycles
+or changes `XDISP-P0.1` from **blocked**. One complete OnePlus frame and a safe
+controlled stop/start remain prerequisites for three mini-cycles and the
+ten-cycle matrix.
 
 The previously outstanding post-payload crash evidence is preserved under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step2-predeploy-2026-07-25/`.

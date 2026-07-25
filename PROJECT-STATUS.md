@@ -170,19 +170,18 @@ kernel log recorded bulk and atomic-update `-110`, followed by request `0x64`
 
 Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step5-16k-first-hardware-2026-07-25T2214BST/`.
-Keep `XDISP-P0.1` **blocked**. Do not stop, restart, reboot, or shut down the
-current poisoned Pi instance, and do not retry 16 KiB, 64 KiB, or 512 bytes.
-Recover by physical power cycle, hardware reset, or watchdog reset. The next
-diagnostic is DWC2 gadget DMA isolation with `g_dma=0`; do not start Step 5
-mini-cycles, the ten-cycle matrix, or `XDISP-P0.2` first.
+That failed Pi boot was poisoned and was subsequently physically recovered.
+For any future poisoned instance, do not stop, restart, reboot, shut down, or
+retry another read size; recover by physical power cycle, hardware reset, or
+watchdog reset. Keep `XDISP-P0.1` **blocked** and do not start Step 5
+mini-cycles, the ten-cycle matrix, or `XDISP-P0.2` yet.
 
 **Read-count/DMA decision (2026-07-25):** keep the configurable four-read
 16 KiB strategy in `gud-gadget`, but do not accept it as the normal default
-until it passes the DMA-isolation gate. Do not restore the 125-read 512-byte
-loop as a fix; that path has an active-payload stall and allocator-corruption
-result. The next test holds the host URB, 512-byte wire packets, four
-FunctionFS reads, userspace binary, and OnePlus module constant and changes
-only Pi DWC2 gadget data movement from buffer DMA to slave/PIO mode.
+until the changed-variable reliability gates pass. Do not restore the 125-read
+512-byte loop as a fix; that path has an active-payload stall and
+allocator-corruption result. The initial next action was DMA isolation; the
+later laptop result and revised next steps below supersede that ordering.
 
 The installed Pi kernel is `6.12.47+rpt-rpi-v8` with
 `CONFIG_USB_DWC2=y`. It has no `g_dma` module parameter, its `dwc2` overlay
@@ -215,6 +214,40 @@ restore the 125-read loop. `g_dma=0` remains an OnePlus-specific isolation
 test, not a general laptop requirement. The control is not an OnePlus
 acceptance cycle and does not change the **blocked** status. Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.1-laptop-16k-live-2026-07-25T2256BST/`.
+
+**Performance decision (2026-07-25):** the user noticed no visible-performance
+difference between the previous 512-byte userspace reads and the 16 KiB
+strategy. This was not a controlled A/B and creates no performance claim.
+Keep 16 KiB for reduced request churn and diagnostics. Defer an identical-
+workload comparison—including presented FPS, latency, dropped frames, host/Pi
+CPU, and USB throughput—to `XDISP-P2.1` after reliability is stable. Do not
+restore 512-byte reads during `XDISP-P0.1` for benchmarking.
+
+**Revised next steps:** prefer userspace-only transfer-shape controls before
+compiling a `g_dma=0` Pi kernel:
+
+1. Preserve the final counters from the current healthy laptop session, then
+   physically disconnect it and require a clean detached/idle Pi state.
+2. Add test-only `gud-gadget` descriptor controls for compression disabled and
+   optional `max_buffer_size=64000`, with normal LZ4/natural-size defaults
+   unchanged and fresh enumeration required after descriptor changes.
+3. On a fresh Pi boot, keep `GUD_FFS_READ_SIZE=16384` and `g_dma=1`, use the
+   modern laptop at RGB565 1280x720 with `max_buffer_size=64000` and LZ4, and
+   capture one deterministic frame plus usbmon. This isolates the 25-row
+   `SET_BUFFER` tiling/control cadence while retaining compressed bulk data.
+4. Only after that passes, use another fresh boot/enumeration with compression
+   disabled and the same maximum. This creates the OnePlus's 64,000-byte
+   normal protocol payloads and 51,200-byte tail. Usbmon must prove actual URB
+   segmentation; upstream uses an SG-backed buffer while the OnePlus uses one
+   linear DMA-coherent URB.
+5. A first-control failure implicates tiling/control cadence; a compressed pass
+   followed by an uncompressed failure implicates 64,000-byte bulk behavior.
+   If both pass, leave the Pi kernel unchanged and use only separately named
+   OnePlus diagnostic module artifacts—preserving the normal module—to isolate
+   chunk size and DMA mapping before reconsidering `g_dma=0`.
+6. After one clean OnePlus frame and safe stop/start, run three mini-cycles,
+   then restart the ten-cycle matrix at cycle 1. Keep `XDISP-P0.1` blocked and
+   do not start `XDISP-P0.2` beforehand.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the
@@ -353,9 +386,11 @@ The initial fresh test reached the host bulk URB but timed out with `-110`.
 Pi diagnostics isolated two FunctionFS failures: native AIO returned an invalid
 completion despite the DWC2 controller receiving packets, and reopening the
 already-enabled bulk endpoint could block indefinitely. The Pi now reuses the
-endpoint file opened during FunctionFS initialization and performs synchronous
-512-byte reads. It also binds USB only after DRM CRTC/framebuffer initialization
-has succeeded, avoiding a transient half-started gadget during host enumeration.
+endpoint file opened during FunctionFS initialization. The original repair
+used synchronous 512-byte reads; the current candidate performs exact-length
+reads capped at 16 KiB. It also binds USB only after DRM CRTC/framebuffer
+initialization has succeeded, avoiding a transient half-started gadget during
+host enumeration.
 
 The final clean retest rebooted the Pi, deployed the fix, forced the OnePlus
 through device then host mode, and obtained a fresh `1d50:614d` probe and

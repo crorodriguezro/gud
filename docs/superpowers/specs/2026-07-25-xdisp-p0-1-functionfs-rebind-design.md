@@ -71,6 +71,9 @@ For each fresh Pi gadget rebind or OnePlus reconnect:
   readiness from this work.
 - The local Pi 1280x720 HDMI-mode preference is a separate, unverified scaling
   experiment; it is out of scope for transport reliability.
+- Subjective visible performance and 512-byte-versus-16 KiB read-granularity
+  benchmarking are outside P0.1 acceptance. They are deferred to
+  `XDISP-P2.1`; no reliability cycle may be repurposed as a performance A/B.
 
 ## Observability contract
 
