@@ -58,6 +58,8 @@ Read first:
 - `BACKLOG.md`: ordered milestones; update only with evidence-backed completion.
 - The cross-repository priority table above: the source of truth for the
   extended-display work spanning all three repositories.
+- `docs/superpowers/CROSS-REPOSITORY-WORKFLOW.md`: placement, lifecycle, and
+  evidence rules for future cross-repository specifications and plans.
 - `docs/superpowers/specs/2026-07-23-oneplus6-gud-usb-probe-design.md`: Ticket 2 requirements.
 - `docs/superpowers/plans/2026-07-23-oneplus6-gud-usb-probe.md`: Ticket 2 implementation and acceptance procedure.
 - `docs/superpowers/plans/2026-07-23-oneplus6-gud-host-backport.md`: full driver ticket sequence.
