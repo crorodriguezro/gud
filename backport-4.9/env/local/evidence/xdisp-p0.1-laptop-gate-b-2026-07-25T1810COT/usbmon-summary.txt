@@ -1,0 +1,34 @@
+pcap_records=1166
+pcap_packets_dropped=0
+gud_bus=1
+gud_device=4
+gud_records=96
+set_buffer_submits=2
+set_buffer_successful_completes=1
+bulk_submits=1
+bulk_completes=1
+bulk_submit_length=61440
+bulk_complete_actual_length=18432
+bulk_complete_status=-104
+bulk_elapsed_us=3033326
+initial_set_buffer_rect=1920x16
+initial_set_buffer_length=61440
+initial_set_buffer_compression=0
+initial_set_buffer_compressed_length=0
+later_control_complete_status_minus_2=19
+
+The first SET_BUFFER control transfer completed successfully. Its single
+61,440-byte bulk URB was submitted immediately afterward. The bulk URB
+completed 3.033326 seconds later with status -104 (ECONNRESET) and an actual
+length of 18,432 bytes. No second bulk URB was submitted. A second identical
+SET_BUFFER was attempted later, after the gadget receive session had entered
+its terminal poisoned state, and did not complete successfully.
+
+The Pi's matching first 16,384-byte FunctionFS read returned the unsigned value
+18446744073709045760, which is signed -505856. The preserved DWC2 ep1out
+snapshot reports DOEPTSIZ=0x0007f800, whose transfer-size residual is 522,240:
+
+    16384 - 522240 = -505856
+
+This exact equality ties the impossible userspace read result to the DWC2
+endpoint residual rather than to a short host submission.

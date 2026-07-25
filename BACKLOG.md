@@ -138,6 +138,12 @@ architecture decision.
 
 - [ ] `XDISP-P0.1` — Pi FunctionFS first-transfer reliability is verified over
   ten fresh rebind/reconnect cycles. Owner: `gud-gadget`.
+  - Laptop Gate A passed with LZ4; Gate B reproduced the impossible DWC2
+    residual on the first upstream-host uncompressed 61,440-byte URB. The
+    OnePlus backport is not a necessary trigger.
+  - Before a `g_dma=0` kernel, test fresh-boot uncompressed complete-row maxima
+    of 15,360, 30,720, 46,080, then 53,760 bytes, advancing only after a clean
+    frame and safe stop. The known 61,440-byte failure is the upper bound.
 - [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
   phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
 - [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume

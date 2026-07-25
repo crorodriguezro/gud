@@ -272,37 +272,50 @@ complete sustained traffic, and the user noticed no visible-performance
 difference from the old 512-byte read granularity. Performance benchmarking is
 out of scope here and is deferred to `XDISP-P2.1`.
 
-Run userspace-only transfer-shape controls first. Add test-only gadget
-descriptor controls for compression disabled and optional
-`max_buffer_size=64000`, leaving the normal LZ4/natural-size defaults
-unchanged. Descriptor changes require fresh enumeration. After the current
-laptop session ends cleanly, use a fresh Pi boot with the same 16 KiB binary
-and `g_dma=1`, then run two single-payload gates at RGB565 1280x720:
+The userspace-only transfer-shape controls are implemented with normal
+LZ4/natural-size defaults unchanged. The final compressed laptop control
+reached 4,786 payloads and stopped cleanly after physical detach.
 
-1. Advertise `max_buffer_size=64000` with LZ4 retained. This isolates the
-   25-row `SET_BUFFER` tiling/control cadence while actual bulk data remains
-   compressed.
-2. Only after a clean first gate and a new boot/enumeration, disable
-   compression with the same maximum. This produces the OnePlus-shaped
-   64,000-byte normal bulk payloads and 51,200-byte tail at the protocol level.
+Gate A then advertised `max_buffer_size=64000` with LZ4. Usbmon captured 5,671
+matched SET_BUFFER/bulk pairs with no error, including 15 complete 1280x720
+frames. All actual compressed bulk URBs were 131--12,600 bytes. Gate A passed.
 
-Capture usbmon and full host/Pi logs for each gate. Usbmon must prove the
-underlying laptop URB count and length: upstream uses an SG-backed buffer,
-while the OnePlus backport uses one linear DMA-coherent URB with
-`URB_NO_TRANSFER_DMA_MAP`.
+Gate B disabled compression on a fresh boot. KDE restored 1920x1080, producing
+a first 1920x16/61,440-byte rectangle. The SET_BUFFER completed and the
+upstream GUD/xHCI host submitted one 61,440-byte bulk URB. It completed
+cancelled (`-104`) after 18,432 bytes and 3.033326 seconds while the host logged
+`-110`. The Pi's first 16,384-byte read returned signed `-505856`, exactly
+matching `16384 - 522240` from ep1 OUT `DOEPTSIZ=0x7f800`. Gate B therefore
+reproduced the DWC2 residual failure without the OnePlus backport.
 
-- If the first gate fails, tiling/control cadence is implicated.
-- If the first passes and the second fails, uncompressed 64,000-byte bulk
-  behavior is implicated.
-- If both pass, leave the Pi kernel unchanged and compare the laptop upstream
-  GUD/xHCI path against separately named OnePlus diagnostic module variants
-  for chunk size and DMA mapping. Preserve the normal module and reconsider
-  `g_dma=0` only after those no-Pi-kernel-build controls.
+Containment parked the service without teardown. Evidence was copied before a
+physical reset; the previous-boot journal was then retained, both pstore
+captures were empty, watchdog bootstatus was zero, and there was no DWC2 stop
+timeout or Oops. The failed drop-in is quarantined and the recovered service
+is disabled/inactive.
 
-Any anomaly is terminal for that boot. Neither outcome starts the mini-cycles
-or changes `XDISP-P0.1` from **blocked**. One complete OnePlus frame and a safe
-controlled stop/start remain prerequisites for three mini-cycles and the
-ten-cycle matrix.
+**Revision after Gate B (2026-07-25):** do not repeat the unchanged
+61,440-byte failure and do not compile `g_dma=0` yet. Establish an uncompressed
+safe-length ceiling with the existing descriptor control:
+
+1. Gate C: fresh boot, `g_dma=1`, 16 KiB reads, compression disabled, and
+   `max_buffer_size=15360`. This is packet aligned and exactly 4 RGB565 rows at
+   1920 width or 6 rows at 1280 width, so it is one URB/read in either mode.
+2. Require a complete frame with exact usbmon/read matching, physical detach,
+   an `Idle` receive session, and a controlled exit-zero stop. Any anomaly is
+   terminal for that boot.
+3. If Gate C passes, repeat on separate fresh boots at 30,720, 46,080, then
+   53,760 bytes. Stop on the first anomaly; the known 61,440-byte failure is
+   already the upper bound.
+4. Treat the largest clean value as a userspace mitigation candidate. Verify it
+   first on the laptop, then with the unchanged normal OnePlus module for one
+   full frame and a safe restart.
+5. Reconsider one isolated `g_dma=0` Pi test kernel only if Gate C fails or the
+   ladder yields no usable safe value.
+
+No gate starts the mini-cycles or changes `XDISP-P0.1` from **blocked**. One
+complete OnePlus frame and a safe controlled stop/start remain prerequisites
+for three mini-cycles and the ten-cycle matrix.
 
 The previously outstanding post-payload crash evidence is preserved under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step2-predeploy-2026-07-25/`.
