@@ -197,7 +197,7 @@ static int gud_pipe_transfer(struct gud_device *gud,
 		return -EINVAL;
 	/*
 	 * vmap() memory is not necessarily DMA-addressable on this 4.9 USB host.
-	 * The gadget queues one bulk request per SET_BUFFER, so each DMA-coherent
+	 * The host sends one bulk URB per SET_BUFFER, so each DMA-coherent
 	 * bounce buffer contains complete rows for exactly one buffer rectangle.
 	 */
 	bytes_per_line = (size_t)plane_state->fb->width * 2;

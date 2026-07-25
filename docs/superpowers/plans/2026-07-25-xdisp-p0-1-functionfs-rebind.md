@@ -57,7 +57,7 @@ lifecycle.
 
 **2026-07-25 diagnostic finding:** This boundary is now after successful host
 bulk completion but before Pi userspace read completion. The OnePlus submitted
-the first 64 KiB URB and its callback reported `status=0 actual=64000`; Pi
+the first 64,000-byte URB and its callback reported `status=0 actual=64000`; Pi
 `gud-drm` had validated the matching `SET_BUFFER` and entered its 512-byte
 FunctionFS receive loop without reporting aggregate payload completion, then
 the next control request timed out. The current logging does not identify
@@ -164,16 +164,66 @@ stop/restart. The later two-boot recovery evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.1-exit0-hardware-blocked-2026-07-25/`.
 
 Recovery after two Pi restarts retained that failed payload as boot `-2`.
-The service accepted the first 64,000-byte `SET_BUFFER` and blocked in its
-first FunctionFS read. Fifteen seconds later the kernel Oopsed in
-`__kmalloc_noprof` while `sshd-session` loaded an ELF binary, with
-`f81ff81ff81ff81f` in allocator state and a bad RSS-counter report. No
+The service accepted the first 64,000-byte `SET_BUFFER` and entered its
+512-byte FunctionFS loop without an aggregate completion. The old logging
+cannot identify which of its 125 reads stalled. Fifteen seconds later the
+kernel Oopsed in `__kmalloc_noprof` while `sshd-session` loaded an ELF binary,
+with `f81ff81ff81ff81f` in allocator state and a bad RSS-counter report. No
 SIGTERM, DWC2 endpoint-stop timeout, FunctionFS teardown, or DRM release ran.
 This moves the stop condition ahead of cleanup: do not retry the existing
 512-byte receive loop. The next userspace experiment must be the planned
 aligned read-size test; only use DWC2 DMA isolation if that remains necessary.
 The current service is failed after the separate boot-time `set_crtc`/`EACCES`
 race, and the UDC is `not attached`; leave it stopped.
+
+**Step 5 implementation completed locally (2026-07-25): hardware pending.**
+The `gud-gadget` blocking path still reuses the endpoint file opened during
+FunctionFS initialization and does not return to native AIO. It now validates
+`GUD_FFS_READ_SIZE` as a 512-byte-aligned ceiling from 4,096 through 65,536
+bytes and queues exactly `min(remaining_payload, ceiling)` for each syscall.
+The tracked first-test setting is 16,384 bytes, so a normal 64,000-byte tile
+uses `[16384, 16384, 16384, 14848]`; the exact tail is never padded. The caller
+atomically changes `Idle -> InFlight` before blocking, and `SIGTERM` may claim
+teardown only from `Idle`. A short, zero, failed, or more-than-one-second
+completion does not queue another read and permanently poisons that process
+when it returns. One second is a conservative threshold relative to the
+observed 5--11 ms receives, not a userspace timeout; a hung read remains
+`InFlight`. In-flight and poisoned processes refuse further USB/control
+processing and require a physical power cycle, hardware reset, or watchdog
+reset rather than graceful teardown.
+
+Structured logs identify the payload sequence, read index, requested/result
+bytes, remaining bytes, and per-read duration. Aggregate `frame_stats`
+separates `read_calls` from `usb_packets_est`. Focused tests cover the
+16 KiB first-test strategy, a later 64 KiB one-read A/B case, the 51,200-byte
+final tile, ceiling splitting, an unaligned exact tail, short/zero completions,
+endpoint I/O errors, caller-level receive poisoning, in-flight shutdown
+exclusion, late-completion poisoning, post-read isolation, and idle shutdown
+claiming. All 39 `gud-gadget` and 17 `gud-drm` tests pass. The local AArch64
+artifact SHA-256 is
+`0c5961daf65a543101bb1727c2c6909a19b5a48ae398cadd94c4c6ebd044b662`.
+
+The Fedora verification host needs its installed cross-toolchain name in
+place of the stale linker/sysroot configured in `.cargo/config.toml`. The
+passing test and release commands use:
+
+```bash
+env CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-redhat-linux-gcc \
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS='-C link-arg=-static-libgcc' \
+    'CC_aarch64-unknown-linux-gnu=aarch64-redhat-linux-gcc' \
+    'CFLAGS_aarch64-unknown-linux-gnu=' \
+    cargo test -p gud-gadget -p gud-drm -- --test-threads=1
+env CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-redhat-linux-gcc \
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUSTFLAGS='-C link-arg=-static-libgcc' \
+    'CC_aarch64-unknown-linux-gnu=aarch64-redhat-linux-gcc' \
+    'CFLAGS_aarch64-unknown-linux-gnu=' \
+    cargo build --release -p gud-drm
+```
+
+The artifact has not been deployed, the Pi service/UDC were not touched, and
+no payload was sent. Keep `XDISP-P0.1` blocked. Start the hardware gate at
+16 KiB; reserve 64 KiB for an optional A/B only after three clean
+payload/teardown/rebind mini-cycles.
 
 The previously outstanding post-payload crash evidence is preserved under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step2-predeploy-2026-07-25/`.

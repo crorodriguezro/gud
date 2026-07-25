@@ -39,27 +39,28 @@ Use these states consistently:
 
 | ID | Priority | Owner | State | Required acceptance evidence |
 | --- | --- | --- | --- | --- |
-| `XDISP-P0.1` | Make the Pi FunctionFS first bulk transfer reliable after a gadget rebind or phone reconnect. See `docs/superpowers/specs/2026-07-25-xdisp-p0-1-functionfs-rebind-design.md` and its implementation plan. | `gud-gadget` | blocked | Ten fresh rebind/reconnect cycles complete the first 64 KiB payload without host `-110` timeout. |
+| `XDISP-P0.1` | Make the Pi FunctionFS first bulk transfer reliable after a gadget rebind or phone reconnect. See `docs/superpowers/specs/2026-07-25-xdisp-p0-1-functionfs-rebind-design.md` and its implementation plan. | `gud-gadget` | blocked | Ten fresh rebind/reconnect cycles complete all 29 tiles of the 1,843,200-byte RGB565 frame, including the first 64,000-byte tile, without host `-110` timeout. |
 | `XDISP-P0.2` | Move GUD presentation off Mir's compositor commit path; retain only the newest pending frame on overload. | `mir-android2-platform-gud` | planned | Phone input and internal display remain responsive while the Pi is slow, absent, or returns an I/O error. |
 | `XDISP-P0.3` | Discover the live GUD DRM card and handle remove/re-add; do not hard-code `card1` or use a symlink. | `mir-android2-platform-gud`, `gud` | planned | Reconnect succeeds when the card number changes, with no manual node changes or compositor restart. |
 | `XDISP-P1.1` | Validate external-output geometry and Lomiri placement, including the intermittent narrow/cropped image. | `mir-android2-platform-gud`, `gud-gadget` | planned | A 1280x720 extended desktop fills the selected output correctly across repeated enable/disable cycles. |
 | `XDISP-P2.1` | Improve usable performance with damage-aware updates, mode matching, measurement, and optional compression. | all three | planned | Recorded end-to-end FPS, latency, CPU use, and frame-drop behavior at the chosen mode. |
 
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
-the Pi: the OnePlus submitted and successfully completed the first 64 KiB bulk
-URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
+the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
+bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
 reporting aggregate payload completion. The next `SET_BUFFER` control request
 then timed out. DWC2 subsequently timed out while stopping the OUT endpoint,
 and the Pi Oopsed with `0x5a` corruption visible in allocator state. Raw logs
 are ignored under `backport-4.9/env/local/evidence/`.
 
 **Decision (2026-07-25):** take the userspace-only repair path first. Disable
-automatic Pi service restart, implement controlled UDC/FunctionFS shutdown and
-signal cancellation, then test larger receive requests through staged
-mini-cycles. Defer a custom Pi kernel (`g_dma=0` or a DWC2 patch) unless those
-changes still reproduce host `-110`, DWC2 endpoint-stop timeouts, or a Pi
-Oops. Keep the OnePlus module and Mir unchanged. The item remains **blocked**;
-do not start `XDISP-P0.2` or mark verification.
+automatic Pi service restart, permit controlled UDC/FunctionFS shutdown only
+from an atomically idle receive session, guard in-flight reads from signal
+teardown, then test larger receive requests through staged mini-cycles. Defer
+a custom Pi kernel (`g_dma=0` or a DWC2 patch) unless those changes still
+reproduce host `-110`, DWC2 endpoint-stop timeouts, or a Pi Oops. Keep the
+OnePlus module and Mir unchanged. The item remains **blocked**; do not start
+`XDISP-P0.2` or mark verification.
 
 Containment step 1 is deployed on the Pi as
 `10-xdisp-p0.1-containment.conf` (SHA-256
@@ -133,20 +134,45 @@ reached. Recovery journals are now collected. Evidence is under
 
 Recovery after two manual Pi restarts retained the failed payload as boot
 `-2`. The Pi accepted the first 64,000-byte `SET_BUFFER` at 20:40:22 and
-blocked in its first FunctionFS bulk read. At 20:40:37 the kernel Oopsed in
-`__kmalloc_noprof` while `sshd-session` was loading an ELF binary, with
-`f81ff81ff81ff81f` in allocator state and a subsequent bad RSS-counter report.
-No SIGTERM, DWC2 endpoint-stop timeout, FunctionFS teardown, or DRM release
-occurred. This establishes that the remaining allocator corruption can occur
-during the active blocked payload, independently of the repaired cleanup
-ordering. Pstore was empty, but the persistent service and kernel journals are
-retained in the evidence directory above.
+entered the 512-byte FunctionFS loop without an aggregate completion. The old
+logging cannot identify which of its 125 reads stalled. At 20:40:37 the kernel
+Oopsed in `__kmalloc_noprof` while `sshd-session` was loading an ELF binary,
+with `f81ff81ff81ff81f` in allocator state and a subsequent bad RSS-counter
+report. No SIGTERM, DWC2 endpoint-stop timeout, FunctionFS teardown, or DRM
+release occurred. This establishes that the remaining allocator corruption
+can occur during the active blocked payload, independently of the repaired
+cleanup ordering. Pstore was empty, but the persistent service and kernel
+journals are retained in the evidence directory above.
 
 The current boot again exhausted `set_crtc` retries with `EACCES`; the service
 is failed and the UDC is `not attached`. Leave it stopped. Do not retry the
-current 512-byte FunctionFS receive loop or start verification. The next
-userspace experiment is the planned aligned read-size change; DWC2 DMA
-isolation remains the kernel/configuration fallback.
+current 512-byte FunctionFS receive loop or start verification.
+
+Step 5 is now implementation-complete in `gud-gadget` and locally verified,
+but has not been deployed or exercised on hardware. `GUD_FFS_READ_SIZE`
+selects a 512-byte-aligned ceiling from 4,096 through 65,536 bytes, and the
+tracked first-test drop-in pins 16,384. Each syscall requests exactly the
+smaller of the ceiling and the remaining payload, so a normal 64,000-byte tile
+uses four requests (`16384, 16384, 16384, 14848`) rather than 125. The exact
+remaining count is never padded in userspace.
+
+The caller atomically marks every receive `InFlight` before blocking, so
+`SIGTERM` cannot unbind DWC2 during the reproduced hung-read state. Short/zero
+completions and all other receive errors fail without another read and
+permanently poison that process; a completion beyond the one-second safety
+threshold is poisoned when it returns. The threshold is conservative relative
+to the observed 5--11 ms receives; it is not a userspace timeout, so a hung
+read remains `InFlight`. In-flight/poisoned processes refuse further
+USB/control processing and automatic teardown and require a physical power
+cycle, hardware reset, or watchdog reset. All 39 `gud-gadget` and 17
+`gud-drm` focused tests pass. The local AArch64 release artifact SHA-256 is
+`0c5961daf65a543101bb1727c2c6909a19b5a48ae398cadd94c4c6ebd044b662`.
+The service and UDC remain untouched. The next action is one controlled
+clean-boot complete-frame payload using the 16,384-byte setting, followed by
+its UDC-first restart only if all 29 tiles and both device baselines are clean.
+A 65,536-byte ceiling is reserved for a later optional A/B test after three
+clean mini-cycles; DWC2 DMA isolation remains the kernel/configuration fallback
+only if Step 5 still fails.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the

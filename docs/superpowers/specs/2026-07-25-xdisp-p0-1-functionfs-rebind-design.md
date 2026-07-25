@@ -44,7 +44,7 @@ For each fresh Pi gadget rebind or OnePlus reconnect:
    presentation state is ready.
 2. The OnePlus detects `1d50:614d`, probes `gud.ko`, and exposes a live GUD
    DRM node.
-3. The first KMS fill submits at least 64 KiB of RGB565 bulk data.
+3. The first KMS fill submits the normal 64,000-byte RGB565 tile.
 4. The Pi bulk reader receives that data, returns it to userspace, and presents
    the first tile; the host completes the atomic update without `-110` or a
    subsequent control-request timeout.
@@ -61,6 +61,12 @@ For each fresh Pi gadget rebind or OnePlus reconnect:
 - Keep Pi endpoint lifecycle explicit: ownership of the FunctionFS endpoint
   file, endpoint enable/disable, reader start/stop, and gadget bind/unbind
   must have a defined order and idempotent cleanup.
+- Treat any incomplete/failed bulk receive as terminal for that process. It
+  must not accept another payload or automatically enter the known-risk
+  teardown path. Mark the session in-flight before blocking and permit teardown
+  only from an atomically claimed idle state. Recover an in-flight/failed
+  instance with a physical power cycle, hardware reset, or watchdog reset, not
+  a graceful reboot or service stop/restart.
 - Do not change the normal phone graphics plugin or claim external-display
   readiness from this work.
 - The local Pi 1280x720 HDMI-mode preference is a separate, unverified scaling
@@ -75,13 +81,16 @@ The Pi service must make these events distinguishable in its logs:
 - reader start/exit and the reason for exit;
 - gadget bind/unbind and UDC state transitions;
 - endpoint request queue/giveback where available, plus start and completion
-  of the first bulk read, including byte count and error;
+  of every userspace bulk read, including payload sequence, byte count, and
+  error;
 - first tile presentation completion or failure.
 
 The OnePlus evidence must include the matching GUD probe, active card node,
-bulk URB submit result and completion status/byte count, start of the first
-update, its result, and any `-110`/control timeout. Use a shared timestamp or
-record the local clock offset when correlating the two devices.
+start of the first update, its result, and any `-110`/control timeout. Retain
+usbmon URB completion status/byte count when available; otherwise retain
+`PAYLOAD_RC=0` and document the unchanged host invariant that rejects a short
+URB completion. Use a shared timestamp or record the local clock offset when
+correlating the two devices.
 
 ## Acceptance
 
@@ -90,7 +99,8 @@ of the following:
 
 - at least five cycles begin with a Pi gadget rebind and at least five begin
   with OnePlus reconnect/reboot recovery;
-- every cycle completes its first 64 KiB-or-larger payload without retry;
+- every cycle completes all 29 tiles of the 1,843,200-byte RGB565 frame,
+  including its first 64,000-byte tile, without retry;
 - no host evidence contains GUD bulk/atomic `-110` timeout; and
 - raw Pi service logs and focused OnePlus kernel logs are retained for every
   pass and failure.
