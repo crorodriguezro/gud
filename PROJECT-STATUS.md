@@ -20,11 +20,44 @@ image or DRM core changes unless a documented blocker proves them unavoidable.
   XRGB8888 build. Ticket 5 RGB565 transfer and Pi presentation are now
   hardware-validated end to end on the OnePlus 6 and Raspberry Pi Zero 2 W.
 
+## Cross-repository external-display priorities
+
+`PROJECT-STATUS.md` is the canonical board for work that crosses the host
+driver, Pi gadget, and Mir platform repositories.  Detailed implementation
+notes stay in the owning repository, but every cross-repository item keeps the
+same ID here and there.  This prevents a successful one-off hardware result
+from being mistaken for a reliable end-user feature.
+
+Use these states consistently:
+
+- **planned**: scoped but not started;
+- **in progress**: active implementation or investigation;
+- **blocked**: waiting on a named dependency or reproducible evidence;
+- **verified**: acceptance test passed with retained evidence; and
+- **rolled back**: a useful experiment that is not enabled in the normal phone
+  image.
+
+| ID | Priority | Owner | State | Required acceptance evidence |
+| --- | --- | --- | --- | --- |
+| `XDISP-P0.1` | Make the Pi FunctionFS first bulk transfer reliable after a gadget rebind or phone reconnect. | `gud-gadget` | blocked | Ten fresh rebind/reconnect cycles complete the first 64 KiB payload without host `-110` timeout. |
+| `XDISP-P0.2` | Move GUD presentation off Mir's compositor commit path; retain only the newest pending frame on overload. | `mir-android2-platform-gud` | planned | Phone input and internal display remain responsive while the Pi is slow, absent, or returns an I/O error. |
+| `XDISP-P0.3` | Discover the live GUD DRM card and handle remove/re-add; do not hard-code `card1` or use a symlink. | `mir-android2-platform-gud`, `gud` | planned | Reconnect succeeds when the card number changes, with no manual node changes or compositor restart. |
+| `XDISP-P1.1` | Validate external-output geometry and Lomiri placement, including the intermittent narrow/cropped image. | `mir-android2-platform-gud`, `gud-gadget` | planned | A 1280x720 extended desktop fills the selected output correctly across repeated enable/disable cycles. |
+| `XDISP-P2.1` | Improve usable performance with damage-aware updates, mode matching, measurement, and optional compression. | all three | planned | Recorded end-to-end FPS, latency, CPU use, and frame-drop behavior at the chosen mode. |
+
+The proof of concept verified that Lomiri can expose an independent
+`DisplayPort-2` output backed by GUD. It also froze or severely slowed the
+phone because it did synchronous USB work in Mir's commit path, and it has
+been rolled back from the phone. The detailed POC record and its constraints
+are in `../mir-android2-platform-gud/GUD-EXTERNAL-DISPLAY-POC.md`.
+
 Read first:
 
 - `AGENTS.md`: project constraints and verification expectations.
 - `LINUX-4.9-BACKPORT.md`: architecture, MVP, and compatibility strategy.
 - `BACKLOG.md`: ordered milestones; update only with evidence-backed completion.
+- The cross-repository priority table above: the source of truth for the
+  extended-display work spanning all three repositories.
 - `docs/superpowers/specs/2026-07-23-oneplus6-gud-usb-probe-design.md`: Ticket 2 requirements.
 - `docs/superpowers/plans/2026-07-23-oneplus6-gud-usb-probe.md`: Ticket 2 implementation and acceptance procedure.
 - `docs/superpowers/plans/2026-07-23-oneplus6-gud-host-backport.md`: full driver ticket sequence.

@@ -126,16 +126,35 @@ validated. Damage tracking remains deferred as a performance improvement.
 
 ## P1 — Mir/Lomiri external-display integration
 
-- [ ] Determine whether Mir enumerates the new DRM device automatically.
-- [ ] Inspect Mir/Lomiri logs when the GUD connector appears.
-- [ ] Test whether the output can be enabled as a second display.
-- [ ] If not, identify the multi-GPU/multi-DRM limitation in the Ubuntu Touch Mir stack.
-- [ ] Keep this work separate from the kernel backport where possible.
+Mir's Android-HWC platform does not enumerate the separately registered GUD
+card automatically. The selected approach is a separate
+`mir-android2-platform-gud` fork that advertises a software DisplayPort-like
+HWC output and presents that output through GUD. The feasibility POC exposed a
+real independent `DisplayPort-2` output in Lomiri, but it is rolled back and
+not usable yet: it performs a blocking USB update on the compositor commit
+path and hard-codes the DRM node. See `PROJECT-STATUS.md` (`XDISP-*`) for the
+cross-repository board and `docs/lomiri-gud-integration-options.md` for the
+architecture decision.
 
-**Done when:** Lomiri can use the GUD monitor as a true external output, or the exact userspace limitation is documented.
+- [ ] `XDISP-P0.1` — Pi FunctionFS first-transfer reliability is verified over
+  ten fresh rebind/reconnect cycles. Owner: `gud-gadget`.
+- [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
+  phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
+- [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume
+  `/dev/dri/card1`. Owners: `mir-android2-platform-gud`, `gud`.
+- [ ] `XDISP-P1.1` — the external desktop has correct geometry and window
+  placement at the selected mode. Owners: `mir-android2-platform-gud`,
+  `gud-gadget`.
+
+**Done when:** Lomiri uses the GUD monitor as a stable independent output with
+the acceptance evidence recorded for every `XDISP-P0.*` item. A POC that merely
+creates the output is not sufficient.
 
 ## P2 — Performance improvements
 
+- [ ] `XDISP-P2.1` — record end-to-end frame rate, latency, CPU use, and
+  frame-drop behavior for the extended-display path before claiming it is
+  usable.
 - [ ] Add damage tracking / partial framebuffer transfers.
 - [x] Use RGB565 for the active MVP to reduce USB-transfer bandwidth.
 - [ ] Add LZ4 compression.
