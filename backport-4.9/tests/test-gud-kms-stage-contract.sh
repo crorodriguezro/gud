@@ -14,6 +14,8 @@ for text in \
     'DRM_IOCTL_MODE_CREATE_DUMB' \
     'DRM_IOCTL_MODE_MAP_DUMB' \
     'DRM_IOCTL_MODE_DESTROY_DUMB' \
+    'create.bpp = 16;' \
+    'DRM_FORMAT_RGB565' \
     'drmModeAddFB2' \
     'drmModeRmFB' \
     'drmModeAtomicCommit' \

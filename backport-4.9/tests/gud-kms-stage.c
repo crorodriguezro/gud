@@ -125,7 +125,7 @@ int main(int argc, char **argv)
 
 	create.width = 1280;
 	create.height = 720;
-	create.bpp = 32;
+	create.bpp = 16;
 	if (drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &create) < 0) {
 		rc = fail("DRM_IOCTL_MODE_CREATE_DUMB");
 		goto out;
@@ -154,7 +154,7 @@ int main(int argc, char **argv)
 		uint32_t offsets[4] = { 0 };
 
 		if (drmModeAddFB2(fd, create.width, create.height,
-				  DRM_FORMAT_XRGB8888, handles, pitches, offsets,
+				  DRM_FORMAT_RGB565, handles, pitches, offsets,
 				  &fb_id, 0)) {
 			rc = fail("drmModeAddFB2");
 			goto out;
