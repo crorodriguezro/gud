@@ -176,6 +176,27 @@ Recover by physical power cycle, hardware reset, or watchdog reset. The next
 diagnostic is DWC2 gadget DMA isolation with `g_dma=0`; do not start Step 5
 mini-cycles, the ten-cycle matrix, or `XDISP-P0.2` first.
 
+**Read-count/DMA decision (2026-07-25):** keep the configurable four-read
+16 KiB strategy in `gud-gadget`, but do not accept it as the normal default
+until it passes the DMA-isolation gate. Do not restore the 125-read 512-byte
+loop as a fix; that path has an active-payload stall and allocator-corruption
+result. The next test holds the host URB, 512-byte wire packets, four
+FunctionFS reads, userspace binary, and OnePlus module constant and changes
+only Pi DWC2 gadget data movement from buffer DMA to slave/PIO mode.
+
+The installed Pi kernel is `6.12.47+rpt-rpi-v8` with
+`CONFIG_USB_DWC2=y`. It has no `g_dma` module parameter, its `dwc2` overlay
+does not expose one, and its debugfs `params` file is read-only. Therefore
+`g_dma=0` requires a separately named patched/prebuilt Pi test kernel; it
+cannot be enabled through `cmdline.txt`, `config.txt`, module reload, or
+debugfs on the current image. The minimal source experiment sets
+`p->g_dma = false` in the Broadcom callback in
+`drivers/usb/dwc2/params.c`. Preserve the stock kernel and modules as the
+rollback path. This is a Raspberry Pi kernel-only diagnostic; it does not
+change or rebuild the OnePlus kernel, `gud.ko`, or Mir. The executable
+procedure and source references are in
+`../gud-gadget/docs/XDISP-P0.1-FUNCTIONFS-REBIND-TEST.md`.
+
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the
 phone because it did synchronous USB work in Mir's commit path, and it has

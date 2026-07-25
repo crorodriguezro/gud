@@ -242,6 +242,24 @@ poisoned boot. Recover only by physical/hardware/watchdog reset. The next
 diagnostic is DWC2 gadget DMA isolation with `g_dma=0`; do not run the 64 KiB
 A/B, return to 512 bytes, or begin the acceptance matrix first.
 
+**Read-count and DMA-isolation decision (2026-07-25):** retain the
+configurable four-read 16 KiB implementation, but do not accept it as the
+normal default until the DMA-isolation gate passes. Do not restore the
+historical 125-read loop as a fix. The next experiment keeps the four-read
+userspace binary and host/wire behavior constant and changes only Pi DWC2
+gadget data movement from `g_dma=1` buffer DMA to `g_dma=0` slave/PIO mode.
+
+Read-only inspection of the exact Pi established
+`6.12.47+rpt-rpi-v8`, `CONFIG_USB_DWC2=y`, no `g_dma` module parameter, no
+`g_dma` option in the installed `dwc2` overlay, and a read-only debugfs
+parameter report. There is no supported `cmdline.txt`, `config.txt`, module
+reload, or debugfs switch for this test. Use a separately named Pi test kernel
+with `p->g_dma = false` in the Broadcom callback in
+`drivers/usb/dwc2/params.c`, preserving the stock kernel/modules as rollback.
+This does not modify the OnePlus kernel. The exact safety and verification
+procedure is maintained in
+`../../../../gud-gadget/docs/XDISP-P0.1-FUNCTIONFS-REBIND-TEST.md`.
+
 The previously outstanding post-payload crash evidence is preserved under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step2-predeploy-2026-07-25/`.
 It shows the old shutdown path hit both DWC2 endpoint-stop timeouts immediately
