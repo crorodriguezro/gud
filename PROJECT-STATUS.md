@@ -119,7 +119,7 @@ A later attempt to verify the small intentional-shutdown exit-status follow-up
 reproduced the intermittent transport failure before SIGTERM could be tested.
 That follow-up artifact, SHA-256
 `7053d5b1cf3f7cc94da776a97f64d3471382df9b8f40b00b511eb9ef3bcf1e12`,
-is installed on the currently unreachable Pi; the `5aae726...` base is
+is installed on the Pi; the `5aae726...` base is
 retained at `/home/cristian/gud-drm.pre-xdisp-p0.1-exit0-5aae726`.
 The unchanged OnePlus module re-probed `1d50:614d`; the isolated KMS tool
 reported `PAYLOAD_RC=0`, but the host kernel then logged request `0x60` and
@@ -127,9 +127,26 @@ atomic-update `-110`, followed by request `0x64` `-110`. Pi SSH became
 unreachable while the gadget and host DRM node remained present. In accordance
 with containment, the affected service was not stopped or restarted. The
 exit-status change is outside the payload path and passes focused unit tests,
-but its hardware result is undetermined until the Pi is recovered and its
-journals are collected. Evidence is under
+but its hardware result remains undetermined because SIGTERM was never
+reached. Recovery journals are now collected. Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.1-exit0-hardware-blocked-2026-07-25/`.
+
+Recovery after two manual Pi restarts retained the failed payload as boot
+`-2`. The Pi accepted the first 64,000-byte `SET_BUFFER` at 20:40:22 and
+blocked in its first FunctionFS bulk read. At 20:40:37 the kernel Oopsed in
+`__kmalloc_noprof` while `sshd-session` was loading an ELF binary, with
+`f81ff81ff81ff81f` in allocator state and a subsequent bad RSS-counter report.
+No SIGTERM, DWC2 endpoint-stop timeout, FunctionFS teardown, or DRM release
+occurred. This establishes that the remaining allocator corruption can occur
+during the active blocked payload, independently of the repaired cleanup
+ordering. Pstore was empty, but the persistent service and kernel journals are
+retained in the evidence directory above.
+
+The current boot again exhausted `set_crtc` retries with `EACCES`; the service
+is failed and the UDC is `not attached`. Leave it stopped. Do not retry the
+current 512-byte FunctionFS receive loop or start verification. The next
+userspace experiment is the planned aligned read-size change; DWC2 DMA
+isolation remains the kernel/configuration fallback.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the

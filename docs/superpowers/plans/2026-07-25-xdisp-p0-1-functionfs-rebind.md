@@ -155,13 +155,25 @@ precedence over a queued detach restart request, so successful intentional
 teardown returns status 0 while unexpected detach still requests a restart.
 All 11 focused `gud-drm` tests pass. Artifact
 `7053d5b1cf3f7cc94da776a97f64d3471382df9b8f40b00b511eb9ef3bcf1e12`
-is installed on the currently unreachable Pi; the `5aae726...` base is
+is installed on the Pi; the `5aae726...` base is
 preserved at `/home/cristian/gud-drm.pre-xdisp-p0.1-exit0-5aae726`. The first
 hardware attempt did not reach SIGTERM: after the mandatory gate and normal
 host reprobe, the first payload reproduced request `0x60`/atomic-update
 `-110`; Pi SSH became unreachable, so the Step 1 containment rule prohibited
-stop/restart. Preserve Pi journals before retrying. Evidence is under
+stop/restart. The later two-boot recovery evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.1-exit0-hardware-blocked-2026-07-25/`.
+
+Recovery after two Pi restarts retained that failed payload as boot `-2`.
+The service accepted the first 64,000-byte `SET_BUFFER` and blocked in its
+first FunctionFS read. Fifteen seconds later the kernel Oopsed in
+`__kmalloc_noprof` while `sshd-session` loaded an ELF binary, with
+`f81ff81ff81ff81f` in allocator state and a bad RSS-counter report. No
+SIGTERM, DWC2 endpoint-stop timeout, FunctionFS teardown, or DRM release ran.
+This moves the stop condition ahead of cleanup: do not retry the existing
+512-byte receive loop. The next userspace experiment must be the planned
+aligned read-size test; only use DWC2 DMA isolation if that remains necessary.
+The current service is failed after the separate boot-time `set_crtc`/`EACCES`
+race, and the UDC is `not attached`; leave it stopped.
 
 The previously outstanding post-payload crash evidence is preserved under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step2-predeploy-2026-07-25/`.
