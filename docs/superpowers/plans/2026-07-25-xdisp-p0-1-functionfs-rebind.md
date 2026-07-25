@@ -176,7 +176,8 @@ aligned read-size test; only use DWC2 DMA isolation if that remains necessary.
 The current service is failed after the separate boot-time `set_crtc`/`EACCES`
 race, and the UDC is `not attached`; leave it stopped.
 
-**Step 5 implementation completed locally (2026-07-25): hardware pending.**
+**Step 5 implementation completed locally (2026-07-25); first hardware gate
+failed.**
 The `gud-gadget` blocking path still reuses the endpoint file opened during
 FunctionFS initialization and does not return to native AIO. It now validates
 `GUD_FFS_READ_SIZE` as a 512-byte-aligned ceiling from 4,096 through 65,536
@@ -220,10 +221,26 @@ env CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-redhat-linux-gcc \
     cargo build --release -p gud-drm
 ```
 
-The artifact has not been deployed, the Pi service/UDC were not touched, and
-no payload was sent. Keep `XDISP-P0.1` blocked. Start the hardware gate at
-16 KiB; reserve 64 KiB for an optional A/B only after three clean
-payload/teardown/rebind mini-cycles.
+**Step 5 first 16 KiB hardware result (2026-07-25): failed.** The documented
+artifact and drop-ins were hash-verified and deployed while the service was
+inactive. After manual start and a fresh high-speed OnePlus probe, the first
+16,384-byte read returned `18446744073709045760` (signed `-505856`) instead of
+16,384. DWC2 debugfs showed `g_dma=1`, `g_dma_desc=0`, and ep1 OUT
+`DOEPTSIZ=0x7f800` (522,240) against a loaded `0x4000` bytes. The DWC2
+buffer-DMA size calculation therefore underflowed exactly to the returned
+`0xfff84800`.
+
+The service entered `Poisoned`, refused further processing, and safely avoided
+teardown. The Pi remained reachable and showed no new Oops or allocator/DWC2
+kernel warning. The OnePlus utility printed `PAYLOAD_RC=0`, but its kernel
+logged fresh bulk/atomic `-110` and control request `0x64` `-110`, so tool
+return status is not transfer proof. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-step5-16k-first-hardware-2026-07-25T2214BST/`.
+
+Keep `XDISP-P0.1` blocked. Do not stop/restart or retry any read size on the
+poisoned boot. Recover only by physical/hardware/watchdog reset. The next
+diagnostic is DWC2 gadget DMA isolation with `g_dma=0`; do not run the 64 KiB
+A/B, return to 512 bytes, or begin the acceptance matrix first.
 
 The previously outstanding post-payload crash evidence is preserved under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step2-predeploy-2026-07-25/`.

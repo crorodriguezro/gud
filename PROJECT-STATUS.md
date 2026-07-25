@@ -144,35 +144,37 @@ can occur during the active blocked payload, independently of the repaired
 cleanup ordering. Pstore was empty, but the persistent service and kernel
 journals are retained in the evidence directory above.
 
-The current boot again exhausted `set_crtc` retries with `EACCES`; the service
-is failed and the UDC is `not attached`. Leave it stopped. Do not retry the
-current 512-byte FunctionFS receive loop or start verification.
+Step 5 was deployed on the inactive Pi with the expected artifact SHA-256
+`0c5961daf65a543101bb1727c2c6909a19b5a48ae398cadd94c4c6ebd044b662`;
+the prior `7053d5b...` binary is preserved at
+`/home/cristian/gud-drm.pre-xdisp-p0.1-step5-7053d5b`. Auto-start remains
+disabled. Manual start acquired DRM, bound the UDC, and reached a fresh
+high-speed OnePlus probe after the documented phone `device -> host` role
+reset.
 
-Step 5 is now implementation-complete in `gud-gadget` and locally verified,
-but has not been deployed or exercised on hardware. `GUD_FFS_READ_SIZE`
-selects a 512-byte-aligned ceiling from 4,096 through 65,536 bytes, and the
-tracked first-test drop-in pins 16,384. Each syscall requests exactly the
-smaller of the ceiling and the remaining payload, so a normal 64,000-byte tile
-uses four requests (`16384, 16384, 16384, 14848`) rather than 125. The exact
-remaining count is never padded in userspace.
+The first 16,384-byte hardware payload failed on read 1 of the first
+64,000-byte tile. FunctionFS returned `18446744073709045760`, signed
+`-505856`, after 476 microseconds. DWC2 debugfs showed `g_dma=1`,
+`g_dma_desc=0`, and ep1 OUT `DOEPTSIZ=0x0007f800` (522,240 bytes remaining)
+against 16,384 bytes loaded. The buffer-DMA completion calculation therefore
+underflowed exactly: `0x4000 - 0x7f800 = 0xfff84800 = -505856 signed`.
+FunctionFS propagated that impossible `req->actual` value to userspace.
 
-The caller atomically marks every receive `InFlight` before blocking, so
-`SIGTERM` cannot unbind DWC2 during the reproduced hung-read state. Short/zero
-completions and all other receive errors fail without another read and
-permanently poison that process; a completion beyond the one-second safety
-threshold is poisoned when it returns. The threshold is conservative relative
-to the observed 5--11 ms receives; it is not a userspace timeout, so a hung
-read remains `InFlight`. In-flight/poisoned processes refuse further
-USB/control processing and automatic teardown and require a physical power
-cycle, hardware reset, or watchdog reset. All 39 `gud-gadget` and 17
-`gud-drm` focused tests pass. The local AArch64 release artifact SHA-256 is
-`0c5961daf65a543101bb1727c2c6909a19b5a48ae398cadd94c4c6ebd044b662`.
-The service and UDC remain untouched. The next action is one controlled
-clean-boot complete-frame payload using the 16,384-byte setting, followed by
-its UDC-first restart only if all 29 tiles and both device baselines are clean.
-A 65,536-byte ceiling is reserved for a later optional A/B test after three
-clean mini-cycles; DWC2 DMA isolation remains the kernel/configuration fallback
-only if Step 5 still fails.
+The service correctly changed `InFlight -> Poisoned`, refused another read,
+parked, and did not enter the known-risk teardown path. The Pi remained
+reachable with the same boot ID, the UDC remained configured at high speed,
+and no new Oops, allocator warning, DWC2 endpoint-stop timeout, or pstore
+record appeared. The host utility printed `PAYLOAD_RC=0`, but the fresh host
+kernel log recorded bulk and atomic-update `-110`, followed by request `0x64`
+`-110`; userspace return status is therefore not standalone transfer proof.
+
+Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-step5-16k-first-hardware-2026-07-25T2214BST/`.
+Keep `XDISP-P0.1` **blocked**. Do not stop, restart, reboot, or shut down the
+current poisoned Pi instance, and do not retry 16 KiB, 64 KiB, or 512 bytes.
+Recover by physical power cycle, hardware reset, or watchdog reset. The next
+diagnostic is DWC2 gadget DMA isolation with `g_dma=0`; do not start Step 5
+mini-cycles, the ten-cycle matrix, or `XDISP-P0.2` first.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the

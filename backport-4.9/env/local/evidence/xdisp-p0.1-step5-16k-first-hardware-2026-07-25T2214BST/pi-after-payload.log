@@ -1,0 +1,140 @@
+AFTER_PAYLOAD_TIME
+2026-07-25T22:21:56+01:00
+raspberrypi
+ 22:21:56 up  1:32,  2 users,  load average: 0.01, 0.03, 0.00
+BOOT_ID
+0f3257d9-7d1b-45d6-a3fc-7098f068fda2
+SERVICE
+active
+MainPID=1486
+Result=success
+ExecMainStatus=0
+ActiveState=active
+SubState=running
+PROCESS
+    PID STAT WCHAN                            COMMAND         COMMAND
+   1486 Ssl  -                                gud-drm         /home/cristian/gud-drm /dev/dri/card0
+   1553 Ss   do_wait                          bash            bash -c printf "cristian\n" | sudo -S -v; echo AFTER_PAYLOAD_TIME; date --iso-8601=seconds; hostname; uptime; echo BOOT_ID; cat /proc/sys/kernel/random/boot_id; echo SERVICE; systemctl is-active gud-userspace.service || true; systemctl show gud-userspace.service -p ActiveState -p SubState -p Result -p ExecMainStatus -p MainPID; echo PROCESS; ps -eo pid,stat,wchan:32,comm,args | grep -E "gud-drm|PID"; echo UDC; cat /sys/class/udc/3f980000.usb/state; cat /sys/class/udc/3f980000.usb/current_speed 2>/dev/null || true; echo MEMINFO; cat /proc/meminfo; echo BUDDYINFO; cat /proc/buddyinfo; echo PSTORE; sudo find /sys/fs/pstore -maxdepth 1 -type f -print -exec sha256sum {} \;; echo WATCHDOG; for f in /sys/class/watchdog/watchdog0/bootstatus /sys/class/watchdog/watchdog0/identity /sys/class/watchdog/watchdog0/state /sys/class/watchdog/watchdog0/status; do test -r "$f" && printf "%s: " "$f" && cat "$f"; done; echo SERVICE_JOURNAL; journalctl -u gud-userspace.service -b --since "2026-07-25 22:17:00" --no-pager; echo KERNEL_JOURNAL; journalctl -k -b --since "2026-07-25 22:17:00" --no-pager
+   1564 S    pipe_read                        grep            grep -E gud-drm|PID
+UDC
+configured
+high-speed
+MEMINFO
+MemTotal:         426136 kB
+MemFree:           53056 kB
+MemAvailable:     214468 kB
+Buffers:           23512 kB
+Cached:           175860 kB
+SwapCached:            0 kB
+Active:           220884 kB
+Inactive:          52080 kB
+Active(anon):      74288 kB
+Inactive(anon):      988 kB
+Active(file):     146596 kB
+Inactive(file):    51092 kB
+Unevictable:           0 kB
+Mlocked:               0 kB
+SwapTotal:        425980 kB
+SwapFree:         425980 kB
+Zswap:                 0 kB
+Zswapped:              0 kB
+Dirty:               152 kB
+Writeback:             0 kB
+AnonPages:         73680 kB
+Mapped:            66672 kB
+Shmem:              1856 kB
+KReclaimable:      17812 kB
+Slab:              43960 kB
+SReclaimable:      17812 kB
+SUnreclaim:        26148 kB
+KernelStack:        3408 kB
+PageTables:         4268 kB
+SecPageTables:         0 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:      639048 kB
+Committed_AS:     409628 kB
+VmallocTotal:   261087232 kB
+VmallocUsed:       15664 kB
+VmallocChunk:          0 kB
+Percpu:              720 kB
+CmaTotal:         262144 kB
+CmaFree:           30356 kB
+BUDDYINFO
+Node 0, zone      DMA     32     22     92     62     46     29     22      4      6      6      4 
+PSTORE
+WATCHDOG
+/sys/class/watchdog/watchdog0/bootstatus: 0
+/sys/class/watchdog/watchdog0/identity: Broadcom BCM2835 Watchdog timer
+/sys/class/watchdog/watchdog0/state: active
+/sys/class/watchdog/watchdog0/status: 0x8000
+SERVICE_JOURNAL
+Jul 25 22:17:12 raspberrypi systemd[1]: Starting gud-userspace.service - Userspace GUD gadget...
+Jul 25 22:17:12 raspberrypi systemd[1]: Started gud-userspace.service - Userspace GUD gadget.
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.457745Z  INFO gud_drm: gud-drm starting (XDISP-P0.1 lifecycle and read-size repair)
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.457967Z  INFO gud_drm: Pattern mode: Off
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.457988Z  INFO gud_drm: Transfer format: Rgb565 (2 bytes/pixel)
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.458006Z  INFO gud_drm: FunctionFS bulk OUT read ceiling: 16384 bytes; conservative receive safety deadline: 1000 ms
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.458028Z  INFO gud_drm: Opening DRM device: /dev/dri/card0
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.458261Z  INFO gud_drm: Using UDC: Udc { name: "3f980000.usb" }
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.470392Z  INFO gud_drm: USB gadgets removed
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.470460Z  INFO gud_drm: Created pixel data endpoint
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.470497Z  INFO gud_drm: Built USB gadget
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.470836Z  INFO gud_drm: picked mode Mode { name: "1920x1080", clock: 148500, size: (1920, 1080), hsync: (2008, 2052, 2200), vsync: (1084, 1089, 1125), hskew: 0, vscan: 0, vrefresh: 60, mode_type: ModeTypeFlags(DRIVER) }
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.470957Z DEBUG gud_drm: Creating double dumb buffers 1920x1080 (RGB565)
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.523740Z DEBUG gud_drm: Framebuffers created (RGB565, 16bpp)
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.537418Z  INFO gud_drm: CRTC set, display should be active
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.537624Z DEBUG gud_drm: Dumb buffer mapped, pitch=3840
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.545824Z  INFO gud_drm: Filled both framebuffers with waiting screen
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.545908Z  WARN gud_drm: Failed to flush test pattern: Function not implemented (os error 38)
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.557794Z DEBUG usb_gadget::gadget: registering gadget at /sys/kernel/config/usb_gadget/usb-gadget0
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.558409Z DEBUG usb_gadget::gadget: creating function at /sys/kernel/config/usb_gadget/usb-gadget0/functions/ffs.usb-gadget0-0
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.601132Z DEBUG usb_gadget::function::custom: creating functionfs directory /dev/ffs-usb-gadget0-0
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.601274Z DEBUG usb_gadget::function::custom: mounting functionfs into /dev/ffs-usb-gadget0-0 using options MountOptions { no_disconnect: true, rmode: None, fmode: None, mode: None, uid: None, gid: None }
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.601650Z DEBUG usb_gadget::function::custom: writing functionfs descriptors to /dev/ffs-usb-gadget0-0/ep0
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.601744Z DEBUG usb_gadget::function::custom: writing functionfs strings to /dev/ffs-usb-gadget0-0/ep0
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.601793Z DEBUG usb_gadget::function::custom: functionfs initialized
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.601818Z DEBUG usb_gadget::function::custom: opening endpoint file /dev/ffs-usb-gadget0-0/ep1 with queue length 16
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.602355Z DEBUG usb_gadget::gadget: creating config at /sys/kernel/config/usb_gadget/usb-gadget0/configs/c.1
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.602768Z DEBUG usb_gadget::gadget: adding function /sys/kernel/config/usb_gadget/usb-gadget0/functions/ffs.usb-gadget0-0
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.602861Z DEBUG usb_gadget::gadget: gadget at /sys/kernel/config/usb_gadget/usb-gadget0 registered
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.602895Z DEBUG usb_gadget::gadget: binding gadget RegGadget { name: "usb-gadget0", is_attached: true } to Some(Udc { name: "3f980000.usb" })
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.606633Z  INFO gud_drm: USB gadget bound to UDC
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.606691Z  INFO gud_drm: Entering main event loop
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.606745Z DEBUG gud_drm: Received event: Bind
+Jul 25 22:17:12 raspberrypi gud-drm[1486]: 2026-07-25T21:17:12.606769Z DEBUG gud_gadget: Bind event received
+Jul 25 22:19:27 raspberrypi gud-drm[1486]: 2026-07-25T21:19:27.392589Z DEBUG gud_drm: Received event: Enable
+Jul 25 22:19:27 raspberrypi gud-drm[1486]: 2026-07-25T21:19:27.392712Z DEBUG gud_gadget: Enable event received
+Jul 25 22:19:27 raspberrypi gud-drm[1486]: 2026-07-25T21:19:27.393705Z DEBUG gud_drm: Received event: SetupDeviceToHost(CtrlSender { ctrl_req: CtrlReq { request_type: 193, request: 1, value: 0, index: 0, length: 30 } })
+Jul 25 22:19:27 raspberrypi gud-drm[1486]: 2026-07-25T21:19:27.393774Z DEBUG gud_drm: GUD event: GetDescriptor(GetDescriptor { sender: CtrlSender { ctrl_req: CtrlReq { request_type: 193, request: 1, value: 0, index: 0, length: 30 } } })
+Jul 25 22:19:27 raspberrypi gud-drm[1486]: 2026-07-25T21:19:27.393983Z DEBUG gud_gadget: sent display descriptor DisplayDescriptor { magic: 491807053, version: 1, flags: 0, compression: 1, max_buffer_size: 8294400, min_width: 640, max_width: 1920, min_height: 400, max_height: 1080 }
+Jul 25 22:19:27 raspberrypi gud-drm[1486]: 2026-07-25T21:19:27.394042Z DEBUG gud_drm: Sent descriptor
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.478496Z DEBUG gud_drm: Received event: SetupHostToDevice(CtrlReceiver { ctrl_req: CtrlReq { request_type: 65, request: 97, value: 0, index: 0, length: 26 } })
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.478731Z DEBUG gud_gadget: received valid state check
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.479174Z DEBUG gud_drm: Received event: SetupHostToDevice(CtrlReceiver { ctrl_req: CtrlReq { request_type: 65, request: 98, value: 0, index: 0, length: 0 } })
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.479279Z DEBUG gud_gadget: committed checked state
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.479421Z DEBUG gud_drm: Received event: SetupHostToDevice(CtrlReceiver { ctrl_req: CtrlReq { request_type: 65, request: 99, value: 0, index: 0, length: 1 } })
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.479531Z DEBUG gud_gadget: received controller enable: true
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.479812Z DEBUG gud_drm: Received event: SetupHostToDevice(CtrlReceiver { ctrl_req: CtrlReq { request_type: 65, request: 100, value: 0, index: 0, length: 1 } })
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.479931Z DEBUG gud_gadget: received display enable: true
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.482518Z DEBUG gud_drm: Received event: SetupHostToDevice(CtrlReceiver { ctrl_req: CtrlReq { request_type: 65, request: 96, value: 0, index: 0, length: 25 } })
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.482683Z DEBUG gud_gadget: validated set buffer: SetBuffer { x: 0, y: 0, width: 1280, height: 25, length: 64000, compression: 0, compressed_length: 0 }
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.482732Z DEBUG gud_drm: GUD event: Buffer(SetBuffer { x: 0, y: 0, width: 1280, height: 25, length: 64000, compression: 0, compressed_length: 0 })
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.482779Z DEBUG gud_drm: Buffer: x=0 y=0 1280x25 len=64000 compression=0
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.482811Z DEBUG gud_drm: FunctionFS bulk receive session entered InFlight deadline_ms=1000
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.482848Z DEBUG gud_gadget: receiving FunctionFS bulk OUT payload payload_seq=1 payload_len=64000 read_size=16384 max_packet_size=512
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.482891Z DEBUG gud_gadget: using initialized FunctionFS bulk OUT endpoint for blocking reads path="/dev/ffs-usb-gadget0-0/ep1"
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.483203Z DEBUG gud_gadget: starting blocking FunctionFS bulk OUT read payload_seq=1 payload_len=64000 read_size=16384 read_index=1 received_bytes=0 remaining_before=64000 request_bytes=16384
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.483744Z DEBUG gud_gadget: completed blocking FunctionFS bulk OUT read payload_seq=1 payload_len=64000 read_size=16384 read_index=1 remaining_before=64000 request_bytes=16384 result_bytes=18446744073709045760 remaining_after=0 read_us=476 short_read=true
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.483844Z ERROR gud_drm: FunctionFS bulk receive session entered Poisoned after an error
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.483882Z ERROR gud_drm: Failed to receive buffer payload error=short FunctionFS bulk OUT read: payload_seq=1, payload_len=64000, read_size=16384, read_index=1, received_bytes=0, request_bytes=16384, result_bytes=18446744073709045760 error_chain=short FunctionFS bulk OUT read: payload_seq=1, payload_len=64000, read_size=16384, read_index=1, received_bytes=0, request_bytes=16384, result_bytes=18446744073709045760
+Jul 25 22:20:33 raspberrypi gud-drm[1486]: 2026-07-25T21:20:33.483924Z ERROR gud_drm: FunctionFS bulk receive session is terminal; refusing all further USB/control processing and automatic teardown. Do not stop, restart, reboot, or shut down this service instance; recover with a physical/hardware reset and collect previous-boot evidence state=Poisoned
+KERNEL_JOURNAL
+Jul 25 22:17:12 raspberrypi kernel: file system registered
+Jul 25 22:17:12 raspberrypi kernel: read descriptors
+Jul 25 22:17:12 raspberrypi kernel: read strings
+Jul 25 22:17:12 raspberrypi kernel: dwc2 3f980000.usb: bound driver configfs-gadget.usb-gadget0
+Jul 25 22:19:27 raspberrypi kernel: dwc2 3f980000.usb: new device is high-speed
+Jul 25 22:19:27 raspberrypi kernel: dwc2 3f980000.usb: new device is high-speed
+Jul 25 22:19:27 raspberrypi kernel: dwc2 3f980000.usb: new address 3

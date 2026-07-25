@@ -87,9 +87,11 @@ The Pi service must make these events distinguishable in its logs:
 
 The OnePlus evidence must include the matching GUD probe, active card node,
 start of the first update, its result, and any `-110`/control timeout. Retain
-usbmon URB completion status/byte count when available; otherwise retain
-`PAYLOAD_RC=0` and document the unchanged host invariant that rejects a short
-URB completion. Use a shared timestamp or record the local clock offset when
+usbmon URB completion status/byte count when available. Always retain the host
+kernel result and matching Pi complete-frame statistics. `PAYLOAD_RC=0` is
+only the KMS utility's return status, not transport proof: the first Step 5
+hardware run returned zero before the asynchronous host path logged bulk and
+atomic `-110`. Use a shared timestamp or record the local clock offset when
 correlating the two devices.
 
 ## Acceptance

@@ -1,0 +1,92 @@
+CAPTURE_TIME
+2026-07-25T22:25:51+01:00
+DWC2_STATE
+DCFG=0x00040030, DCTL=0x00000000, DSTS=0x0011cf00
+DIEPMSK=0x0000000f, DOEPMASK=0x0000000f
+GINTMSK=0xd0bc3cc4, GINTSTS=0x04008028
+DAINTMSK=0x00030001, DAINT=0x00000000
+GNPTXSTS=0x00080020, GRXSTSR=07ff07ff
+
+Endpoint status:
+ep0: DIEPCTL=0x00028000, DOEPCTL=0x00028000, DIEPTSIZ=0x00000000, DOEPTSIZ=0x60080000
+ep1: DIEPCTL=0x00000400, DOEPCTL=0x000a8200, DIEPTSIZ=0x00000000, DOEPTSIZ=0x0007f800
+ep2: DIEPCTL=0x00000400, DOEPCTL=0x00000400, DIEPTSIZ=0x00000000, DOEPTSIZ=0x00000000
+ep3: DIEPCTL=0x00000400, DOEPCTL=0x00000400, DIEPTSIZ=0x00000000, DOEPTSIZ=0x00000000
+ep4: DIEPCTL=0x00000400, DOEPCTL=0x00000400, DIEPTSIZ=0x00000000, DOEPTSIZ=0x00000000
+ep5: DIEPCTL=0x00000400, DOEPCTL=0x00000400, DIEPTSIZ=0x00000000, DOEPTSIZ=0x00000000
+ep6: DIEPCTL=0x00000400, DOEPCTL=0x00000400, DIEPTSIZ=0x00000000, DOEPTSIZ=0x00000000
+ep7: DIEPCTL=0x00000400, DOEPCTL=0x00000400, DIEPTSIZ=0x00000000, DOEPTSIZ=0x00000000
+EP1OUT
+Endpoint index 1, named ep1out,  dir out:
+	DIEPCTL=0x00000400, DOEPCTL=0x000a8200
+	DIEPDMA=0x15fff9f7, DOEPDMA=0xc4368800
+	DIEPINT=0x00000080, DOEPINT=0x00006010
+	DIEPTSIZ=0x00000000, DOEPTSIZ=0x0007f800
+
+mps 512
+total_data=0
+request list (00000000c8d67016,00000000c8d67016):
+HW_PARAMS
+op_mode                       : 0
+arch                          : 2
+dma_desc_enable               : 0
+enable_dynamic_fifo           : 1
+en_multiple_tx_fifo           : 1
+rx_fifo_size                  : 4096
+host_nperio_tx_fifo_size      : 256
+dev_nperio_tx_fifo_size       : 32
+host_perio_tx_fifo_size       : 512
+nperio_tx_q_depth             : 4
+host_perio_tx_q_depth         : 4
+dev_token_q_depth             : 8
+max_transfer_size             : 524287
+max_packet_count              : 1023
+host_channels                 : 8
+hs_phy_type                   : 1
+fs_phy_type                   : 1
+i2c_enable                    : 0
+num_dev_ep                    : 7
+num_dev_perio_in_ep           : 0
+total_fifo_size               : 4080
+power_optimized               : 0
+utmi_phy_data_width           : 0
+snpsid                        : 0x4f54280a
+dev_ep_dirs                   : 0x0
+PROCESS_STACKS
+/proc/1486/task/1486
+[<0>] hrtimer_nanosleep+0xa4/0x190
+[<0>] common_nsleep+0x50/0x70
+[<0>] __arm64_sys_clock_nanosleep+0xd8/0x160
+[<0>] invoke_syscall+0x50/0x120
+[<0>] el0_svc_common.constprop.0+0x48/0xf0
+[<0>] do_el0_svc+0x24/0x38
+[<0>] el0_svc+0x30/0xf8
+[<0>] el0t_64_sync_handler+0x120/0x130
+[<0>] el0t_64_sync+0x190/0x198
+/proc/1486/task/1489
+[<0>] futex_wait_queue+0x74/0xb0
+[<0>] __futex_wait+0xd8/0x168
+[<0>] futex_wait+0x90/0x120
+[<0>] do_futex+0x100/0x1b0
+[<0>] __arm64_sys_futex+0xf4/0x198
+[<0>] invoke_syscall+0x50/0x120
+[<0>] el0_svc_common.constprop.0+0x48/0xf0
+[<0>] do_el0_svc+0x24/0x38
+[<0>] el0_svc+0x30/0xf8
+[<0>] el0t_64_sync_handler+0x120/0x130
+[<0>] el0t_64_sync+0x190/0x198
+/proc/1486/task/1492
+[<0>] do_wait_intr_irq+0x6c/0xb0
+[<0>] eventfd_read+0x160/0x1d8
+[<0>] vfs_read+0x234/0x328
+[<0>] ksys_read+0x7c/0x120
+[<0>] __arm64_sys_read+0x24/0x40
+[<0>] invoke_syscall+0x50/0x120
+[<0>] el0_svc_common.constprop.0+0x48/0xf0
+[<0>] do_el0_svc+0x24/0x38
+[<0>] el0_svc+0x30/0xf8
+[<0>] el0t_64_sync_handler+0x120/0x130
+[<0>] el0t_64_sync+0x190/0x198
+SERVICE_STATE
+active
+configured

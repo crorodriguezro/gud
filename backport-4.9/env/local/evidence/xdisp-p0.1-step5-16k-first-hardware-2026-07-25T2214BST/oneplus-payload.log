@@ -1,0 +1,85 @@
+PAYLOAD_START
+2026-07-25T16:20:24-05:00
+HOST
+ubuntu-phablet
+4.9.112-g6b190d86b
+ 16:20:24 up  2:08,  3 users,  load average: 0.42, 0.63, 0.75
+MODE
+host
+DEVICE
+/sys/devices/platform/soc/a600000.ssusb/a600000.dwc3/xhci-hcd.0.auto/usb1/1-1/1-1.2/1-1.2:1.0
+HASHES
+bd15c2c1bc4cd941bcac88bb13276b67620d9e2eec515973ff815add68f3630c  /home/phablet/gud.ko
+d2546c9925f057ca8ca5fb897350b4a96a945550d721a167246fe24f375c0d9a  /home/phablet/gud-kms-fill
+DMESG_LINES_BEFORE=7289
+card=/dev/dri/card1 connector=25 crtc=27 plane=26 dumb_handle=1 fb_id=30
+atomic modeset succeeded
+holding test pattern for 30 seconds
+PAYLOAD_RC=0
+PAYLOAD_END
+2026-07-25T16:21:03-05:00
+DRI
+total 0
+drwxr-xr-x  2 root root        180 Jul 25 16:19 by-path
+crw-rw----+ 1 root video  226,   0 Jul 25 14:12 card0
+crw-rw----+ 1 root video  226,   1 Jul 25 16:19 card1
+crw-rw----  1 root video  226,  64 Jun  5 10:36 controlD64
+crw-rw----  1 root video  226,  65 Jul 25 16:19 controlD65
+crw-rw----+ 1 root render 226, 128 Jun  5 10:36 renderD128
+FOCUSED_DMESG
+[    0.322799] pstore: Registered ramoops as persistent store backend
+[    0.322817] ramoops: attached 0x400000@0xac300000, ecc: 0/0
+[   16.197038] init: /vendor/etc/init/hw/init.qcom.rc: 523: ParseTriggers() failed: unexported property trigger found: persist.sys.mba_boot_timeout
+[   16.197075] init: /vendor/etc/init/hw/init.qcom.rc: 526: ParseTriggers() failed: unexported property trigger found: persist.sys.modem_auth_timeout
+[   16.197111] init: /vendor/etc/init/hw/init.qcom.rc: 529: ParseTriggers() failed: unexported property trigger found: persist.sys.pil_proxy_timeout
+[   17.203194] logd: logdr: UID=1000 GID=1000 PID=69 n tail=50 logMask=8 pid=59 start=0ns timeout=0ns
+[   17.204383] logd: logdr: UID=1000 GID=1000 PID=69 n tail=50 logMask=1 pid=59 start=0ns timeout=0ns
+[   17.206575] logd: logdr: UID=1000 GID=1000 PID=69 n tail=0 logMask=8 pid=59 start=0ns timeout=0ns
+[   17.207258] logd: logdr: UID=1000 GID=1000 PID=69 n tail=0 logMask=1 pid=59 start=0ns timeout=0ns
+[   20.212269] logd: logdr: UID=1000 GID=1007 PID=420 n tail=0 logMask=80 pid=0 start=0ns timeout=0ns
+[   26.427961] R0: [NetworkManager][595647171] [19:12:50.449065]  wlan: [1753:I :SYS] Creating periodic timer for OLBC UPDATE CACHE TIMEOUT
+[  119.671367] usb 1-1.2: New USB device found, idVendor=1d50, idProduct=614d
+[  246.511490] gud: loading out-of-tree module taints kernel.
+[  246.515912] gud 1-1.2:1.0: GUD v1 bulk-out=0x01 buffer=8294400 width=640-1920 height=400-1080
+[  246.520335] gud 1-1.2:1.0: GUD probe complete for 1d50:614d
+[  246.520442] usbcore: registered new interface driver gud
+[  312.590979] gud 1-1.2:1.0: GUD connector: detect enter
+[  312.591027] gud 1-1.2:1.0: GUD connector: detect status=1
+[  312.591049] gud 1-1.2:1.0: GUD connector: get_modes enter
+[  312.591071] gud 1-1.2:1.0: GUD connector: mode created
+[  312.591090] gud 1-1.2:1.0: GUD connector: mode probed
+[  312.591103] gud 1-1.2:1.0: GUD connector: get_modes complete
+[  454.037469] gud 1-1.2:1.0: GUD disconnected
+[  454.558023] usb 1-1.2: New USB device found, idVendor=1d50, idProduct=614d
+[  454.561457] gud 1-1.2:1.0: GUD v1 bulk-out=0x01 buffer=8294400 width=640-1920 height=400-1080
+[  454.564906] gud 1-1.2:1.0: GUD probe complete for 1d50:614d
+[ 1622.931792] gud 1-1.2:1.0: GUD disconnected
+[ 1623.714680] usb 1-1.2: New USB device found, idVendor=1d50, idProduct=614d
+[ 1623.719027] gud 1-1.2:1.0: GUD v1 bulk-out=0x01 buffer=8294400 width=640-1920 height=400-1080
+[ 1623.722933] gud 1-1.2:1.0: GUD probe complete for 1d50:614d
+[ 1669.521836] gud 1-1.2:1.0: GUD connector: detect enter
+[ 1669.521890] gud 1-1.2:1.0: GUD connector: detect status=1
+[ 1669.521911] gud 1-1.2:1.0: GUD connector: get_modes enter
+[ 1669.521937] gud 1-1.2:1.0: GUD connector: mode created
+[ 1669.521955] gud 1-1.2:1.0: GUD connector: mode probed
+[ 1669.521968] gud 1-1.2:1.0: GUD connector: get_modes complete
+[ 1674.720647] gud 1-1.2:1.0: GUD request 0x60 failed: -110
+[ 1674.720949] gud 1-1.2:1.0: GUD atomic update failed: -110
+[ 1709.920648] gud 1-1.2:1.0: GUD request 0x64 failed: -110
+[ 2028.486488] SMBLIB: smblib_handle_usbin_uv: PMI: smblib_handle_usbin_uv: DEBUG: RESET STORM COUNT FOR POWER_OK
+[ 2028.489257] gud 1-1.2:1.0: GUD disconnected
+[ 2029.996040] SMBLIB: smblib_handle_usbin_uv: PMI: smblib_handle_usbin_uv: DEBUG: RESET STORM COUNT FOR POWER_OK
+[ 2193.646254] SMBLIB: smblib_handle_usbin_uv: PMI: smblib_handle_usbin_uv: DEBUG: RESET STORM COUNT FOR POWER_OK
+[ 2195.476085] SMBLIB: smblib_handle_usbin_uv: PMI: smblib_handle_usbin_uv: DEBUG: RESET STORM COUNT FOR POWER_OK
+[ 7614.646725] usb 1-1.2: New USB device found, idVendor=1d50, idProduct=614d
+[ 7614.651581] gud 1-1.2:1.0: GUD v1 bulk-out=0x01 buffer=8294400 width=640-1920 height=400-1080
+[ 7614.655451] gud 1-1.2:1.0: GUD probe complete for 1d50:614d
+[ 7680.711224] gud 1-1.2:1.0: GUD connector: detect enter
+[ 7680.711275] gud 1-1.2:1.0: GUD connector: detect status=1
+[ 7680.711296] gud 1-1.2:1.0: GUD connector: get_modes enter
+[ 7680.711322] gud 1-1.2:1.0: GUD connector: mode created
+[ 7680.711344] gud 1-1.2:1.0: GUD connector: mode probed
+[ 7680.711359] gud 1-1.2:1.0: GUD connector: get_modes complete
+[ 7683.893382] gud 1-1.2:1.0: GUD bulk transfer failed after 0 retries: -110
+[ 7683.893544] gud 1-1.2:1.0: GUD atomic update failed: -110
+[ 7719.092931] gud 1-1.2:1.0: GUD request 0x64 failed: -110

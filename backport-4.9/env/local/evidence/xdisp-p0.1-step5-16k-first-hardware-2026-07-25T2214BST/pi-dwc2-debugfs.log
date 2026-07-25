@@ -1,0 +1,99 @@
+DWC2_DMA_LOGS
+DEBUGFS_MOUNT
+debugfs on /sys/kernel/debug type debugfs (rw,nosuid,nodev,noexec,relatime)
+DEBUGFS_FILES
+/sys/kernel/debug/usb/3f980000.usb/regdump
+/sys/kernel/debug/usb/3f980000.usb/ep7in
+/sys/kernel/debug/usb/3f980000.usb/ep6in
+/sys/kernel/debug/usb/3f980000.usb/ep5in
+/sys/kernel/debug/usb/3f980000.usb/ep4in
+/sys/kernel/debug/usb/3f980000.usb/ep3in
+/sys/kernel/debug/usb/3f980000.usb/ep2in
+/sys/kernel/debug/usb/3f980000.usb/ep1in
+/sys/kernel/debug/usb/3f980000.usb/ep7out
+/sys/kernel/debug/usb/3f980000.usb/ep6out
+/sys/kernel/debug/usb/3f980000.usb/ep5out
+/sys/kernel/debug/usb/3f980000.usb/ep4out
+/sys/kernel/debug/usb/3f980000.usb/ep3out
+/sys/kernel/debug/usb/3f980000.usb/ep2out
+/sys/kernel/debug/usb/3f980000.usb/ep1out
+/sys/kernel/debug/usb/3f980000.usb/ep0
+/sys/kernel/debug/usb/3f980000.usb/fifo
+/sys/kernel/debug/usb/3f980000.usb/testmode
+/sys/kernel/debug/usb/3f980000.usb/state
+/sys/kernel/debug/usb/3f980000.usb/dr_mode
+/sys/kernel/debug/usb/3f980000.usb/hw_params
+/sys/kernel/debug/usb/3f980000.usb/params
+/sys/kernel/debug/regulator/reg-dummy-regulator-dummy/3f980000.usb-vusb_a/constraint_flags
+/sys/kernel/debug/regulator/reg-dummy-regulator-dummy/3f980000.usb-vusb_a/max_uV
+/sys/kernel/debug/regulator/reg-dummy-regulator-dummy/3f980000.usb-vusb_a/min_uV
+/sys/kernel/debug/regulator/reg-dummy-regulator-dummy/3f980000.usb-vusb_a/uA_load
+/sys/kernel/debug/regulator/reg-dummy-regulator-dummy/3f980000.usb-vusb_d/constraint_flags
+/sys/kernel/debug/regulator/reg-dummy-regulator-dummy/3f980000.usb-vusb_d/max_uV
+/sys/kernel/debug/regulator/reg-dummy-regulator-dummy/3f980000.usb-vusb_d/min_uV
+/sys/kernel/debug/regulator/reg-dummy-regulator-dummy/3f980000.usb-vusb_d/uA_load
+DEBUGFS_CONTENTS
+/sys/kernel/debug/usb/3f980000.usb/params
+otg_caps.hnp_support          : 1
+otg_caps.srp_support          : 1
+otg_caps.otg_rev              : 0
+dma_desc_enable               : 0
+dma_desc_fs_enable            : 0
+speed                         : 0
+enable_dynamic_fifo           : 1
+en_multiple_tx_fifo           : 1
+host_rx_fifo_size             : 774
+host_nperio_tx_fifo_size      : 256
+host_perio_tx_fifo_size       : 512
+max_transfer_size             : 65535
+max_packet_count              : 511
+host_channels                 : 8
+phy_type                      : 1
+phy_utmi_width                : 8
+eusb2_disc                    : 0
+phy_ulpi_ddr                  : 0
+phy_ulpi_ext_vbus             : 0
+i2c_enable                    : 0
+ipg_isoc_en                   : 0
+ulpi_fs_ls                    : 0
+host_support_fs_ls_low_power  : 0
+host_ls_low_power_phy_clk     : 0
+activate_stm_fs_transceiver   : 0
+activate_stm_id_vb_detection  : 0
+ts_dline                      : 0
+reload_ctl                    : 0
+ahbcfg                        : 0x10
+uframe_sched                  : 1
+external_id_pin_ctl           : 0
+power_down                    : 0
+no_clock_gating               : 0
+lpm                           : 0
+lpm_clock_gating              : 0
+besl                          : 0
+hird_threshold_en             : 0
+hird_threshold                : 0
+service_interval              : 0
+host_dma                      : 1
+g_dma                         : 1
+g_dma_desc                    : 0
+g_rx_fifo_size                : 558
+g_np_tx_fifo_size             : 32
+g_tx_fifo_size[0]             : 0
+g_tx_fifo_size[1]             : 512
+g_tx_fifo_size[2]             : 512
+g_tx_fifo_size[3]             : 512
+g_tx_fifo_size[4]             : 512
+g_tx_fifo_size[5]             : 512
+g_tx_fifo_size[6]             : 256
+g_tx_fifo_size[7]             : 256
+g_tx_fifo_size[8]             : 0
+g_tx_fifo_size[9]             : 0
+g_tx_fifo_size[10]            : 0
+g_tx_fifo_size[11]            : 0
+g_tx_fifo_size[12]            : 0
+g_tx_fifo_size[13]            : 0
+g_tx_fifo_size[14]            : 0
+g_tx_fifo_size[15]            : 0
+STATE
+active
+configured

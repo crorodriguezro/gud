@@ -1,0 +1,139 @@
+BASELINE_TIME
+2026-07-25T22:16:38+01:00
+HOST_UPTIME
+raspberrypi
+ 22:16:38 up  1:27,  2 users,  load average: 0.06, 0.04, 0.01
+BOOT_ID
+0f3257d9-7d1b-45d6-a3fc-7098f068fda2
+HASHES
+0c5961daf65a543101bb1727c2c6909a19b5a48ae398cadd94c4c6ebd044b662  /home/cristian/gud-drm
+7053d5b1cf3f7cc94da776a97f64d3471382df9b8f40b00b511eb9ef3bcf1e12  /home/cristian/gud-drm.pre-xdisp-p0.1-step5-7053d5b
+5da095b75ac6797077e31d88edad25d6a2aea334e01430040e0a147a7707ca5c  /etc/systemd/system/gud-userspace.service.d/10-xdisp-p0.1-containment.conf
+4b074555a5aca73d494aa824c9499577e0334d4160bc6a0055d6e9086d842c49  /etc/systemd/system/gud-userspace.service.d/20-xdisp-p0.1-ffs-read-size.conf
+SERVICE
+failed
+disabled
+Restart=no
+Result=exit-code
+ExecMainStatus=1
+Environment=RUST_LOG=debug GUD_FFS_READ_SIZE=16384
+SendSIGKILL=no
+ActiveState=failed
+SubState=failed
+DropInPaths=/etc/systemd/system/gud-userspace.service.d/10-xdisp-p0.1-containment.conf /etc/systemd/system/gud-userspace.service.d/20-xdisp-p0.1-ffs-read-size.conf /etc/systemd/system/gud-userspace.service.d/debug.conf /etc/systemd/system/gud-userspace.service.d/fbcon.conf
+UDC
+not attached
+UNKNOWN
+DWC2
+cat: /sys/module/dwc2/parameters/g_dma: No such file or directory
+cat: /sys/module/dwc2/parameters/g_dma_desc: No such file or directory
+MEMINFO
+MemTotal:         426136 kB
+MemFree:           54332 kB
+MemAvailable:     221172 kB
+Buffers:           23428 kB
+Cached:           181436 kB
+SwapCached:            0 kB
+Active:           223992 kB
+Inactive:          54220 kB
+Active(anon):      74028 kB
+Inactive(anon):      992 kB
+Active(file):     149964 kB
+Inactive(file):    53228 kB
+Unevictable:           0 kB
+Mlocked:               0 kB
+SwapTotal:        425980 kB
+SwapFree:         425980 kB
+Zswap:                 0 kB
+Zswapped:              0 kB
+Dirty:               220 kB
+Writeback:             0 kB
+AnonPages:         73400 kB
+Mapped:            66912 kB
+Shmem:              1860 kB
+KReclaimable:      17660 kB
+Slab:              44016 kB
+SReclaimable:      17660 kB
+SUnreclaim:        26356 kB
+KernelStack:        3380 kB
+PageTables:         4124 kB
+SecPageTables:         0 kB
+NFS_Unstable:          0 kB
+Bounce:                0 kB
+WritebackTmp:          0 kB
+CommitLimit:      639048 kB
+Committed_AS:     404852 kB
+VmallocTotal:   261087232 kB
+VmallocUsed:       15652 kB
+VmallocChunk:          0 kB
+Percpu:              720 kB
+CmaTotal:         262144 kB
+CmaFree:           28360 kB
+BUDDYINFO
+Node 0, zone      DMA    409    199     78     16      3     28     26      6      9      5      4 
+PSTORE
+WATCHDOG
+cat: /proc/sys/kernel/watchdog: No such file or directory
+cat: /proc/sys/kernel/watchdog_thresh: No such file or directory
+/sys/class/watchdog/watchdog0/bootstatus: 0
+/sys/class/watchdog/watchdog0/identity: Broadcom BCM2835 Watchdog timer
+/sys/class/watchdog/watchdog0/state: active
+/sys/class/watchdog/watchdog0/status: 0x8000
+KERNEL_WARNINGS
+Jul 25 20:48:54 raspberrypi kernel: Kernel command line: coherent_pool=1M 8250.nr_uarts=0 snd_bcm2835.enable_headphones=0 cgroup_disable=memory snd_bcm2835.enable_hdmi=1 snd_bcm2835.enable_hdmi=0  smsc95xx.macaddr=B8:27:EB:BD:7B:BF vc_mem.mem_base=0x1ec00000 vc_mem.mem_size=0x20000000  console=ttyS0,115200 console=tty1 root=PARTUUID=60995f73-02 rootfstype=ext4 fsck.repair=yes rootwait quiet splash plymouth.ignore-serial-consoles cfg80211.ieee80211_regdom=GB modules-load=dwc2 rgb565 video=simplefb:off
+Jul 25 20:48:54 raspberrypi kernel: Unknown kernel command line parameters "splash rgb565 modules-load=dwc2", will be passed to user space.
+Jul 25 20:48:54 raspberrypi kernel: dwc2 3f980000.usb: supply vusb_d not found, using dummy regulator
+Jul 25 20:48:54 raspberrypi kernel: dwc2 3f980000.usb: supply vusb_a not found, using dummy regulator
+Jul 25 20:48:54 raspberrypi kernel: dwc2 3f980000.usb: EPs: 8, dedicated fifos, 4080 entries in SPRAM
+Jul 25 20:48:54 raspberrypi kernel: dwc2 3f980000.usb: DWC OTG Controller
+Jul 25 20:48:54 raspberrypi kernel: dwc2 3f980000.usb: new USB bus registered, assigned bus number 1
+Jul 25 20:48:54 raspberrypi kernel: dwc2 3f980000.usb: irq 51, io mem 0x3f980000
+Jul 25 20:48:54 raspberrypi kernel: usb usb1: Manufacturer: Linux 6.12.47+rpt-rpi-v8 dwc2_hsotg
+Jul 25 20:48:54 raspberrypi kernel: bcm2835-wdt bcm2835-wdt: Broadcom BCM2835 watchdog timer
+Jul 25 20:48:54 raspberrypi kernel: mmc-bcm2835 3f300000.mmcnr: mmc_debug:0 mmc_debug2:0
+Jul 25 20:48:54 raspberrypi kernel:     modules-load=dwc2
+Jul 25 20:48:54 raspberrypi systemd[1]: Using hardware watchdog 'Broadcom BCM2835 Watchdog timer', version 0, device /dev/watchdog0
+Jul 25 20:48:54 raspberrypi systemd[1]: Watchdog running with a hardware timeout of 1min.
+Jul 25 20:48:55 raspberrypi systemd-journald[297]: File /var/log/journal/9535eb4ec08842c1a753556d650a17cf/system.journal corrupted or uncleanly shut down, renaming and replacing.
+Jul 25 20:49:16 raspberrypi systemd-journald[297]: File /var/log/journal/9535eb4ec08842c1a753556d650a17cf/user-1000.journal corrupted or uncleanly shut down, renaming and replacing.
+SERVICE_JOURNAL
+Jul 25 20:49:03 raspberrypi systemd[1]: Starting gud-userspace.service - Userspace GUD gadget...
+Jul 25 20:49:03 raspberrypi systemd[1]: Started gud-userspace.service - Userspace GUD gadget.
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.693393Z  INFO gud_drm: gud-drm starting (XDISP-P0.1 lifecycle repair)
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.704779Z  INFO gud_drm: Pattern mode: Off
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.704835Z  INFO gud_drm: Transfer format: Rgb565 (2 bytes/pixel)
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.704857Z  INFO gud_drm: Opening DRM device: /dev/dri/card0
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.714843Z  INFO gud_drm: Using UDC: Udc { name: "3f980000.usb" }
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.822363Z  INFO gud_drm: USB gadgets removed
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.822444Z  INFO gud_drm: Created pixel data endpoint
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.822477Z  INFO gud_drm: Built USB gadget
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.822949Z  INFO gud_drm: picked mode Mode { name: "1920x1080", clock: 148500, size: (1920, 1080), hsync: (2008, 2052, 2200), vsync: (1084, 1089, 1125), hskew: 0, vscan: 0, vrefresh: 60, mode_type: ModeTypeFlags(DRIVER) }
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.823125Z DEBUG gud_drm: Creating double dumb buffers 1920x1080 (RGB565)
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.860887Z DEBUG gud_drm: Framebuffers created (RGB565, 16bpp)
+Jul 25 20:49:03 raspberrypi gud-drm[626]: 2026-07-25T19:49:03.862007Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=1 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:04 raspberrypi gud-drm[626]: 2026-07-25T19:49:04.115108Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=2 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:04 raspberrypi gud-drm[626]: 2026-07-25T19:49:04.365361Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=3 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:04 raspberrypi gud-drm[626]: 2026-07-25T19:49:04.615572Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=4 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:04 raspberrypi gud-drm[626]: 2026-07-25T19:49:04.865807Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=5 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:05 raspberrypi gud-drm[626]: 2026-07-25T19:49:05.116050Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=6 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:05 raspberrypi gud-drm[626]: 2026-07-25T19:49:05.366341Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=7 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:05 raspberrypi gud-drm[626]: 2026-07-25T19:49:05.616645Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=8 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:05 raspberrypi gud-drm[626]: 2026-07-25T19:49:05.866938Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=9 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:06 raspberrypi gud-drm[626]: 2026-07-25T19:49:06.117208Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=10 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:06 raspberrypi gud-drm[626]: 2026-07-25T19:49:06.367424Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=11 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:06 raspberrypi gud-drm[626]: 2026-07-25T19:49:06.617668Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=12 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:06 raspberrypi gud-drm[626]: 2026-07-25T19:49:06.867933Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=13 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:07 raspberrypi gud-drm[626]: 2026-07-25T19:49:07.118262Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=14 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:07 raspberrypi gud-drm[626]: 2026-07-25T19:49:07.369078Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=15 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:07 raspberrypi gud-drm[626]: 2026-07-25T19:49:07.619415Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=16 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:07 raspberrypi gud-drm[626]: 2026-07-25T19:49:07.869671Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=17 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:08 raspberrypi gud-drm[626]: 2026-07-25T19:49:08.119922Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=18 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:08 raspberrypi systemd[1]: /etc/systemd/system/gud-userspace.service:17: Unknown key 'StartLimitIntervalSec' in section [Service], ignoring.
+Jul 25 20:49:08 raspberrypi gud-drm[626]: 2026-07-25T19:49:08.370164Z  WARN gud_drm: set_crtc not ready; retrying before exposing the USB gadget attempt=19 retries=20 error=Os { code: 13, kind: PermissionDenied, message: "Permission denied" }
+Jul 25 20:49:08 raspberrypi gud-drm[626]: Error: Could not set CRTC after retries
+Jul 25 20:49:08 raspberrypi gud-drm[626]: Caused by:
+Jul 25 20:49:08 raspberrypi gud-drm[626]:     Permission denied (os error 13)
+Jul 25 20:49:09 raspberrypi systemd[1]: gud-userspace.service: Main process exited, code=exited, status=1/FAILURE
+Jul 25 20:49:09 raspberrypi systemd[1]: gud-userspace.service: Failed with result 'exit-code'.
+Jul 25 22:14:43 raspberrypi systemd[1]: /etc/systemd/system/gud-userspace.service:17: Unknown key 'StartLimitIntervalSec' in section [Service], ignoring.
+Jul 25 22:15:43 raspberrypi systemd[1]: /etc/systemd/system/gud-userspace.service:17: Unknown key 'StartLimitIntervalSec' in section [Service], ignoring.
