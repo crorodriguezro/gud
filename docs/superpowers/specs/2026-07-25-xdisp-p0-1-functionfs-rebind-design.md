@@ -12,9 +12,11 @@ independent Lomiri external-display path.
 The standalone OnePlus GUD driver and Pi gadget have previously completed a
 full RGB565 frame transfer. In a later fresh session, the Pi could enumerate
 successfully (`1d50:614d`), its UDC could report `configured`, and the
-FunctionFS service could enter its bulk-reader loop, but the reader never
-received the first framebuffer payload. The OnePlus then reported
-`GUD bulk transfer failed ... -110` or `GUD atomic update failed: -110`.
+FunctionFS service could enter its bulk-reader loop without reporting a
+userspace read completion. A 2026-07-25 host-URB capture established that the
+OnePlus did submit and complete the first 64,000-byte bulk transfer
+(`status=0`, `actual=64000`); the Pi reader nevertheless remained blocked and
+the following `SET_BUFFER` control request timed out with `-110`.
 
 This is not the previous `usb-moded` ownership conflict: the gadget can remain
 configured without a competing phone USB identity. It is also not a Mir
@@ -43,8 +45,9 @@ For each fresh Pi gadget rebind or OnePlus reconnect:
 2. The OnePlus detects `1d50:614d`, probes `gud.ko`, and exposes a live GUD
    DRM node.
 3. The first KMS fill submits at least 64 KiB of RGB565 bulk data.
-4. The Pi bulk reader receives that data and the host completes the atomic
-   update without `-110` or a subsequent control-request timeout.
+4. The Pi bulk reader receives that data, returns it to userspace, and presents
+   the first tile; the host completes the atomic update without `-110` or a
+   subsequent control-request timeout.
 5. Any failure has enough Pi and host timestamps to determine whether it
    occurred before host submission, at USB endpoint delivery, or in Pi frame
    presentation.
@@ -71,13 +74,14 @@ The Pi service must make these events distinguishable in its logs:
 - endpoint file opened, enabled, disabled, or closed;
 - reader start/exit and the reason for exit;
 - gadget bind/unbind and UDC state transitions;
-- start and completion of the first bulk read, including byte count and error;
+- endpoint request queue/giveback where available, plus start and completion
+  of the first bulk read, including byte count and error;
 - first tile presentation completion or failure.
 
 The OnePlus evidence must include the matching GUD probe, active card node,
-start of the first update, its result, and any `-110`/control timeout. Use a
-shared timestamp or record the local clock offset when correlating the two
-devices.
+bulk URB submit result and completion status/byte count, start of the first
+update, its result, and any `-110`/control timeout. Use a shared timestamp or
+record the local clock offset when correlating the two devices.
 
 ## Acceptance
 

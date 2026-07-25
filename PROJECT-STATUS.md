@@ -45,6 +45,76 @@ Use these states consistently:
 | `XDISP-P1.1` | Validate external-output geometry and Lomiri placement, including the intermittent narrow/cropped image. | `mir-android2-platform-gud`, `gud-gadget` | planned | A 1280x720 extended desktop fills the selected output correctly across repeated enable/disable cycles. |
 | `XDISP-P2.1` | Improve usable performance with damage-aware updates, mode matching, measurement, and optional compression. | all three | planned | Recorded end-to-end FPS, latency, CPU use, and frame-drop behavior at the chosen mode. |
 
+`XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
+the Pi: the OnePlus submitted and successfully completed the first 64 KiB bulk
+URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
+reporting aggregate payload completion. The next `SET_BUFFER` control request
+then timed out. DWC2 subsequently timed out while stopping the OUT endpoint,
+and the Pi Oopsed with `0x5a` corruption visible in allocator state. Raw logs
+are ignored under `backport-4.9/env/local/evidence/`.
+
+**Decision (2026-07-25):** take the userspace-only repair path first. Disable
+automatic Pi service restart, implement controlled UDC/FunctionFS shutdown and
+signal cancellation, then test larger receive requests through staged
+mini-cycles. Defer a custom Pi kernel (`g_dma=0` or a DWC2 patch) unless those
+changes still reproduce host `-110`, DWC2 endpoint-stop timeouts, or a Pi
+Oops. Keep the OnePlus module and Mir unchanged. The item remains **blocked**;
+do not start `XDISP-P0.2` or mark verification.
+
+Containment step 1 is deployed on the Pi as
+`10-xdisp-p0.1-containment.conf` (SHA-256
+`e1d23477b23e3aff1647262f0f9637129d07e968a1336910c393c71db3879430`).
+After `daemon-reload`, systemd reported `Restart=no`; the service remained
+active with the same PID and restart count. No service restart, UDC rebind, or
+payload test was used to verify this containment setting.
+
+Lifecycle-repair step 2 is implementation-complete in `gud-gadget` and its
+vendored `usb-gadget`: systemd `SIGTERM` now actively unbinds the UDC,
+failed unbinds remain retryable, gadget removal closes FunctionFS after
+unbind, and endpoint owners are dropped before DRM cleanup. The affected
+tests pass (9 `gud-drm`, 30 serialized `gud-gadget`, and the vendored library
+target). The release artifact SHA-256 is
+`5aae726497cb6ea7b21336fae49528a9b69e6592d6871bc1068e11f0aebf7a06`.
+It is staged on the Pi as
+`/home/cristian/gud-drm.xdisp-p0.1-step2-new` and is now active after explicit
+authorization. The prior `7c990347...` binary is retained at
+`/home/cristian/gud-drm.pre-xdisp-p0.1-step2-7c99034`.
+
+The no-payload runtime teardown passed: SIGTERM unbound the UDC, FunctionFS
+removal and endpoint-owner closure completed before DRM release, the service
+restarted successfully, and the Pi kernel logged no DWC2 timeout or Oops.
+Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-step2-runtime-gate-2026-07-25/`.
+
+The first post-payload Step 2 runtime test also passed. After forcing the
+documented OnePlus host-mode node, the dynamic gate found `1d50:614d` at
+`/sys/bus/usb/devices/1-1.2`, and the unchanged normal module created
+`/dev/dri/card1`. One isolated 1280x720 RGB565 submission returned
+`PAYLOAD_RC=0`; all 29 tiles completed. The subsequent controlled Pi service
+restart completed UDC unbind, FunctionFS removal, and endpoint-owner release
+before DRM release. The Pi retained its boot ID with no DWC2 timeout, Oops,
+`5a5a`, or paging fault. The phone re-enumerated the gadget, recreated
+`card1`, and logged no GUD `-110`. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-step2-post-payload-runtime-2026-07-25/`.
+
+Two non-fatal follow-ups were exposed: the stopping process briefly reported
+status 1 after treating the shutdown-induced detach as a restart request, and
+the repaired service's automatic Pi boot start exhausted `set_crtc` retries
+with `EACCES` before a later manual start succeeded. Neither reproduced the
+unsafe cleanup, but both remain separate service-lifecycle/reporting issues.
+This one positive run determines the Step 2 result; it does not satisfy the
+ten-cycle acceptance matrix. `XDISP-P0.1` therefore remains **blocked**, and
+no later step or `XDISP-P0.2` is authorized by this result.
+
+The outstanding post-payload previous-boot journal is now retained under
+`backport-4.9/env/local/evidence/xdisp-p0.1-step2-predeploy-2026-07-25/`.
+On the old shutdown path, DWC2 logged both endpoint-stop timeouts immediately
+before `0x5a` allocator corruption caused repeated Oopses. The new Step 2
+binary is now active and passed the single controlled post-payload restart
+described above. The old crash evidence remains the comparison baseline; the
+single passing run does not change the **blocked** status or authorize
+`XDISP-P0.2`.
+
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the
 phone because it did synchronous USB work in Mir's commit path, and it has

@@ -55,6 +55,107 @@ has been independently checked for reset coverage.
 sleep-based workarounds, or Mir changes as a substitute for a defined endpoint
 lifecycle.
 
+**2026-07-25 diagnostic finding:** This boundary is now after successful host
+bulk completion but before Pi userspace read completion. The OnePlus submitted
+the first 64 KiB URB and its callback reported `status=0 actual=64000`; Pi
+`gud-drm` had validated the matching `SET_BUFFER` and entered its 512-byte
+FunctionFS receive loop without reporting aggregate payload completion, then
+the next control request timed out. The current logging does not identify
+which of the 125 reads failed to complete. Preserve/recover Pi pstore and
+persistent journal evidence before attempting another lifecycle repair. The
+original phone module was restored after the temporary host instrumentation
+run.
+
+## 2026-07-25 userspace-first decision
+
+Do not require a custom Raspberry Pi kernel for the first repair attempt.
+Keep `XDISP-P0.1` blocked and leave the OnePlus module and Mir unchanged.
+Execute the following plan in order:
+
+1. **Contain failure:** disable automatic restart of
+   `gud-userspace.service`. After any host `-110`, do not stop, unbind, or
+   restart the affected instance; recover the Pi by a hard reset and collect
+   the previous boot.
+2. **Repair lifecycle:** in `gud-gadget` and its vendored `usb-gadget`,
+   disconnect/unbind the UDC, let the FunctionFS read exit, close endpoint
+   files, and release DRM last. Systemd `SIGTERM` must actively trigger this
+   path instead of only setting a flag.
+3. **Test `g_dma=0`:** only if the userspace repair still reproduces the
+   failure, test a Raspberry Pi kernel/configuration with DWC2 DMA disabled.
+4. **Harden DWC2:** only if the kernel test requires it, change the Raspberry
+   Pi `drivers/usb/dwc2/` stop-timeout path.
+5. **Test read sizes:** instrument individual read completions and test larger
+   aligned FunctionFS receive requests in `gud-gadget` as a separate variable.
+6. **Staged verification:** pass three safe mini-cycles before restarting the
+   official ten-cycle matrix from cycle 1, retaining evidence through the
+   `gud` procedures.
+
+Step 1 is containment, not verification. It must not change the status or
+authorize `XDISP-P0.2`.
+
+**Step 1 completed (2026-07-25):** installed the tracked
+`10-xdisp-p0.1-containment.conf` drop-in on the Pi and ran only
+`systemctl daemon-reload`. The loaded unit reports `Restart=no`,
+`ActiveState=active`, `SubState=running`, unchanged `MainPID=849`, and
+unchanged `NRestarts=1`. The UDC remained `not attached`; the service was not
+stopped or restarted.
+
+**Step 2 implementation completed (2026-07-25):** `gud-drm` now keeps an
+explicit gadget registration owner, unbinds the UDC to cancel a blocked
+FunctionFS read, removes the gadget, and drops the remaining FunctionFS
+endpoint owners before returning into DRM cleanup. The vendored
+`usb-gadget` removal path unbinds before FunctionFS `pre_removal`.
+Shutdown/unbind is idempotent, a failed unbind remains retryable, and the
+`ctrlc` termination feature routes systemd `SIGTERM` through the same path.
+
+The shutdown controller is covered for shutdown-before-bind,
+shutdown-after-bind, and first-unbind-failure cases. All 9 `gud-drm` tests,
+all 30 `gud-gadget` tests when serialized, and the vendored library test
+target pass. The release artifact SHA-256 is
+`5aae726497cb6ea7b21336fae49528a9b69e6592d6871bc1068e11f0aebf7a06`.
+It is staged on the Pi as
+`/home/cristian/gud-drm.xdisp-p0.1-step2-new`; dependency resolution succeeds.
+After explicit authorization, the prior binary was preserved as
+`/home/cristian/gud-drm.pre-xdisp-p0.1-step2-7c99034` and the repaired binary
+was activated.
+
+A controlled no-payload restart passed the ordered teardown path: SIGTERM
+unbound the UDC, the main loop exited, gadget/FunctionFS removal completed,
+endpoint owners were dropped before DRM release, and the service restarted
+with no DWC2 timeout or Pi Oops. The retained runtime evidence is
+`backport-4.9/env/local/evidence/xdisp-p0.1-step2-runtime-gate-2026-07-25/`.
+
+**Step 2 post-payload runtime result (2026-07-25): passed once.** After Pi and
+OnePlus recovery, forcing the documented OnePlus host-mode node produced the
+mandatory dynamic gate
+`FOUND: /sys/bus/usb/devices/1-1.2` for `1d50:614d`. The unchanged normal
+OnePlus module created `/dev/dri/card1`. One isolated 1280x720 RGB565
+submission returned `PAYLOAD_RC=0`; the Pi completed 28 64,000-byte tiles and
+one 51,200-byte tile. A controlled service restart then unbound the UDC,
+removed FunctionFS, dropped endpoint owners before DRM release, and started a
+new process. The Pi stayed in the same boot with no DWC2 stop timeout, Oops,
+`5a5a`, or paging fault. The phone re-enumerated `1d50:614d`, recreated
+`card1`, and logged no GUD `-110`.
+
+The stopping process reported status 1 because the signal-induced detach was
+also classified as a restart request; the explicit systemd restart itself
+succeeded and the replacement is active with `Restart=no`, `NRestarts=0`, and
+`Result=success`. Treat that as a service-status/reporting defect, not a
+kernel-cleanup failure. The rebooted Pi also needed one manual service start
+after its boot start exhausted `set_crtc` retries with `EACCES`; that separate
+DRM-startup race does not invalidate the post-payload lifecycle result.
+Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-step2-post-payload-runtime-2026-07-25/`.
+This single safe run establishes a positive Step 2 result only; it does not
+mark `XDISP-P0.1` verified or authorize later steps.
+
+The previously outstanding post-payload crash evidence is preserved under
+`backport-4.9/env/local/evidence/xdisp-p0.1-step2-predeploy-2026-07-25/`.
+It shows the old shutdown path hit both DWC2 endpoint-stop timeouts immediately
+before allocator state containing `0x5a` caused ten Oopses. This is evidence
+for the repair boundary, not verification of the new binary. `XDISP-P0.1`
+remains blocked.
+
 ## Task 3: Add minimal instrumentation and a targeted repair
 
 - [ ] Add structured, rate-limited Pi debug logging for the events required by
