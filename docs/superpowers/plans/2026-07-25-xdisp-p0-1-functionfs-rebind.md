@@ -113,7 +113,7 @@ shutdown-after-bind, and first-unbind-failure cases. All 9 `gud-drm` tests,
 all 30 `gud-gadget` tests when serialized, and the vendored library test
 target pass. The release artifact SHA-256 is
 `5aae726497cb6ea7b21336fae49528a9b69e6592d6871bc1068e11f0aebf7a06`.
-It is staged on the Pi as
+It was staged on the Pi as
 `/home/cristian/gud-drm.xdisp-p0.1-step2-new`; dependency resolution succeeds.
 After explicit authorization, the prior binary was preserved as
 `/home/cristian/gud-drm.pre-xdisp-p0.1-step2-7c99034` and the repaired binary
@@ -148,6 +148,20 @@ Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step2-post-payload-runtime-2026-07-25/`.
 This single safe run establishes a positive Step 2 result only; it does not
 mark `XDISP-P0.1` verified or authorize later steps.
+
+**Intentional-shutdown status follow-up (2026-07-25): locally passed,
+hardware blocked.** A focused control-flow change makes SIGTERM take
+precedence over a queued detach restart request, so successful intentional
+teardown returns status 0 while unexpected detach still requests a restart.
+All 11 focused `gud-drm` tests pass. Artifact
+`7053d5b1cf3f7cc94da776a97f64d3471382df9b8f40b00b511eb9ef3bcf1e12`
+is installed on the currently unreachable Pi; the `5aae726...` base is
+preserved at `/home/cristian/gud-drm.pre-xdisp-p0.1-exit0-5aae726`. The first
+hardware attempt did not reach SIGTERM: after the mandatory gate and normal
+host reprobe, the first payload reproduced request `0x60`/atomic-update
+`-110`; Pi SSH became unreachable, so the Step 1 containment rule prohibited
+stop/restart. Preserve Pi journals before retrying. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-exit0-hardware-blocked-2026-07-25/`.
 
 The previously outstanding post-payload crash evidence is preserved under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step2-predeploy-2026-07-25/`.

@@ -75,8 +75,8 @@ unbind, and endpoint owners are dropped before DRM cleanup. The affected
 tests pass (9 `gud-drm`, 30 serialized `gud-gadget`, and the vendored library
 target). The release artifact SHA-256 is
 `5aae726497cb6ea7b21336fae49528a9b69e6592d6871bc1068e11f0aebf7a06`.
-It is staged on the Pi as
-`/home/cristian/gud-drm.xdisp-p0.1-step2-new` and is now active after explicit
+It was staged on the Pi as
+`/home/cristian/gud-drm.xdisp-p0.1-step2-new` and activated after explicit
 authorization. The prior `7c990347...` binary is retained at
 `/home/cristian/gud-drm.pre-xdisp-p0.1-step2-7c99034`.
 
@@ -109,11 +109,27 @@ no later step or `XDISP-P0.2` is authorized by this result.
 The outstanding post-payload previous-boot journal is now retained under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step2-predeploy-2026-07-25/`.
 On the old shutdown path, DWC2 logged both endpoint-stop timeouts immediately
-before `0x5a` allocator corruption caused repeated Oopses. The new Step 2
-binary is now active and passed the single controlled post-payload restart
+before `0x5a` allocator corruption caused repeated Oopses. The Step 2 base
+binary passed the single controlled post-payload restart
 described above. The old crash evidence remains the comparison baseline; the
 single passing run does not change the **blocked** status or authorize
 `XDISP-P0.2`.
+
+A later attempt to verify the small intentional-shutdown exit-status follow-up
+reproduced the intermittent transport failure before SIGTERM could be tested.
+That follow-up artifact, SHA-256
+`7053d5b1cf3f7cc94da776a97f64d3471382df9b8f40b00b511eb9ef3bcf1e12`,
+is installed on the currently unreachable Pi; the `5aae726...` base is
+retained at `/home/cristian/gud-drm.pre-xdisp-p0.1-exit0-5aae726`.
+The unchanged OnePlus module re-probed `1d50:614d`; the isolated KMS tool
+reported `PAYLOAD_RC=0`, but the host kernel then logged request `0x60` and
+atomic-update `-110`, followed by request `0x64` `-110`. Pi SSH became
+unreachable while the gadget and host DRM node remained present. In accordance
+with containment, the affected service was not stopped or restarted. The
+exit-status change is outside the payload path and passes focused unit tests,
+but its hardware result is undetermined until the Pi is recovered and its
+journals are collected. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-exit0-hardware-blocked-2026-07-25/`.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the
