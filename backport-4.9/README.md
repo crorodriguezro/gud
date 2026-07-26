@@ -114,6 +114,48 @@ grep -E '\b(vmap|vunmap|vm_insert_page)\b' env/local/capture/kallsyms.txt
 The generated module must reference only target-exported GEM and VM symbols.
 The `gud_gem_4_9.o` object is expected in the module link.
 
+## XDISP-P0.1 Adaptive-LZ4 Diagnostic Variant
+
+The test-only OnePlus variant is built separately from the normal module:
+
+```bash
+cd backport-4.9
+make MANIFEST="$PWD/env/target-manifest.env" xdisp-lz4-12800
+./tests/test-xdisp-lz4.sh
+./tests/test-xdisp-lz4-contract.sh
+```
+
+Its artifact is `variants/xdisp-lz4-12800/gud.ko`; the normal artifact remains
+the separate root `gud.ko`. Both intentionally have the internal module name
+`gud`, so the kernel cannot load the diagnostic beside the normal driver. The
+diagnostic compresses the largest permitted complete-row RGB565
+rectangle, adaptively reduces height when needed, and checks immediately before
+submission that the actual bulk length is no larger than 12,800 bytes. If the
+gadget does not advertise LZ4, it uses complete-row raw rectangles that obey
+the same cap.
+
+The target kernel does not export an LZ4 compressor. The variant therefore
+links its private Linux-4.9-derived compressor and must have no unresolved LZ4
+symbol:
+
+```bash
+nm -u variants/xdisp-lz4-12800/gud.ko | grep -i lz4
+```
+
+Stage only with a commit-qualified separate path. This runner refuses the
+normal module path and never loads or unloads a module:
+
+```bash
+REMOTE_MODULE_PATH=/home/phablet/gud.xdisp-p0.1-adaptive-12800-<commit>.ko \
+  ./env/stage-xdisp-module.sh
+```
+
+Do not use `deploy-test.sh`, `probe-test.sh`, or the unchanged KMS stage runner
+for this artifact because their normal workflow targets
+`/home/phablet/gud.ko`. Follow
+`../docs/superpowers/plans/2026-07-26-xdisp-p0-1-oneplus-adaptive-lz4.md`
+for activation, evidence, failure containment, and rollback.
+
 ## Ticket 5 First-Pixels Test
 
 Ticket 5 uses a synchronous, full-frame RGB565 DRM framebuffer after an atomic

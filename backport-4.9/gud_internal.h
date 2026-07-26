@@ -12,6 +12,16 @@ struct gud_device {
 	struct usb_interface *intf;
 	u8 bulk_out_endpoint;
 	u8 protocol_version;
+#ifdef GUD_XDISP_LZ4_12800
+	u8 compression;
+	void *xdisp_lz4_workmem;
+	void *xdisp_lz4_scratch;
+	size_t xdisp_lz4_scratch_size;
+	size_t xdisp_max_source_length;
+	void *xdisp_bulk_buffer;
+	dma_addr_t xdisp_bulk_dma;
+	struct urb *xdisp_bulk_urb;
+#endif
 	u32 flags;
 	u32 max_buffer_size;
 	u32 min_width;
@@ -56,5 +66,9 @@ int gud_connector_init(struct gud_device *gud);
 int gud_pipe_init(struct gud_device *gud);
 int gud_drm_init(struct gud_device *gud);
 void gud_drm_fini(struct gud_device *gud);
+#ifdef GUD_XDISP_LZ4_12800
+int gud_xdisp_buffers_init(struct gud_device *gud);
+void gud_xdisp_buffers_fini(struct gud_device *gud);
+#endif
 
 #endif

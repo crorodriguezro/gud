@@ -160,6 +160,11 @@ architecture decision.
     splits after compression and enforces an actual payload ceiling no larger
     than 12,800 bytes. If that cannot retain usable cadence, targeted Pi DWC2
     kernel work is required; do not ship the `g_dma=0` diagnostic.
+  - The host-only variant is now implemented as a separate build under
+    `variants/xdisp-lz4-12800/`. Offline LZ4 round-trip, payload-cap, row
+    coverage, and exact-kernel build gates must pass before staging; one
+    isolated hardware frame and safe lifecycle test are still required before
+    mini-cycles. This does not unblock XDISP-P0.1.
 - [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
   phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
 - [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume

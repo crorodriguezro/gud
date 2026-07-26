@@ -3,6 +3,9 @@
 #include <linux/delay.h>
 #include <linux/kernel.h>
 #include <linux/slab.h>
+#ifdef GUD_XDISP_LZ4_12800
+#include <linux/vmalloc.h>
+#endif
 
 #include "gud_internal.h"
 #include "gud_protocol.h"
@@ -164,9 +167,249 @@ static int gud_pipe_state_check(struct gud_device *gud,
 	return ret;
 }
 
+#ifdef GUD_XDISP_LZ4_12800
+int gud_xdisp_buffers_init(struct gud_device *gud)
+{
+	size_t bytes_per_line = 1280U * 2U;
+	size_t max_source_length;
+	size_t scratch_size;
+
+	if (bytes_per_line > GUD_XDISP_PAYLOAD_LIMIT)
+		return -E2BIG;
+
+	max_source_length = min_t(size_t, gud->max_buffer_size,
+				  1280U * 720U * 2U);
+	max_source_length -= max_source_length % bytes_per_line;
+	if (!max_source_length)
+		return -EINVAL;
+
+	scratch_size = gud_xdisp_lz4_compress_bound(max_source_length);
+	if (!scratch_size)
+		return -EOVERFLOW;
+
+	gud->xdisp_lz4_workmem = kmalloc(GUD_XDISP_LZ4_WORKMEM_SIZE,
+					 GFP_KERNEL);
+	if (!gud->xdisp_lz4_workmem)
+		return -ENOMEM;
+
+	gud->xdisp_lz4_scratch = vmalloc(scratch_size);
+	if (!gud->xdisp_lz4_scratch)
+		goto err_workmem;
+	gud->xdisp_lz4_scratch_size = scratch_size;
+
+	gud->xdisp_bulk_buffer = usb_alloc_coherent(
+		gud->usb, GUD_XDISP_PAYLOAD_LIMIT, GFP_KERNEL,
+		&gud->xdisp_bulk_dma);
+	if (!gud->xdisp_bulk_buffer)
+		goto err_scratch;
+
+	gud->xdisp_bulk_urb = usb_alloc_urb(0, GFP_KERNEL);
+	if (!gud->xdisp_bulk_urb)
+		goto err_bulk;
+
+	gud->xdisp_max_source_length = max_source_length;
+	return 0;
+
+err_bulk:
+	usb_free_coherent(gud->usb, GUD_XDISP_PAYLOAD_LIMIT,
+			  gud->xdisp_bulk_buffer, gud->xdisp_bulk_dma);
+	gud->xdisp_bulk_buffer = NULL;
+err_scratch:
+	vfree(gud->xdisp_lz4_scratch);
+	gud->xdisp_lz4_scratch = NULL;
+	gud->xdisp_lz4_scratch_size = 0;
+err_workmem:
+	kfree(gud->xdisp_lz4_workmem);
+	gud->xdisp_lz4_workmem = NULL;
+	gud->xdisp_max_source_length = 0;
+	return -ENOMEM;
+}
+
+void gud_xdisp_buffers_fini(struct gud_device *gud)
+{
+	usb_free_urb(gud->xdisp_bulk_urb);
+	gud->xdisp_bulk_urb = NULL;
+	if (gud->xdisp_bulk_buffer) {
+		usb_free_coherent(gud->usb, GUD_XDISP_PAYLOAD_LIMIT,
+				  gud->xdisp_bulk_buffer,
+				  gud->xdisp_bulk_dma);
+		gud->xdisp_bulk_buffer = NULL;
+	}
+	vfree(gud->xdisp_lz4_scratch);
+	gud->xdisp_lz4_scratch = NULL;
+	gud->xdisp_lz4_scratch_size = 0;
+	gud->xdisp_max_source_length = 0;
+	kfree(gud->xdisp_lz4_workmem);
+	gud->xdisp_lz4_workmem = NULL;
+}
+
+static int gud_pipe_transfer_xdisp(struct gud_device *gud,
+				   const struct drm_plane_state *plane_state)
+{
+	struct gud_framebuffer *gfb = to_gud_framebuffer(plane_state->fb);
+	struct gud_gem_object *obj = to_gud_gem(gfb->obj);
+	struct gud_set_buffer_req request;
+	size_t bytes_per_line;
+	size_t framebuffer_offset;
+	size_t length;
+	size_t map_size;
+	size_t offset = 0;
+	size_t total_payload = 0;
+	void *vaddr;
+	u32 compressed_rects = 0;
+	u32 max_payload = 0;
+	u32 max_rows;
+	u32 row_hint;
+	u32 raw_rects = 0;
+	u32 rectangles = 0;
+	int ret;
+
+	length = (size_t)plane_state->fb->width * 2 *
+		 plane_state->fb->height;
+	if (!length || length > U32_MAX || length > obj->base.size)
+		return -EINVAL;
+	if (!gud->max_buffer_size)
+		return -EINVAL;
+
+	ret = gud_gem_vmap(obj, &vaddr, &map_size);
+	if (ret)
+		return ret;
+	framebuffer_offset = plane_state->fb->offsets[0];
+	if (framebuffer_offset > map_size ||
+	    length > map_size - framebuffer_offset)
+		return -EINVAL;
+	vaddr = (u8 *)vaddr + framebuffer_offset;
+
+	bytes_per_line = (size_t)plane_state->fb->width * 2;
+	if (!bytes_per_line || bytes_per_line > GUD_XDISP_PAYLOAD_LIMIT)
+		return -E2BIG;
+	max_rows = min_t(size_t, gud->xdisp_max_source_length, length) /
+		   bytes_per_line;
+	if (!max_rows)
+		return -EINVAL;
+	row_hint = max_rows;
+
+	mutex_lock(&gud->lock);
+	while (offset < length) {
+		struct gud_xdisp_chunk chunk;
+		const void *payload;
+		u32 remaining_rows = (length - offset) / bytes_per_line;
+		int actual;
+		int retries;
+		int transfer_length;
+
+		if (gud->disconnected) {
+			ret = -ENODEV;
+			break;
+		}
+
+		if (gud->compression & GUD_COMPRESSION_LZ4) {
+			ret = gud_xdisp_plan_chunk(
+				(u8 *)vaddr + offset, remaining_rows,
+				bytes_per_line, min(row_hint, max_rows),
+				GUD_XDISP_PAYLOAD_LIMIT,
+				gud->xdisp_lz4_workmem,
+				gud->xdisp_lz4_scratch,
+				gud->xdisp_lz4_scratch_size, &chunk);
+			if (ret)
+				break;
+		} else {
+			chunk.rows = min_t(u32, remaining_rows,
+					   GUD_XDISP_PAYLOAD_LIMIT /
+					   bytes_per_line);
+			chunk.rows = min_t(u32, chunk.rows, max_rows);
+			chunk.source_length =
+				(size_t)chunk.rows * bytes_per_line;
+			chunk.payload_length = chunk.source_length;
+			chunk.compressed = false;
+		}
+
+		/*
+		 * This check is intentionally adjacent to the only SET_BUFFER /
+		 * bulk submission path.  A larger host URB is never submitted,
+		 * even if a future planner regression returns a bad result.
+		 */
+		if (!chunk.rows || !chunk.source_length ||
+		    !chunk.payload_length ||
+		    chunk.payload_length > GUD_XDISP_PAYLOAD_LIMIT) {
+			ret = -EOVERFLOW;
+			break;
+		}
+		transfer_length = chunk.payload_length;
+
+		payload = chunk.compressed ? gud->xdisp_lz4_scratch :
+			  (u8 *)vaddr + offset;
+		memcpy(gud->xdisp_bulk_buffer, payload,
+		       chunk.payload_length);
+
+		memset(&request, 0, sizeof(request));
+		request.y = cpu_to_le32(offset / bytes_per_line);
+		request.width = cpu_to_le32(plane_state->fb->width);
+		request.height = cpu_to_le32(chunk.rows);
+		request.length = cpu_to_le32(chunk.source_length);
+		if (chunk.compressed) {
+			request.compression = GUD_COMPRESSION_LZ4;
+			request.compressed_length =
+				cpu_to_le32(chunk.payload_length);
+		}
+
+		ret = gud_usb_set(gud, GUD_REQ_SET_BUFFER, &request,
+				  sizeof(request));
+		if (ret)
+			break;
+
+		for (retries = 0; ; retries++) {
+			ret = gud_usb_bulk_write(
+				gud, gud->xdisp_bulk_urb,
+				gud->xdisp_bulk_buffer,
+				gud->xdisp_bulk_dma,
+				transfer_length, &actual);
+			if (ret != -EAGAIN ||
+			    retries == GUD_BULK_EAGAIN_RETRIES)
+				break;
+			msleep(10);
+		}
+		if (ret) {
+			dev_err(&gud->intf->dev,
+				"GUD bulk transfer failed after %d retries: %d\n",
+				retries, ret);
+			break;
+		}
+		if (actual != transfer_length) {
+			ret = -EIO;
+			break;
+		}
+
+		offset += chunk.source_length;
+		total_payload += chunk.payload_length;
+		max_payload = max_t(u32, max_payload,
+				    chunk.payload_length);
+		rectangles++;
+		if (chunk.compressed)
+			compressed_rects++;
+		else
+			raw_rects++;
+		row_hint = gud_xdisp_next_row_hint(chunk.rows, max_rows);
+	}
+	mutex_unlock(&gud->lock);
+
+	if (!ret)
+		dev_info_ratelimited(
+			&gud->intf->dev,
+			"XDISP frame source=%zu payload=%zu rectangles=%u compressed=%u raw=%u max_payload=%u cap=%u\n",
+			length, total_payload, rectangles, compressed_rects,
+			raw_rects, max_payload, GUD_XDISP_PAYLOAD_LIMIT);
+
+	return ret;
+}
+#endif
+
 static int gud_pipe_transfer(struct gud_device *gud,
 			     const struct drm_plane_state *plane_state)
 {
+#ifdef GUD_XDISP_LZ4_12800
+	return gud_pipe_transfer_xdisp(gud, plane_state);
+#else
 	struct gud_framebuffer *gfb = to_gud_framebuffer(plane_state->fb);
 	struct gud_gem_object *obj = to_gud_gem(gfb->obj);
 	struct gud_set_buffer_req request;
@@ -261,6 +504,7 @@ static int gud_pipe_transfer(struct gud_device *gud,
 	usb_free_urb(bulk_urb);
 	usb_free_coherent(gud->usb, chunk_size, bulk_buffer, bulk_dma);
 	return ret;
+#endif
 }
 
 static void gud_fb_destroy(struct drm_framebuffer *fb)

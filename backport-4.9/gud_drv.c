@@ -26,6 +26,9 @@ static int gud_drm_unload(struct drm_device *drm)
 
 	drm_mode_config_cleanup(drm);
 	if (gud) {
+#ifdef GUD_XDISP_LZ4_12800
+		gud_xdisp_buffers_fini(gud);
+#endif
 		usb_put_dev(gud->usb);
 		kfree(gud);
 	}
@@ -129,6 +132,9 @@ int gud_get_display_descriptor(struct gud_device *gud)
 
 	gud->protocol_version = desc.version;
 	gud->flags = le32_to_cpu(desc.flags);
+#ifdef GUD_XDISP_LZ4_12800
+	gud->compression = desc.compression & GUD_COMPRESSION_LZ4;
+#endif
 	gud->max_buffer_size = le32_to_cpu(desc.max_buffer_size);
 	gud->min_width = le32_to_cpu(desc.min_width);
 	gud->max_width = le32_to_cpu(desc.max_width);
@@ -148,6 +154,11 @@ int gud_get_display_descriptor(struct gud_device *gud)
 		 "GUD v%u bulk-out=0x%02x buffer=%u width=%u-%u height=%u-%u\n",
 		 gud->protocol_version, gud->bulk_out_endpoint, gud->max_buffer_size,
 		 gud->min_width, gud->max_width, gud->min_height, gud->max_height);
+#ifdef GUD_XDISP_LZ4_12800
+	dev_info(&gud->intf->dev,
+		 "XDISP diagnostic variant: compression=0x%02x actual bulk payload cap=%u\n",
+		 gud->compression, GUD_XDISP_PAYLOAD_LIMIT);
+#endif
 	return 0;
 }
 
@@ -185,9 +196,15 @@ static int gud_probe(struct usb_interface *intf,
 	if (ret)
 		goto err_put_usb;
 
-	ret = gud_drm_init(gud);
+#ifdef GUD_XDISP_LZ4_12800
+	ret = gud_xdisp_buffers_init(gud);
 	if (ret)
 		goto err_put_usb;
+#endif
+
+	ret = gud_drm_init(gud);
+	if (ret)
+		goto err_free_xdisp;
 
 	usb_set_intfdata(intf, gud);
 	dev_info(&intf->dev, "GUD probe complete for %04x:%04x\n",
@@ -195,6 +212,10 @@ static int gud_probe(struct usb_interface *intf,
 		le16_to_cpu(gud->usb->descriptor.idProduct));
 	return 0;
 
+err_free_xdisp:
+#ifdef GUD_XDISP_LZ4_12800
+	gud_xdisp_buffers_fini(gud);
+#endif
 err_put_usb:
 	usb_put_dev(gud->usb);
 	kfree(gud);
@@ -229,12 +250,21 @@ static const struct usb_device_id gud_id_table[] = {
 MODULE_DEVICE_TABLE(usb, gud_id_table);
 
 static struct usb_driver gud_usb_driver = {
+#ifdef GUD_XDISP_LZ4_12800
+	.name = "gud_xdisp_lz4_12800",
+#else
 	.name = "gud",
+#endif
 	.probe = gud_probe,
 	.disconnect = gud_disconnect,
 	.id_table = gud_id_table,
 };
 module_usb_driver(gud_usb_driver);
 
+#ifdef GUD_XDISP_LZ4_12800
+MODULE_DESCRIPTION("OnePlus 6 GUD XDISP adaptive LZ4 12800-byte diagnostic");
+MODULE_VERSION("xdisp-p0.1-adaptive-12800-v1");
+#else
 MODULE_DESCRIPTION("OnePlus 6 GUD USB probe backport");
+#endif
 MODULE_LICENSE("GPL");

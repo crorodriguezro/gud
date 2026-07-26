@@ -344,6 +344,12 @@ the normal OnePlus module unchanged until that review is accepted. If the
 host-only design is rejected or cannot meet the boundary with usable cadence,
 Step 4 becomes the remaining normal-performance path.
 
+**Revision on 2026-07-26:** the host-only design was authorized. Its
+implementation, offline gates, staging rules, single-frame test, and rollback
+are tracked in
+`2026-07-26-xdisp-p0-1-oneplus-adaptive-lz4.md`. Authorization does not change
+this plan's blocked verification state and does not authorize P0.2.
+
 No gate starts the mini-cycles or changes `XDISP-P0.1` from **blocked**. One
 complete OnePlus frame and a safe controlled stop/start remain prerequisites
 for three mini-cycles and the ten-cycle matrix.

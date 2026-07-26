@@ -357,6 +357,18 @@ cannot meet the boundary, normal-performance progress requires targeted Pi
 DWC2/FunctionFS kernel instrumentation and another test build. Keep
 `XDISP-P0.1` blocked and do not start `XDISP-P0.2`.
 
+The design was authorized on 2026-07-26 and is being implemented as a separate
+build under `backport-4.9/variants/xdisp-lz4-12800/`. It compresses the
+largest legal source rectangle before splitting, uses measured compression
+size to reduce complete rows, and retains a final pre-submit `<= 12,800`
+check. A private Linux-4.9-derived LZ4 compressor is linked because the
+OnePlus kernel exports no LZ4 compressor. The normal build remains a separate
+target and must retain its preserved SHA-256. Offline completion, staging, one
+real frame, safe restart, and cadence evidence are distinct gates;
+implementation alone is not a reliability result. The execution and rollback
+plan is
+`docs/superpowers/plans/2026-07-26-xdisp-p0-1-oneplus-adaptive-lz4.md`.
+
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the
 phone because it did synchronous USB work in Mir's commit path, and it has
