@@ -150,8 +150,16 @@ architecture decision.
   - Gate E and two identical fresh-boot repeats each passed six full 1280
     target frames at 12,800 bytes/25 packets and a clean stop: 2,592 target
     transfers with zero error. The observed aligned boundary is
-    12,800 clean versus 15,360 failed. Next is one unchanged-module OnePlus
-    frame and safe restart.
+    12,800 clean versus 15,360 failed.
+  - Gate F proved that a 12,800-byte userspace prefix read does not safely
+    consume a larger host transfer under `g_dma=1`. The one-shot `g_dma=0`
+    Pi kernel then failed its first 16,274-byte compressed payload: the host
+    completed the full URB, but FunctionFS returned 3,986 bytes and left an
+    exact 12,288-byte DWC2 residual. Do not advance to OnePlus or the matrix.
+  - Review a separately preserved OnePlus module variant that dynamically
+    splits after compression and enforces an actual payload ceiling no larger
+    than 12,800 bytes. If that cannot retain usable cadence, targeted Pi DWC2
+    kernel work is required; do not ship the `g_dma=0` diagnostic.
 - [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
   phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
 - [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume

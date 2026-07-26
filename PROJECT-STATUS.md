@@ -314,7 +314,7 @@ safely consume a larger host transfer under `g_dma=1`. The descriptor and
 internal-read ceilings therefore cannot be decoupled as a performance
 workaround. Do not reinstall Gate F unchanged or proceed to the OnePlus gate.
 
-**Revised next step:** isolate DWC2 buffer DMA with the separately named Pi
+**Gate F decision at the time:** isolate DWC2 buffer DMA with the separately named Pi
 `g_dma=0` test kernel documented in
 `../gud-gadget/docs/XDISP-P0.1-FUNCTIONFS-REBIND-TEST.md`. The installed Pi
 kernel cannot enable this through `cmdline.txt`, an overlay, module reload, or
@@ -322,6 +322,40 @@ debugfs; it requires a separately built/prebuilt Pi test kernel while
 preserving the stock rollback kernel. This does not modify the OnePlus kernel,
 `gud.ko`, or Mir. Keep `XDISP-P0.1` blocked and do not start mini-cycles, the
 matrix, or `XDISP-P0.2`.
+
+**`g_dma=0` result (2026-07-26):** the stock-preserving one-shot kernel
+`6.12.47+rpt-rpi-v8-xdisp-gdma0` booted with buffer and descriptor DMA both
+disabled. With the normal LZ4/natural descriptor and the 16 KiB blocking read
+ceiling, its first laptop payload was a 16,274-byte compressed 1920x1080
+rectangle. Usbmon recorded the upstream host submitting and successfully
+completing all 16,274 bytes in 823 microseconds. Pi FunctionFS returned only
+3,986 bytes from the exact 16,274-byte request after 302 microseconds. Live
+DWC2 state reported `total_data=3986` and 12,288 bytes remaining in
+`DOEPTSIZ`, exactly `16274 - 3986`.
+
+Containment changed the service to `Poisoned` and refused teardown. Later host
+control retries caused 17 secondary DWC2 ep0-state warnings; no OnePlus test,
+mini-cycle, matrix, or service stop was attempted on that boot. This rejects
+`g_dma=0` as an unchanged workaround and further localizes the failure to the
+Pi DWC2/FunctionFS receive path. It does not establish a safe DWC2 patch.
+Physical reset returned to stock `6.12.47+rpt-rpi-v8` with `g_dma=1`, the
+service disabled/inactive, and the UDC detached. The previous boot contains no
+endpoint-stop timeout, Oops, panic, or pstore record; watchdog bootstatus is
+zero.
+Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-pi-gdma0-laptop-normal-2026-07-25T2140COT/`.
+
+Do not automatically start the original Step 4 kernel-hardening work. Gate E
+is the only laptop-qualified userspace boundary, but its observed
+one-frame-per-five-seconds cadence is not a usable product setting. The next
+no-Pi-kernel design candidate is a separately preserved OnePlus diagnostic
+module that adds compression-aware adaptive rectangle splitting and enforces
+an actual bulk payload ceiling at or below the qualified 12,800-byte boundary.
+The normal `/home/phablet/gud.ko` must remain untouched until that design is
+reviewed and explicitly authorized. If that host-only path is rejected or
+cannot meet the boundary, normal-performance progress requires targeted Pi
+DWC2/FunctionFS kernel instrumentation and another test build. Keep
+`XDISP-P0.1` blocked and do not start `XDISP-P0.2`.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the

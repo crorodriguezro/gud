@@ -315,11 +315,34 @@ detach and controlled stop were clean.
 
 The aligned boundary is now 12,800 clean versus 15,360 failed. Two additional
 fresh-boot Gate E repeats passed the identical workload, yielding 2,592 clean
-target transfers and three safe stops across qualification. Promote 12,800 to
-the OnePlus ceiling candidate. The next gate uses the unchanged normal
-OnePlus module for one complete frame and safe restart. Keep an isolated Pi
-`g_dma=0` test kernel as later root-cause isolation, not the immediate next
-action.
+target transfers and three safe stops across qualification.
+
+**Revision after Gate F (2026-07-25):** do not advance the 12,800-byte
+descriptor ceiling to OnePlus. It produced roughly one visible frame every
+five seconds. Keeping the normal descriptor while limiting only FunctionFS
+reads to 12,800 failed on the first 16,274-byte compressed payload with signed
+`-509440`, exactly `12800 - 522240` from the recurring DWC2 residual. Proceed
+only to the stock-preserving `g_dma=0` Pi isolation.
+
+**Step 3 result (2026-07-26):** the separately named one-shot
+`6.12.47+rpt-rpi-v8-xdisp-gdma0` kernel booted with `g_dma=0` and
+`g_dma_desc=0`, then failed its first normal 16,274-byte laptop payload.
+Usbmon recorded the host completing the full URB with status zero in 823
+microseconds. The Pi's exact blocking FunctionFS read returned 3,986 bytes in
+302 microseconds and DWC2 retained 12,288 bytes, exactly the missing amount.
+Containment parked the service as `Poisoned`; no teardown or later gate ran.
+Physical reset returned to the stock kernel with `g_dma=1`, the service
+disabled/inactive, and the UDC detached. Previous-boot evidence contains no
+endpoint-stop timeout, Oops, panic, or pstore record.
+
+Step 3 therefore does not supply a workaround and Step 6 remains blocked.
+Do not start Step 4 automatically: it requires a new Pi kernel change and
+explicit authorization. First review a host-only alternative using a
+separately preserved OnePlus module variant with compression-aware adaptive
+rectangle splitting and an actual payload cap at or below 12,800 bytes. Keep
+the normal OnePlus module unchanged until that review is accepted. If the
+host-only design is rejected or cannot meet the boundary with usable cadence,
+Step 4 becomes the remaining normal-performance path.
 
 No gate starts the mini-cycles or changes `XDISP-P0.1` from **blocked**. One
 complete OnePlus frame and a safe controlled stop/start remain prerequisites
