@@ -412,15 +412,25 @@ short read, DWC2 stop timeout, vc4 fault, Pi Oops, pstore record, or watchdog
 event.
 
 This is a userspace lifecycle-policy incompatibility, not a kernel failure.
-The proposed repair is to let only the proven-idle, safely torn-down detach
-path exit successfully and set the containment drop-in to
-`Restart=on-success`. Explicit service stops remain non-restarting, while
-real status-1 failures, poisoned receives, and crashes remain contained. Do
-not resume the matrix or reuse cycle 1: after implementation and a dedicated
-post-payload reconnect gate, restart all ten cycles from cycle 1.
+The repair now lets only the proven-idle, safely torn-down detach path exit
+successfully and sets the containment drop-in to `Restart=on-success`.
+Nonzero failures, poisoned receives, and crashes remain contained.
+
+The dedicated post-payload reconnect gate passed. The old PID 2739 claimed an
+idle receive session, safely unbound UDC and closed FunctionFS, exited zero,
+and systemd automatically created PID 2836 on the same Pi boot
+(`NRestarts=1`). The OnePlus re-enumerated `1d50:614d` without a manual Pi
+service command. A fresh frame under PID 2836 covered all 720 rows with five
+one-read compressed payloads totaling 53,594 bytes; the 12,735-byte maximum
+remained below the 12,800-byte cap and every receive returned to `Idle`.
+Display/controller disable completed normally and neither kernel logged a
+timeout or fault. This qualifies the lifecycle repair, but does not reuse the
+old matrix pass: restart all ten cycles from cycle 1.
 `XDISP-P0.1` remains **blocked** and `XDISP-P0.2` remains prohibited.
 Evidence is under
-`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-matrix-2026-07-26T1256COT/`.
+`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-matrix-2026-07-26T1256COT/`
+and
+`backport-4.9/env/local/evidence/xdisp-p0.1-detach-restart-repair-2026-07-26T1446COT/`.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the

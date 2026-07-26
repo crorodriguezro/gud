@@ -201,13 +201,21 @@ gadget recreation. The containment drop-in had `Restart=no`, so systemd left
 the service failed and the phone could not complete enumeration. The Pi
 kernel remained clean.
 
-Do not continue this matrix. The next userspace-only change is to classify
-only the proven-idle safe-detach teardown as a successful exit and set the
-containment drop-in to `Restart=on-success`. Keep all genuine status-1,
-poisoned-receive, signal, and crash outcomes non-restarting. After unit tests,
-staging, and one post-payload disconnect/reconnect gate pass, start a fresh
-ten-cycle matrix from cycle 1. Evidence is under
-`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-matrix-2026-07-26T1256COT/`.
+Do not continue that matrix. The userspace-only repair now classifies only
+the proven-idle safe-detach teardown as a successful exit and sets the
+containment drop-in to `Restart=on-success`. Genuine nonzero,
+poisoned-receive, and crash outcomes remain non-restarting.
+
+Offline tests and the dedicated post-payload disconnect/reconnect gate passed.
+The clean-detach service instance exited zero, systemd created a new instance
+on the same Pi boot, the OnePlus re-enumerated, and a fresh complete frame
+under the new PID used five one-read payloads with a 12,735-byte maximum.
+Every receive returned to `Idle` and the kernels stayed clean. Start a fresh
+ten-cycle matrix from cycle 1; the old cycle-1 result is not reusable.
+Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-matrix-2026-07-26T1256COT/`
+and
+`backport-4.9/env/local/evidence/xdisp-p0.1-detach-restart-repair-2026-07-26T1446COT/`.
 
 ## Failure handling
 

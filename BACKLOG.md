@@ -178,10 +178,14 @@ architecture decision.
     rectangles, 12,790-byte maximum) but failed cycle 2 before payload. On a
     reconnect-only reset, the Pi safely tore down the detached gadget and
     intentionally exited 1; containment's `Restart=no` left it failed, so the
-    phone could not re-enumerate. Repair only this clean-detach lifecycle
-    outcome in userspace and use `Restart=on-success`, retaining containment
-    for status-1/poison/crash failures. Requalify reconnect, then restart the
-    ten-cycle matrix from cycle 1.
+    phone could not re-enumerate.
+  - The userspace clean-detach repair and dedicated reconnect gate passed.
+    Only a proven-idle detach exits zero under `Restart=on-success`; nonzero,
+    poisoned, and crash outcomes remain contained. The service automatically
+    changed from PID 2739 to PID 2836 on the same Pi boot, the OnePlus
+    re-enumerated, and a fresh five-rectangle frame completed with a
+    12,735-byte maximum and every receive returned to `Idle`. Restart the
+    ten-cycle matrix from cycle 1; do not credit the old cycle-1 pass.
 - [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
   phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
 - [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume
