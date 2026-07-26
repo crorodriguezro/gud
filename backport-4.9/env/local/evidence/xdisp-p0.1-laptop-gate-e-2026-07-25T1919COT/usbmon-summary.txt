@@ -1,0 +1,31 @@
+pcap_records=5440
+pcap_packets_dropped=0
+gud_bus=1
+gud_device=4
+set_buffer_submits=1224
+bulk_submits=1224
+bulk_completes=1224
+unmatched_bulk_submits=0
+bulk_completion_errors=0
+bulk_length_mismatches=0
+zero_length_bulk_submits=0
+bulk_submit_flags=0x0:1224
+bulk_latency_us_min=280
+bulk_latency_us_avg=482
+bulk_latency_us_max=1659
+rect_hist=1920x3:11520:c0:360,1280x5:12800:c0:864
+bulk_length_hist=11520:360,12800:864
+complete_1920x1080_frames=1
+complete_1280x720_frames=6
+pcap_sha256=b41514146ace46bb9f849b906d5b3fde83ffbf2d548249646e0ab2c6743c6639
+
+The preliminary phase completed one full 1920x1080 frame as 360 known-clean
+11,520-byte transfers.
+
+The valid Gate E phase completed six full 1280x720 frames as 864
+uncompressed 12,800-byte transfers. Each is exactly 25 high-speed 512-byte
+packets. Every bulk submit had transfer flags zero, and there was no
+zero-length bulk submit.
+
+All 1,224 bulk URBs completed with status zero and their full submitted
+length. Usbmon and the Pi service journal agree on the payload count.

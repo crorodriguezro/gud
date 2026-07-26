@@ -307,22 +307,18 @@ transfers with status zero/full length, transfer flags zero, and no
 zero-length bulk URB. The Pi returned to `Idle` 1,440 times and controlled
 shutdown completed without a kernel anomaly.
 
-**Revision after Gate D (2026-07-25):** exact maxpacket termination is not a
-sufficient trigger. Cancel the proposed OnePlus `URB_ZERO_PACKET` diagnostic.
-Continue the no-kernel aligned-size boundary:
+**Revision after Gate E run 1 (2026-07-25):** exact maxpacket termination is
+not a sufficient trigger, and the 12,800-byte boundary run passed. It completed
+six full 1280 target frames—864 aligned 25-packet transfers—within 1,224
+matched status-zero/full-length transfers. All Pi reads returned to `Idle`;
+detach and controlled stop were clean.
 
-1. Gate E: fresh boot, `g_dma=1`, 16 KiB reads, compression disabled, and
-   `max_buffer_size=12800`.
-2. Interpret only the 1280x5/12,800-byte shape: exactly 25 packets, between the
-   clean 10,240/20-packet and failed 15,360/30-packet cases.
-3. Require a complete 1280 frame with exact usbmon/read matching, physical
-   detach, `Idle`, and a controlled exit-zero stop.
-4. A failure retains 10,240 as the current userspace ceiling candidate. A pass
-   narrows the aligned boundary to 12,800--15,360. Repeat any clean candidate
-   on separate fresh boots because the historical 64,000-byte behavior was
-   intermittent.
-5. Keep an isolated Pi `g_dma=0` test kernel as later root-cause isolation,
-   not the immediate next action.
+The aligned boundary is now 12,800 clean versus 15,360 failed. Repeat the
+identical Gate E configuration on two additional fresh boots, requiring at
+least one complete 1280 frame and a safe stop each. If both pass, promote
+12,800 to the OnePlus ceiling candidate. If either fails, fall back to the
+proven-clean 10,240 shape and repeat it. Keep an isolated Pi `g_dma=0` test
+kernel as later root-cause isolation, not the immediate next action.
 
 No gate starts the mini-cycles or changes `XDISP-P0.1` from **blocked**. One
 complete OnePlus frame and a safe controlled stop/start remain prerequisites

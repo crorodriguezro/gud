@@ -272,25 +272,28 @@ proposed OnePlus `URB_ZERO_PACKET` diagnostic. The useful aligned boundary is
 now a 10,240-byte pass versus 15,360-byte failure; size and/or intermittent
 DWC2 state still matters.
 
-**Revised next steps:** isolate the aligned size boundary before reconsidering
-`g_dma=0`:
+**Laptop Gate E first result (2026-07-25):** Gate E passed one known-clean
+1920 frame followed by six complete target 1280x720 frames. Usbmon matched
+1,224/1,224 transfers; 864 were aligned 1280x5/12,800-byte target transfers.
+Every completion had status zero/full length, and the Pi returned to `Idle`
+1,224 times. Physical detach and controlled stop were clean, with no host/Pi
+kernel anomaly. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-laptop-gate-e-2026-07-25T1919COT/`.
 
-1. Gate E starts from a fresh, clean Pi boot with
-   `GUD_FFS_READ_SIZE=16384`, `g_dma=1`, compression disabled, and
-   `max_buffer_size=12800`.
-2. Interpret only 1280x5/12,800-byte SET_BUFFERs: exactly 25 maxpackets,
-   between the clean 10,240/20-packet and failed 15,360/30-packet cases.
-   Require a complete 1280 frame, exact usbmon/read matching, physical detach,
-   `Idle`, and a safe controlled stop.
-3. A Gate E failure retains 10,240 bytes as the current userspace ceiling
-   candidate. A pass narrows the aligned boundary to 12,800--15,360 bytes.
-   Repeat any clean candidate on separate fresh boots because the historical
-   64,000-byte behavior was intermittent.
-4. Keep one isolated Pi `g_dma=0` test kernel as later root-cause isolation,
-   not the immediate next action.
-5. After a repeated laptop candidate, one clean OnePlus frame, and safe
-   stop/start, run three mini-cycles, then restart the ten-cycle matrix at
-   cycle 1. Keep `XDISP-P0.1` blocked and do not start `XDISP-P0.2` beforehand.
+The observed aligned boundary is now 12,800 bytes clean versus 15,360 bytes
+failed. This is a ceiling candidate, not verification or root-cause proof.
+
+**Revised next steps:** repeat the identical 12,800-byte Gate E configuration
+on two additional fresh Pi boots. Each must include at least one complete
+1280x720 frame, exact usbmon/read matching, physical detach, `Idle`, and an
+exit-zero controlled stop. Stop at the first anomaly.
+
+If both repeat boots pass, use 12,800 as the laptop-qualified userspace ceiling
+for one frame and safe restart with the unchanged normal OnePlus module. If a
+repeat fails, fall back to the proven-clean 10,240-byte shape and repeat it
+before OnePlus use. Keep `g_dma=0` as later root-cause isolation. Only after a
+clean OnePlus gate may three mini-cycles and then the ten-cycle matrix begin.
+Keep `XDISP-P0.1` blocked and do not start `XDISP-P0.2` beforehand.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the

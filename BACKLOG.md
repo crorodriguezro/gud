@@ -147,9 +147,10 @@ architecture decision.
     including 1,080 aligned 10,240-byte transfers with no ZLP or
     `URB_ZERO_PACKET`. Exact maxpacket termination alone is not the trigger;
     cancel the proposed OnePlus ZLP diagnostic.
-  - Before a `g_dma=0` kernel, run Gate E at 1280x5/12,800 bytes (25 packets),
-    between the clean 10,240-byte and failed 15,360-byte aligned values.
-    Repeat any clean ceiling candidate on separate fresh boots.
+  - Gate E's first boot passed six full 1280 target frames at
+    12,800 bytes/25 packets and a clean stop. Repeat the identical candidate
+    on two additional fresh boots before the OnePlus gate. The observed clean
+    versus failed aligned boundary is now 12,800--15,360 bytes.
 - [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
   phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
 - [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume
