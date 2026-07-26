@@ -283,17 +283,19 @@ kernel anomaly. Evidence is under
 The observed aligned boundary is now 12,800 bytes clean versus 15,360 bytes
 failed. This is a ceiling candidate, not verification or root-cause proof.
 
-**Revised next steps:** repeat the identical 12,800-byte Gate E configuration
-on two additional fresh Pi boots. Each must include at least one complete
-1280x720 frame, exact usbmon/read matching, physical detach, `Idle`, and an
-exit-zero controlled stop. Stop at the first anomaly.
+**Gate E qualification result (2026-07-25):** two additional fresh-boot
+repeats passed the identical configuration. Each of the three boots completed
+six target 1280x720 frames, 864 aligned 12,800-byte transfers, and an exit-zero
+controlled stop. Across the qualification, all 2,592 target transfers
+completed without a host URB error, length mismatch, Pi read anomaly, poisoned
+session, or kernel fault. The table is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-laptop-gate-e-qualification-2026-07-25.md`.
 
-If both repeat boots pass, use 12,800 as the laptop-qualified userspace ceiling
-for one frame and safe restart with the unchanged normal OnePlus module. If a
-repeat fails, fall back to the proven-clean 10,240-byte shape and repeat it
-before OnePlus use. Keep `g_dma=0` as later root-cause isolation. Only after a
-clean OnePlus gate may three mini-cycles and then the ten-cycle matrix begin.
-Keep `XDISP-P0.1` blocked and do not start `XDISP-P0.2` beforehand.
+**Revised next step:** use 12,800 as the laptop-qualified userspace ceiling for
+one complete frame and safe restart with the unchanged normal OnePlus module.
+Keep `g_dma=0` as later root-cause isolation. Only after a clean OnePlus gate
+may three mini-cycles and then the ten-cycle matrix begin. Keep `XDISP-P0.1`
+blocked and do not start `XDISP-P0.2` beforehand.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the

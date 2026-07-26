@@ -1,0 +1,17 @@
+pcap_records=5774
+pcap_packets_dropped=0
+set_buffer_submits=1224
+bulk_submits=1224
+bulk_completes=1224
+unmatched_bulk_submits=0
+bulk_completion_errors=0
+bulk_length_mismatches=0
+zero_length_bulk_submits=0
+bulk_submit_flags=0x0:1224
+bulk_latency_us_min=283
+bulk_latency_us_avg=473
+bulk_latency_us_max=1491
+rect_hist=1920x3:11520:c0:360,1280x5:12800:c0:864
+complete_1920x1080_frames=1
+complete_1280x720_frames=6
+pcap_sha256=536004d2f1404007d828f769c979230b05c4633fd5ae0f594bcbfe5953653df6

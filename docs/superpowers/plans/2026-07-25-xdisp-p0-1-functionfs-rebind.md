@@ -313,12 +313,13 @@ six full 1280 target frames—864 aligned 25-packet transfers—within 1,224
 matched status-zero/full-length transfers. All Pi reads returned to `Idle`;
 detach and controlled stop were clean.
 
-The aligned boundary is now 12,800 clean versus 15,360 failed. Repeat the
-identical Gate E configuration on two additional fresh boots, requiring at
-least one complete 1280 frame and a safe stop each. If both pass, promote
-12,800 to the OnePlus ceiling candidate. If either fails, fall back to the
-proven-clean 10,240 shape and repeat it. Keep an isolated Pi `g_dma=0` test
-kernel as later root-cause isolation, not the immediate next action.
+The aligned boundary is now 12,800 clean versus 15,360 failed. Two additional
+fresh-boot Gate E repeats passed the identical workload, yielding 2,592 clean
+target transfers and three safe stops across qualification. Promote 12,800 to
+the OnePlus ceiling candidate. The next gate uses the unchanged normal
+OnePlus module for one complete frame and safe restart. Keep an isolated Pi
+`g_dma=0` test kernel as later root-cause isolation, not the immediate next
+action.
 
 No gate starts the mini-cycles or changes `XDISP-P0.1` from **blocked**. One
 complete OnePlus frame and a safe controlled stop/start remain prerequisites
