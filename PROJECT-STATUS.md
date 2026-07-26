@@ -469,6 +469,17 @@ removal of 39--40 ms of scaling for each of 11.3 rectangles per frame
 identifies per-rectangle full-frame Pi scaling/presentation as the earlier
 performance bottleneck.
 
+Final physical cable removal was safe and preserved separately. The OnePlus
+logged USB/GUD disconnect, removed its GUD DRM card, and retained no
+`1d50:614d` node. On the Pi, the last of all 113 receives had returned to
+`Idle` before FunctionFS delivered `Suspend`; the Pi retained the same boot,
+service PID, and zero restarts, with no poisoned receive, DWC2/vc4 fault,
+Oops, pstore record, watchdog boot-status bit, or throttling flag. FunctionFS
+did not deliver `Disable`, the service stayed active, and UDC sysfs retained
+`configured`, so this is recorded as a quiescent physical detach rather than
+an automatic gadget teardown/restart. The performance gate itself does not
+require a manual stop.
+
 This establishes at least 5 fps for direct KMS, not maximum native throughput,
 phone video decoding, Mir/Lomiri presentation, CPU utilization, dropped
 frames, or tear-free output. `XDISP-P2.1` is therefore **in progress**. The
