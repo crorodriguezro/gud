@@ -251,6 +251,29 @@ creates the output is not sufficient.
     rejected attempts, with a 12,793-byte maximum and every receive returned
     to `Idle`. This proves raw-frame playback through GUD, not phone decoding
     or Lomiri/Mir video presentation.
+  - The corrected native-scanout comparison repeated that exact clip with the
+    Pi's physical HDMI mode at 1280x720. It retained 113 transfers, about
+    0.919 MB of payload, and a 12,793-byte maximum, but removed scaling from
+    every payload. Update rate reached the configured ceiling at 4.999 fps and
+    average commit latency fell from 489.394 ms to 50.097 ms. All 113
+    `InFlight` entries returned to `Idle`; the mean of logged whole-millisecond
+    Pi `total_ms` values was 0.504 ms per payload and neither kernel recorded a
+    new fault. This isolates per-rectangle Pi full-frame
+    scaling/presentation as the prior bottleneck.
+    Evidence:
+    `backport-4.9/env/local/evidence/xdisp-p2.1-native-scanout-2026-07-26T1707COT/RESULTS.md`.
+  - Replace the test-only physical-mode environment override with dynamic
+    matching on successful GUD state commit: select an exact physical
+    connector timing, recreate matching scanout buffers once, use native
+    rectangle copies, and retain scaling only when no exact mode exists. Keep
+    USB advertised preference independent of physical mode selection.
+  - After dynamic mode matching, run an unpaced native comparison. The paced
+    result proves at least 5 fps but does not establish maximum throughput,
+    CPU use, dropped frames, tearing, or Mir/Lomiri/video-decode behavior.
+  - Align the 4.9 backport's mode serializer with upstream by translating
+    `DRM_MODE_TYPE_PREFERRED` into `GUD_DISPLAY_MODE_FLAG_PREFERRED` when real
+    gadget mode enumeration replaces the current fixed diagnostic mode. This
+    is an out-of-tree module correction, not a full phone-kernel build.
   - Implement any 512-byte comparison with the current poison/teardown
     containment; do not redeploy the old artifact or treat it as the
     reliability fallback or normal default.

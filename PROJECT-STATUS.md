@@ -43,7 +43,7 @@ Use these states consistently:
 | `XDISP-P0.2` | Move GUD presentation off Mir's compositor commit path; retain only the newest pending frame on overload. | `mir-android2-platform-gud` | planned | Phone input and internal display remain responsive while the Pi is slow, absent, or returns an I/O error. |
 | `XDISP-P0.3` | Discover the live GUD DRM card and handle remove/re-add; do not hard-code `card1` or use a symlink. | `mir-android2-platform-gud`, `gud` | planned | Reconnect succeeds when the card number changes, with no manual node changes or compositor restart. |
 | `XDISP-P1.1` | Validate external-output geometry and Lomiri placement, including the intermittent narrow/cropped image. | `mir-android2-platform-gud`, `gud-gadget` | planned | A 1280x720 extended desktop fills the selected output correctly across repeated enable/disable cycles. |
-| `XDISP-P2.1` | Improve usable performance with damage-aware updates, mode matching, measurement, and optional compression. | all three | planned | Recorded end-to-end FPS, latency, CPU use, and frame-drop behavior at the chosen mode. |
+| `XDISP-P2.1` | Improve usable performance with damage-aware updates, mode matching, measurement, and optional compression. | all three | in progress | Recorded end-to-end FPS, latency, CPU use, and frame-drop behavior at the chosen mode. |
 
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
@@ -447,6 +447,44 @@ and
 `backport-4.9/env/local/evidence/xdisp-p0.1-detach-restart-repair-2026-07-26T1446COT/`
 and
 `backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-matrix-2026-07-26T1454COT/`.
+
+**Native-scanout performance gate (2026-07-26):** the preserved predecoded
+1280x720 RGB565 clip was repeated with the Pi's physical HDMI scanout changed
+from scaled 1920x1080 to native 1280x720. The first activation was invalid
+before payload: the test override accidentally changed USB preferred-mode
+metadata, so the Pi advertised flags `0x405` while the diagnostic host sent
+the same timing as `0x005`. The Pi rejected state check/commit and never
+entered a userspace bulk receive. The corrected Pi commit `4556800` keeps
+advertised USB preference independent of physical test-mode selection.
+
+The corrected gate passed at the configured 5-fps pacing ceiling:
+`update_fps=4.999`, with 50.097 ms average synchronous commit latency versus
+2.015 fps and 489.394 ms for the scaled baseline. Both runs used the same ten
+frames and 113 rectangles, approximately 0.919 MB of payload, and a
+12,793-byte maximum. On the Pi, all 113 payloads reported
+`source=1280x720 scaled=false scale_ms=0`; all 113 `InFlight` entries returned
+to `Idle`, the mean of logged whole-millisecond Pi `total_ms` values was 0.504
+ms per payload, and neither kernel recorded a new fault. The near-exact
+removal of 39--40 ms of scaling for each of 11.3 rectangles per frame
+identifies per-rectangle full-frame Pi scaling/presentation as the earlier
+performance bottleneck.
+
+This establishes at least 5 fps for direct KMS, not maximum native throughput,
+phone video decoding, Mir/Lomiri presentation, CPU utilization, dropped
+frames, or tear-free output. `XDISP-P2.1` is therefore **in progress**. The
+next userspace design is dynamic physical mode matching on successful GUD
+state commit, with scaling retained only when no exact connector mode exists,
+followed by an unpaced native benchmark. The adaptive planner also still
+needs its recent-ratio/90--95% target-margin A/B: this run made 252 compression
+attempts and rejected 139 of them.
+
+Following the detach after the invalid negotiation, the Pi experienced an
+unclean reset or power interruption with no surviving Oops, pstore record, or
+watchdog boot-status bit. Its cause cannot be attributed to DWC2/vc4 without a
+stack, and it is not counted as a successful teardown. The corrected gate
+began from a fresh, detached boot. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p2.1-native-scanout-2026-07-26T1707COT/`.
+`XDISP-P0.1` remains **blocked**, and `XDISP-P0.2` remains unstarted.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the
