@@ -166,8 +166,14 @@ architecture decision.
     frame used four LZ4 payloads totaling 45,988 bytes, with a 12,380-byte
     maximum under the 12,800-byte cap. All four Pi reads completed, physical
     detach was clean, and the post-payload service restart exited zero without
-    DWC2/vc4 failure. Three fresh mini-cycles are next before the ten-cycle
-    matrix. This does not unblock XDISP-P0.1.
+    DWC2/vc4 failure.
+  - Three fresh adaptive mini-cycles then passed. Their complete RGB565 frames
+    used 4, 3, and 4 compressed complete-row rectangles; maximum actual
+    payloads were 12,728, 12,718, and 12,347 bytes. Every payload completed in
+    one 16 KiB FunctionFS read and returned to `Idle`; all three detached
+    separate stop/start gates exited zero without host `-110`, DWC2/vc4
+    failure, or Pi Oops. Start a new ten-cycle matrix from cycle 1 with the
+    adaptive module. This does not yet unblock XDISP-P0.1.
 - [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
   phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
 - [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume

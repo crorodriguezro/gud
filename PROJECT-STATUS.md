@@ -39,7 +39,7 @@ Use these states consistently:
 
 | ID | Priority | Owner | State | Required acceptance evidence |
 | --- | --- | --- | --- | --- |
-| `XDISP-P0.1` | Make the Pi FunctionFS first bulk transfer reliable after a gadget rebind or phone reconnect. See `docs/superpowers/specs/2026-07-25-xdisp-p0-1-functionfs-rebind-design.md` and its implementation plan. | `gud-gadget` | blocked | Ten fresh rebind/reconnect cycles complete all 29 tiles of the 1,843,200-byte RGB565 frame, including the first 64,000-byte tile, without host `-110` timeout. |
+| `XDISP-P0.1` | Make the Pi FunctionFS first bulk transfer reliable after a gadget rebind or phone reconnect. See `docs/superpowers/specs/2026-07-25-xdisp-p0-1-functionfs-rebind-design.md` and its implementation plan. | `gud-gadget` | blocked | Ten fresh adaptive-module rebind/reconnect cycles cover the complete 1,843,200-byte RGB565 frame with contiguous complete-row rectangles, every actual payload at or below 12,800 bytes, matching Pi completion/`Idle` evidence, and no host `-110`, short read, DWC2 stop timeout, or Pi Oops. |
 | `XDISP-P0.2` | Move GUD presentation off Mir's compositor commit path; retain only the newest pending frame on overload. | `mir-android2-platform-gud` | planned | Phone input and internal display remain responsive while the Pi is slow, absent, or returns an I/O error. |
 | `XDISP-P0.3` | Discover the live GUD DRM card and handle remove/re-add; do not hard-code `card1` or use a symlink. | `mir-android2-platform-gud`, `gud` | planned | Reconnect succeeds when the card number changes, with no manual node changes or compositor restart. |
 | `XDISP-P1.1` | Validate external-output geometry and Lomiri placement, including the intermittent narrow/cropped image. | `mir-android2-platform-gud`, `gud-gadget` | planned | A 1280x720 extended desktop fills the selected output correctly across repeated enable/disable cycles. |
@@ -384,11 +384,19 @@ the vc4 release fault.
 The Pi processing totals were 208 ms across the four rectangles, an isolated
 upper bound of about 4.8 full frames/s for the highly compressible color-bar
 pattern rather than a sustained benchmark. The first-frame and lifecycle
-prerequisites have passed; three fresh mini-cycles are next, using separate
-stop/start operations after proven-idle physical detach. Do not start the
-ten-cycle matrix before all three pass. `XDISP-P0.1` remains **blocked** and
-`XDISP-P0.2` must not start. Evidence is under
-`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-frame-2026-07-26T1154COT/`.
+prerequisites passed, followed by three fresh adaptive mini-cycles on
+2026-07-26. Each cycle covered exactly 720 contiguous RGB565 rows, kept every
+actual payload below the 12,800-byte cap, matched every `InFlight` receive
+with completion and `Idle`, physically detached before teardown, and passed
+separate service stop/start with no host `-110`, short read, DWC2 stop timeout,
+vc4 fault, or Pi Oops. The maximum payloads were 12,728, 12,718, and 12,347
+bytes. The mini-cycle gate is **3/3 PASS**, authorizing a new ten-cycle matrix
+from cycle 1 using this separately preserved diagnostic module and adaptive
+acceptance shape. `XDISP-P0.1` remains **blocked** until all ten matrix cycles
+pass, and `XDISP-P0.2` must not start. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-frame-2026-07-26T1154COT/`
+and
+`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-mini-cycles-2026-07-26T1236COT/`.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the

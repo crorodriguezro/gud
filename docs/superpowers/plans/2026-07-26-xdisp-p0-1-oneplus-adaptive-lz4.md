@@ -1,8 +1,8 @@
 # XDISP-P0.1 OnePlus Adaptive-LZ4 Diagnostic Plan
 
 Date: 2026-07-26
-Status: isolated frame and post-payload lifecycle passed; three mini-cycles
-and the ten-cycle matrix have not started
+Status: isolated frame, post-payload lifecycle, and three mini-cycles passed;
+ten-cycle matrix is next and has not started
 
 ## Decision
 
@@ -177,10 +177,21 @@ panic.
 
 Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-frame-2026-07-26T1154COT/`.
-The three fresh mini-cycles are now the next gate. Each proven-idle,
-physically detached cycle must use separate `systemctl stop` and
-`systemctl start` operations rather than another `restart`. `XDISP-P0.1`
-remains blocked and `XDISP-P0.2` remains prohibited.
+Three fresh mini-cycles then passed under
+`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-mini-cycles-2026-07-26T1236COT/`.
+They covered the full 1280x720 RGB565 frame with 4, 3, and 4 compressed
+complete-row rectangles. Maximum actual payloads were 12,728, 12,718, and
+12,347 bytes. Every receive completed in one 16 KiB FunctionFS read and
+returned to `Idle`; every physically detached separate stop/start completed
+on the same Pi boot without host `-110`, DWC2 stop timeout, vc4 fault, or Pi
+Oops.
+
+The mini-cycle gate is 3/3 PASS. Start the ten-cycle matrix from cycle 1,
+splitting the reset categories at least five Pi gadget rebinds and at least
+five OnePlus USB reconnect/reboots. Continue to require complete row coverage
+and every actual payload at or below 12,800 bytes; do not restore the
+historical 29-by-64,000-byte transfer shape. `XDISP-P0.1` remains blocked and
+`XDISP-P0.2` remains prohibited until all ten matrix cycles pass.
 
 ## Failure handling
 
