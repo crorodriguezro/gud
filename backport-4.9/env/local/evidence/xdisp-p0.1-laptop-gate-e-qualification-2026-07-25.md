@@ -24,11 +24,14 @@ error, length mismatch, Pi read anomaly, poisoned session, or kernel fault.
 All three controlled stops exited zero after an empty ep1 request list and
 completed gadget/FunctionFS/DRM teardown.
 
-Decision: 12,800 bytes is the laptop-qualified userspace ceiling candidate.
-The next gate uses the same Pi descriptor control with the unchanged normal
-OnePlus module for one complete frame, physical detach, and safe restart.
-Do not modify the OnePlus module, start mini-cycles, start the ten-cycle
-matrix, or mark XDISP-P0.1 verified yet.
+Decision at qualification time: 12,800 bytes was the laptop-qualified
+complete-transfer ceiling candidate. The later Gate F result superseded the
+proposed OnePlus advance. Gate E's 144 transfers per 1280x720 frame produced
+unacceptable visible cadence, while using 12,800 only as the internal read
+ceiling failed on the first larger compressed payload. Do not proceed to the
+OnePlus gate, start mini-cycles, start the ten-cycle matrix, or mark
+XDISP-P0.1 verified. See
+`xdisp-p0.1-laptop-gate-f-2026-07-25T2039COT/`.
 
 Evidence:
 

@@ -291,11 +291,37 @@ completed without a host URB error, length mismatch, Pi read anomaly, poisoned
 session, or kernel fault. The table is under
 `backport-4.9/env/local/evidence/xdisp-p0.1-laptop-gate-e-qualification-2026-07-25.md`.
 
-**Revised next step:** use 12,800 as the laptop-qualified userspace ceiling for
-one complete frame and safe restart with the unchanged normal OnePlus module.
-Keep `g_dma=0` as later root-cause isolation. Only after a clean OnePlus gate
-may three mini-cycles and then the ten-cycle matrix begin. Keep `XDISP-P0.1`
-blocked and do not start `XDISP-P0.2` beforehand.
+The 12,800-byte descriptor ceiling is not a usable normal configuration. At
+1280x720 it requires 144 SET_BUFFER operations per frame, and the user
+observed roughly one visible frame every five seconds.
+
+**Laptop Gate F result (2026-07-25):** Gate F restored normal LZ4 and the
+natural maximum buffer while changing only the internal FunctionFS read
+ceiling to 12,800 bytes. Its first full-screen compressed payload was 16,274
+bytes. The first 12,800-byte read returned unsigned
+`18446744073709042176`, signed `-509440`, exactly matching
+`12800 - 522240` from ep1 OUT `DOEPTSIZ=0x7f800`. Usbmon recorded the
+16,274-byte submit and cancellation 3.052803 seconds later with status `-104`
+and 14,848 bytes actual; the laptop logged framebuffer-flush `-110`.
+Containment parked the poisoned service without teardown, and physical
+recovery found no DWC2 stop timeout, Oops, watchdog reset, or pstore record.
+Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-laptop-gate-f-2026-07-25T2039COT/`.
+
+Gate E passed when the complete host transfer and userspace read were both
+12,800 bytes. Gate F proves that a 12,800-byte FunctionFS prefix read does not
+safely consume a larger host transfer under `g_dma=1`. The descriptor and
+internal-read ceilings therefore cannot be decoupled as a performance
+workaround. Do not reinstall Gate F unchanged or proceed to the OnePlus gate.
+
+**Revised next step:** isolate DWC2 buffer DMA with the separately named Pi
+`g_dma=0` test kernel documented in
+`../gud-gadget/docs/XDISP-P0.1-FUNCTIONFS-REBIND-TEST.md`. The installed Pi
+kernel cannot enable this through `cmdline.txt`, an overlay, module reload, or
+debugfs; it requires a separately built/prebuilt Pi test kernel while
+preserving the stock rollback kernel. This does not modify the OnePlus kernel,
+`gud.ko`, or Mir. Keep `XDISP-P0.1` blocked and do not start mini-cycles, the
+matrix, or `XDISP-P0.2`.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the

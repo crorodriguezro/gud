@@ -1,0 +1,11 @@
+pcap_records=1092
+kernel_dropped_packets=0
+gud_bulk_records=2
+bulk_submit_ts=1785030343.341225
+bulk_submit_length=16274
+bulk_submit_status=-115
+bulk_complete_ts=1785030346.394028
+bulk_complete_status=-104
+bulk_complete_actual_length=14848
+bulk_elapsed_us=3052803
+pcap_sha256=404d18fffef19d085e32a488aa0f6f57756deb2f0c3513d70021479b592024a8

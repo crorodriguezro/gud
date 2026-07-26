@@ -1,0 +1,12 @@
+failed_boot=bce5d643-9420-4334-88ed-0d700406f598
+recovery_boot=35033b83-ce6e-4bc2-9593-a33f6a95d658
+service_active_state=inactive
+service_enabled_state=disabled
+udc_state=not attached
+effective_environment=RUST_LOG=debug GUD_FFS_READ_SIZE=16384
+gate_f_active_dropin=absent
+gate_f_quarantine=/home/cristian/30-xdisp-p0.1-laptop-gate-f.conf.failed-poisoned
+gate_f_sha256=d53946b4d371607acbab5b6be5dc479f1b4856537bf124147091ce810f7d7f1a
+pstore_pre_reset=empty
+pstore_after_reset=empty
+watchdog_bootstatus=0
