@@ -1,0 +1,33 @@
+pcap_records=6360
+pcap_packets_dropped=0
+gud_bus=1
+gud_device=4
+set_buffer_submits=1440
+bulk_submits=1440
+bulk_completes=1440
+unmatched_bulk_submits=0
+bulk_completion_errors=0
+bulk_length_mismatches=0
+zero_length_bulk_submits=0
+bulk_submit_flags=0x0:1440
+bulk_latency_us_min=248
+bulk_latency_us_avg=430
+bulk_latency_us_max=695
+rect_hist=1920x3:11520:c0:360,1280x4:10240:c0:1080
+bulk_length_hist=11520:360,10240:1080
+complete_1920x1080_frames=1
+complete_1280x720_frames=6
+pcap_sha256=5f38725200705e6c020f88b98c194917efbb85a4d89e033c441a9cc87e377959
+
+The valid Gate D phase completed one full 1920x1080 frame as 360
+uncompressed 11,520-byte transfers. Each transfer ended with a 256-byte short
+packet.
+
+KDE then changed to 1280x720. The service completed six full frames as 1,080
+uncompressed 10,240-byte transfers. Those lengths are exactly 20 high-speed
+512-byte packets. Every bulk submit had transfer flags zero, and the capture
+contains no zero-length bulk submit. Thus the aligned transfers did not rely
+on URB_ZERO_PACKET or a separate ZLP URB.
+
+All 1,440 bulk URBs completed with status zero and their full submitted
+length. Usbmon and the Pi service journal agree on the payload count.

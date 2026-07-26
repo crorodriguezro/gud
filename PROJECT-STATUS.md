@@ -257,30 +257,40 @@ detach. Containment again prevented teardown, and recovery found no DWC2 stop
 timeout, Oops, watchdog reset, or pstore record. Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.1-laptop-gate-c-2026-07-25T1834COT/`.
 
-This rules out a simple large-transfer threshold. All 5,671 successful Gate A
-bulk lengths were nonmultiples of 512; both failed uncompressed lengths,
-61,440 and 15,360, are exact multiples of the high-speed maxpacket. The leading
-hypothesis is DWC2 buffer-DMA/FunctionFS OUT completion without a terminating
-short packet or ZLP. It still needs an uncompressed, nonaligned control because
-Gate A also differed by compression.
+**Laptop Gate D result (2026-07-25):** Gate D passed one complete 1920x1080
+frame as 360 uncompressed 11,520-byte transfers, then six complete 1280x720
+frames as 1,080 uncompressed 10,240-byte transfers. Usbmon matched all 1,440
+bulk submits/completions with status zero and full length. The 10,240-byte
+shape is exactly 20 maxpackets, but all submits had transfer flags zero and
+there was no zero-length bulk URB. The Pi recorded 1,440 returns to `Idle`;
+post-detach controlled shutdown exited zero with full gadget/DRM teardown and
+no host/Pi kernel anomaly. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-laptop-gate-d-2026-07-25T1905COT/`.
 
-**Revised next steps:** isolate packet termination before reconsidering
+Exact maxpacket termination is therefore not a sufficient trigger. Cancel the
+proposed OnePlus `URB_ZERO_PACKET` diagnostic. The useful aligned boundary is
+now a 10,240-byte pass versus 15,360-byte failure; size and/or intermittent
+DWC2 state still matters.
+
+**Revised next steps:** isolate the aligned size boundary before reconsidering
 `g_dma=0`:
 
-1. Gate D starts from a fresh, clean Pi boot with
+1. Gate E starts from a fresh, clean Pi boot with
    `GUD_FFS_READ_SIZE=16384`, `g_dma=1`, compression disabled, and
-   `max_buffer_size=11520`.
-2. Interpret it only if the first SET_BUFFER is 1920x3/11,520 bytes: 22 full
-   packets plus one 256-byte short packet. Require a complete frame, exact
-   usbmon/read matching, physical detach, `Idle`, and a safe controlled stop.
-3. A repeatable Gate D pass promotes a separately named OnePlus diagnostic
-   `gud.ko` that uses `URB_ZERO_PACKET` only for aligned bulk writes. Preserve
-   `/home/phablet/gud.ko` unchanged; this builds one module, not the Pi kernel.
-4. A Gate D failure means alignment alone is insufficient and promotes one
-   isolated Pi `g_dma=0` test kernel. Do not vary the host module concurrently.
-5. After one clean OnePlus frame and safe stop/start, run three mini-cycles,
-   then restart the ten-cycle matrix at cycle 1. Keep `XDISP-P0.1` blocked and
-   do not start `XDISP-P0.2` beforehand.
+   `max_buffer_size=12800`.
+2. Interpret only 1280x5/12,800-byte SET_BUFFERs: exactly 25 maxpackets,
+   between the clean 10,240/20-packet and failed 15,360/30-packet cases.
+   Require a complete 1280 frame, exact usbmon/read matching, physical detach,
+   `Idle`, and a safe controlled stop.
+3. A Gate E failure retains 10,240 bytes as the current userspace ceiling
+   candidate. A pass narrows the aligned boundary to 12,800--15,360 bytes.
+   Repeat any clean candidate on separate fresh boots because the historical
+   64,000-byte behavior was intermittent.
+4. Keep one isolated Pi `g_dma=0` test kernel as later root-cause isolation,
+   not the immediate next action.
+5. After a repeated laptop candidate, one clean OnePlus frame, and safe
+   stop/start, run three mini-cycles, then restart the ten-cycle matrix at
+   cycle 1. Keep `XDISP-P0.1` blocked and do not start `XDISP-P0.2` beforehand.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the

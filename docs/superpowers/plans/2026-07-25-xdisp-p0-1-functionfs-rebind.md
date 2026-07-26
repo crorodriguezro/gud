@@ -301,23 +301,28 @@ Pi FunctionFS read never returned and remained in flight after physical
 detach. There was no teardown, endpoint-stop timeout, Oops, watchdog reset, or
 pstore record.
 
-This is not a simple large-transfer threshold. Every successful Gate A bulk
-length was a nonmultiple of 512, while the Gate B and C failures ended exactly
-on the high-speed maxpacket. The leading hypothesis is buffer-DMA OUT
-completion without a terminating short packet or ZLP:
+Gate D passed one 1920 frame at 11,520 bytes and six 1280 frames at 10,240
+bytes. The latter are exact 20-packet multiples. Usbmon matched all 1,440
+transfers with status zero/full length, transfer flags zero, and no
+zero-length bulk URB. The Pi returned to `Idle` 1,440 times and controlled
+shutdown completed without a kernel anomaly.
 
-1. Gate D: fresh boot, `g_dma=1`, 16 KiB reads, compression disabled, and
-   `max_buffer_size=11520`.
-2. The gate is valid only if the first SET_BUFFER is 1920x3/11,520 bytes,
-   ending in a 256-byte short packet. Require a complete frame with exact
-   usbmon/read matching, physical detach, `Idle`, and a controlled exit-zero
-   stop.
-3. If Gate D passes repeatedly, test a separately named OnePlus diagnostic
-   module using `URB_ZERO_PACKET` only for maxpacket-aligned bulk writes.
-   Preserve the normal `/home/phablet/gud.ko`; this is a module build, not a Pi
-   kernel build.
-4. If Gate D fails, alignment alone is insufficient; reconsider one isolated
-   Pi `g_dma=0` test kernel without changing the host module concurrently.
+**Revision after Gate D (2026-07-25):** exact maxpacket termination is not a
+sufficient trigger. Cancel the proposed OnePlus `URB_ZERO_PACKET` diagnostic.
+Continue the no-kernel aligned-size boundary:
+
+1. Gate E: fresh boot, `g_dma=1`, 16 KiB reads, compression disabled, and
+   `max_buffer_size=12800`.
+2. Interpret only the 1280x5/12,800-byte shape: exactly 25 packets, between the
+   clean 10,240/20-packet and failed 15,360/30-packet cases.
+3. Require a complete 1280 frame with exact usbmon/read matching, physical
+   detach, `Idle`, and a controlled exit-zero stop.
+4. A failure retains 10,240 as the current userspace ceiling candidate. A pass
+   narrows the aligned boundary to 12,800--15,360. Repeat any clean candidate
+   on separate fresh boots because the historical 64,000-byte behavior was
+   intermittent.
+5. Keep an isolated Pi `g_dma=0` test kernel as later root-cause isolation,
+   not the immediate next action.
 
 No gate starts the mini-cycles or changes `XDISP-P0.1` from **blocked**. One
 complete OnePlus frame and a safe controlled stop/start remain prerequisites

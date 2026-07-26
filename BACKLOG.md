@@ -143,10 +143,13 @@ architecture decision.
     then hung the Pi read at 15,360 bytes even though the host completed the
     entire URB successfully. The OnePlus backport is not a necessary trigger,
     and this is not a simple large-transfer threshold.
-  - Before a `g_dma=0` kernel, run Gate D at cached 1920 width with compression
-    off and an 11,520-byte maximum. Its 1920x3 tile ends in a 256-byte short
-    packet. A repeatable pass promotes an isolated OnePlus `URB_ZERO_PACKET`
-    diagnostic module; a failure promotes the Pi `g_dma=0` test kernel.
+  - Gate D passed 1,440/1,440 uncompressed transfers and a clean stop,
+    including 1,080 aligned 10,240-byte transfers with no ZLP or
+    `URB_ZERO_PACKET`. Exact maxpacket termination alone is not the trigger;
+    cancel the proposed OnePlus ZLP diagnostic.
+  - Before a `g_dma=0` kernel, run Gate E at 1280x5/12,800 bytes (25 packets),
+    between the clean 10,240-byte and failed 15,360-byte aligned values.
+    Repeat any clean ceiling candidate on separate fresh boots.
 - [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
   phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
 - [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume
