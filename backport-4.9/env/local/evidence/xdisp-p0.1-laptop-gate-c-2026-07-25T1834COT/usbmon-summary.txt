@@ -1,0 +1,29 @@
+pcap_records=1002
+pcap_packets_dropped=0
+set_buffer_submits=3
+bulk_submits=1
+bulk_completes=1
+bulk_submit_length=15360
+bulk_complete_actual_length=15360
+bulk_complete_status=0
+bulk_elapsed_us=774
+initial_set_buffer_rect=1920x4
+initial_set_buffer_length=15360
+initial_set_buffer_compression=0
+max_packet=512
+aligned_packets=30
+pi_read_request=15360
+pi_read_completion=none
+pi_doeptsiz=0x00200000
+pi_xfersize_residual=0
+pi_packet_count_residual=4
+host_framebuffer_flush_error=-110
+
+The first 15,360-byte host bulk URB completed successfully and in full after
+774 microseconds. On the Pi, the matching single 15,360-byte FunctionFS read
+never returned. The preserved ep1 OUT request remained in progress with zero
+bytes recorded as completed, even after physical USB detach.
+
+Unlike Gate B, Gate C is not explained by a partial or cancelled host URB.
+The transfer was exactly 30 high-speed 512-byte packets and therefore ended
+without a short final packet.

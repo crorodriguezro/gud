@@ -223,8 +223,8 @@ workload comparison—including presented FPS, latency, dropped frames, host/Pi
 CPU, and USB throughput—to `XDISP-P2.1` after reliability is stable. Do not
 restore 512-byte reads during `XDISP-P0.1` for benchmarking.
 
-**Laptop Gate A/B result (2026-07-25):** the userspace-only controls produced a
-decisive split. Gate A used LZ4, `max_buffer_size=64000`, 16 KiB reads, and
+**Laptop Gate A/B/C result (2026-07-25):** the userspace-only controls produced
+a decisive split. Gate A used LZ4, `max_buffer_size=64000`, 16 KiB reads, and
 `g_dma=1`. Usbmon retained 5,671 matched SET_BUFFER/bulk pairs with no control
 or bulk error, including 15 complete RGB565 1280x720 frames. Every actual
 compressed bulk URB was 131--12,600 bytes, below one 16 KiB read. The
@@ -249,32 +249,36 @@ is under
 and
 `backport-4.9/env/local/evidence/xdisp-p0.1-laptop-gate-b-2026-07-25T1810COT/`.
 
-This rules out tiling/control cadence alone and rules out the OnePlus backport
-as a necessary trigger. It implicates larger uncompressed Pi
-FunctionFS/DWC2 buffer-DMA OUT transfers, while leaving the first unsafe
-length unresolved.
+Gate C kept compression disabled and reduced the first payload to
+1920x4/15,360 bytes. Usbmon records the complete host bulk URB succeeding
+after 774 microseconds, but the matching Pi FunctionFS read never returned.
+The DWC2 request remained in flight with zero bytes done after physical USB
+detach. Containment again prevented teardown, and recovery found no DWC2 stop
+timeout, Oops, watchdog reset, or pstore record. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-laptop-gate-c-2026-07-25T1834COT/`.
 
-**Revised next steps:** find a no-kernel-build safe transfer ceiling before
-reconsidering `g_dma=0`:
+This rules out a simple large-transfer threshold. All 5,671 successful Gate A
+bulk lengths were nonmultiples of 512; both failed uncompressed lengths,
+61,440 and 15,360, are exact multiples of the high-speed maxpacket. The leading
+hypothesis is DWC2 buffer-DMA/FunctionFS OUT completion without a terminating
+short packet or ZLP. It still needs an uncompressed, nonaligned control because
+Gate A also differed by compression.
 
-1. From a fresh, clean Pi boot, keep `GUD_FFS_READ_SIZE=16384`, `g_dma=1`, and
-   compression disabled; advertise `max_buffer_size=15360`. This value is 30
-   high-speed packets and a complete RGB565 row multiple at both 1280 and 1920
-   pixels wide, so each full tile is one URB/read independent of KDE's restored
-   mode.
-2. Require usbmon/read matching for at least one complete frame, then physical
-   detach and a safe controlled stop. Any anomalous read or timeout poisons
-   that boot and requires physical recovery.
-3. If 15,360 passes, use separate fresh boots for 30,720, 46,080, then 53,760
-   bytes. Stop at the first failure. The existing 61,440-byte result is the
-   upper bound and must not be repeated unchanged.
-4. Verify the largest clean value on the laptop, then use it with the unchanged
-   normal OnePlus module for one complete frame and a safe restart. Both host
-   drivers already split updates into complete-row rectangles according to the
-   advertised maximum.
-5. Reconsider one isolated `g_dma=0` Pi test kernel only if 15,360 also fails
-   or the ladder yields no usable clean ceiling.
-6. After one clean OnePlus frame and safe stop/start, run three mini-cycles,
+**Revised next steps:** isolate packet termination before reconsidering
+`g_dma=0`:
+
+1. Gate D starts from a fresh, clean Pi boot with
+   `GUD_FFS_READ_SIZE=16384`, `g_dma=1`, compression disabled, and
+   `max_buffer_size=11520`.
+2. Interpret it only if the first SET_BUFFER is 1920x3/11,520 bytes: 22 full
+   packets plus one 256-byte short packet. Require a complete frame, exact
+   usbmon/read matching, physical detach, `Idle`, and a safe controlled stop.
+3. A repeatable Gate D pass promotes a separately named OnePlus diagnostic
+   `gud.ko` that uses `URB_ZERO_PACKET` only for aligned bulk writes. Preserve
+   `/home/phablet/gud.ko` unchanged; this builds one module, not the Pi kernel.
+4. A Gate D failure means alignment alone is insufficient and promotes one
+   isolated Pi `g_dma=0` test kernel. Do not vary the host module concurrently.
+5. After one clean OnePlus frame and safe stop/start, run three mini-cycles,
    then restart the ten-cycle matrix at cycle 1. Keep `XDISP-P0.1` blocked and
    do not start `XDISP-P0.2` beforehand.
 
