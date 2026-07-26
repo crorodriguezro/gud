@@ -27,6 +27,7 @@ enum workload {
 	WORKLOAD_SCROLL,
 	WORKLOAD_DESKTOP,
 	WORKLOAD_NOISE,
+	WORKLOAD_RAW,
 };
 
 struct dumb_buffer {
@@ -158,20 +159,42 @@ static void paint_noise(struct dumb_buffer *buffer, uint32_t frame)
 	}
 }
 
-static void paint_frame(struct dumb_buffer *buffer, enum workload workload,
-			uint32_t frame)
+static int paint_raw(struct dumb_buffer *buffer, FILE *raw_file)
+{
+	uint32_t y;
+
+	for (y = 0; y < HEIGHT; y++) {
+		void *line = (uint8_t *)buffer->pixels + y * buffer->create.pitch;
+
+		if (fread(line, WIDTH * sizeof(uint16_t), 1, raw_file) != 1) {
+			if (ferror(raw_file))
+				fprintf(stderr, "raw frame read: %s\n",
+					strerror(errno));
+			else
+				fprintf(stderr, "raw clip ended before requested frame\n");
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int paint_frame(struct dumb_buffer *buffer, enum workload workload,
+		       uint32_t frame, FILE *raw_file)
 {
 	switch (workload) {
 	case WORKLOAD_SCROLL:
 		paint_scroll(buffer, frame);
-		break;
+		return 0;
 	case WORKLOAD_DESKTOP:
 		paint_desktop(buffer, frame);
-		break;
+		return 0;
 	case WORKLOAD_NOISE:
 		paint_noise(buffer, frame);
-		break;
+		return 0;
+	case WORKLOAD_RAW:
+		return paint_raw(buffer, raw_file);
 	}
+	return -1;
 }
 
 static uint32_t get_prop_id(int fd, uint32_t object_id, uint32_t object_type,
@@ -301,6 +324,8 @@ static int parse_workload(const char *name, enum workload *workload)
 		*workload = WORKLOAD_DESKTOP;
 	else if (strcmp(name, "noise") == 0)
 		*workload = WORKLOAD_NOISE;
+	else if (strcmp(name, "raw") == 0)
+		*workload = WORKLOAD_RAW;
 	else
 		return -1;
 	return 0;
@@ -350,26 +375,36 @@ int main(int argc, char **argv)
 	uint32_t plane_id = 0;
 	uint32_t mode_blob_id = 0;
 	uint32_t frame;
+	FILE *raw_file = NULL;
 	int fd = -1;
 	int rc = 1;
 	int i;
 
-	if (argc != 5 ||
+	if ((argc != 5 && argc != 6) ||
 	    parse_workload(argv[2], &workload) != 0 ||
 	    parse_u32(argv[3], 2, 10000, &frames) != 0 ||
-	    parse_u32(argv[4], 0, 240, &target_fps) != 0) {
+	    parse_u32(argv[4], 0, 240, &target_fps) != 0 ||
+	    (workload == WORKLOAD_RAW && argc != 6) ||
+	    (workload != WORKLOAD_RAW && argc != 5)) {
 		fprintf(stderr,
-			"usage: %s <card> <scroll|desktop|noise> <frames:2-10000> <target-fps:0-240>\n",
+			"usage: %s <card> <scroll|desktop|noise|raw> <frames:2-10000> <target-fps:0-240> [raw-rgb565le-file]\n",
 			argv[0]);
 		return 2;
 	}
 	card = argv[1];
 	workload_name = argv[2];
+	if (workload == WORKLOAD_RAW) {
+		raw_file = fopen(argv[5], "rb");
+		if (!raw_file) {
+			report_errno("open raw clip");
+			return 1;
+		}
+	}
 
 	fd = open(card, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
 		report_errno("open");
-		return 1;
+		goto out;
 	}
 	if (drmSetClientCap(fd, DRM_CLIENT_CAP_UNIVERSAL_PLANES, 1) != 0 ||
 	    drmSetClientCap(fd, DRM_CLIENT_CAP_ATOMIC, 1) != 0) {
@@ -502,7 +537,8 @@ int main(int argc, char **argv)
 		goto out;
 	}
 
-	paint_frame(&buffers[0], workload, 0);
+	if (paint_frame(&buffers[0], workload, 0, raw_file) != 0)
+		goto out;
 	{
 		drmModeAtomicReq *request = drmModeAtomicAlloc();
 		uint64_t before;
@@ -536,7 +572,8 @@ int main(int argc, char **argv)
 		uint64_t before;
 		uint64_t duration;
 
-		paint_frame(buffer, workload, frame);
+		if (paint_frame(buffer, workload, frame, raw_file) != 0)
+			goto out;
 		request = drmModeAtomicAlloc();
 		if (!request ||
 		    drmModeAtomicAddProperty(request, plane_id,
@@ -611,5 +648,7 @@ out:
 		drmModeFreeResources(resources);
 	if (fd >= 0)
 		close(fd);
+	if (raw_file)
+		fclose(raw_file);
 	return rc;
 }

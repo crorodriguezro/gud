@@ -24,6 +24,8 @@ require_source '#define BUFFER_COUNT 2U'
 require_source 'WORKLOAD_SCROLL'
 require_source 'WORKLOAD_DESKTOP'
 require_source 'WORKLOAD_NOISE'
+require_source 'WORKLOAD_RAW'
+require_source 'raw clip ended before requested frame'
 require_source 'drmModeAtomicAddProperty(request, plane_id,'
 require_source 'props.plane_fb_id'
 require_source 'commit_avg_ms='
@@ -33,7 +35,7 @@ set +e
 rc=$?
 set -e
 if [[ $rc -ne 2 ]] ||
-   ! grep -qF '<scroll|desktop|noise>' "$build_dir/stderr"; then
+   ! grep -qF '<scroll|desktop|noise|raw>' "$build_dir/stderr"; then
 	printf 'FAIL [usage]: rc=%s\n' "$rc" >&2
 	failures=$((failures + 1))
 fi

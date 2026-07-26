@@ -200,17 +200,22 @@ cc -Wall -Wextra -Werror -O2 $(pkg-config --cflags libdrm) \
 
 The benchmark uses two RGB565 dumb buffers and synchronous atomic FB swaps so
 each generated frame reaches the GUD update callback. It supports `scroll`,
-`desktop`, and `noise` workloads:
+`desktop`, `noise`, and predecoded raw-video workloads:
 
 ```bash
 gud-kms-animate /dev/dri/cardX desktop 60 20
+gud-kms-animate /dev/dri/cardX raw 30 10 clip-1280x720-rgb565le.raw
 ```
 
-Arguments are card path, workload, frame count, and target FPS (`0` means run
-without pacing). Start with a short `desktop` run. Treat any host transfer
-error or Pi `InFlight`/`Poisoned` state as terminal for that boot and follow
-the XDISP-P0.1 physical-recovery containment procedure. The `noise` workload
-is intentionally incompressible and should be run last with very few frames.
+Arguments are card path, workload, frame count, target FPS (`0` means run
+without pacing), and, for `raw`, the clip path. A raw clip must contain tightly
+packed 1280x720 RGB565 little-endian frames. Predecoding on the laptop isolates
+GUD frame transport and presentation from phone-side codec availability; it
+is not a decoder-performance test. Start with a short `desktop` run. Treat any
+host transfer error or Pi `InFlight`/`Poisoned` state as terminal for that boot
+and follow the XDISP-P0.1 physical-recovery containment procedure. The `noise`
+workload is intentionally incompressible and should be run last with very few
+frames.
 
 The diagnostic driver's `XDISP frame` messages are rate-limited. They are
 useful samples during a short run, but their totals are not complete when
@@ -219,6 +224,7 @@ counts to prove transfer completion. Before comparing compression policies,
 add a non-rate-limited cumulative counter snapshot so compression attempts,
 rejections, source bytes, and compression time cannot be omitted by printk
 rate limiting.
+
 In particular, verify `drm_gem_get_pages`, `drm_gem_put_pages`,
 `drm_gem_mmap`, and `drm_gem_handle_create` remain target-exported.
 

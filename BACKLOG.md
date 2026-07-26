@@ -245,6 +245,12 @@ creates the output is not sufficient.
     transfers), so its sampled attempt/rejection totals are lower bounds.
     Evidence:
     `backport-4.9/env/local/evidence/xdisp-p2.1-oneplus-motion-2026-07-26T1611COT/RESULTS.md`.
+  - The same gate played ten predecoded 1280x720 RGB565 video frames through
+    direct KMS at 2.015 synchronous updates/s. The frames produced 113 matching
+    Pi transfers, 918,595 payload bytes, 246 compression attempts, and 133
+    rejected attempts, with a 12,793-byte maximum and every receive returned
+    to `Idle`. This proves raw-frame playback through GUD, not phone decoding
+    or Lomiri/Mir video presentation.
   - Implement any 512-byte comparison with the current poison/teardown
     containment; do not redeploy the old artifact or treat it as the
     reliability fallback or normal default.
