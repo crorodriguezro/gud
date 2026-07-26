@@ -217,6 +217,20 @@ Evidence is under
 and
 `backport-4.9/env/local/evidence/xdisp-p0.1-detach-restart-repair-2026-07-26T1446COT/`.
 
+That replacement matrix passed 10/10 on the same Pi boot. Cycles 1, 3, 5, 7,
+and 9 used isolated Pi gadget rebinds; cycles 2, 4, 6, 8, and 10 used isolated
+OnePlus USB reconnects with automatic clean-detach service recreation. Ten
+complete frames produced 45 host payloads, 45 matching Pi `frame_stats`, and
+45 returns to `Idle`. The largest actual payload was 12,799 bytes. No host
+timeout, Pi receive anomaly, DWC2/vc4 failure, Oops, pstore record, watchdog
+event, or Pi reboot occurred.
+
+The adaptive diagnostic matrix's technical acceptance criteria are satisfied.
+The standing no-verification instruction remains in force, so do not change
+`XDISP-P0.1` from blocked or start `XDISP-P0.2` without an explicit status
+decision. Final matrix evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-matrix-2026-07-26T1454COT/`.
+
 ## Failure handling
 
 On any Pi `InFlight`/`Poisoned` state, timeout, short/impossible read, warning,

@@ -425,12 +425,28 @@ one-read compressed payloads totaling 53,594 bytes; the 12,735-byte maximum
 remained below the 12,800-byte cap and every receive returned to `Idle`.
 Display/controller disable completed normally and neither kernel logged a
 timeout or fault. This qualifies the lifecycle repair, but does not reuse the
-old matrix pass: restart all ten cycles from cycle 1.
+old matrix pass.
+
+The replacement ten-cycle matrix then passed **10/10** from a new cycle 1:
+five isolated Pi gadget rebinds and five isolated OnePlus USB reconnects.
+All ten 1280x720 RGB565 frames had complete contiguous-row coverage. The host
+reported ten frame summaries; the Pi reported 45 matching `frame_stats` and
+45 returns to `Idle`. Every actual payload stayed at or below 12,799 bytes,
+all completed in one 16,384-byte-ceiling FunctionFS read, and all five
+reconnect cycles performed a clean policy-controlled automatic service
+restart. There was no host `-110`, receive anomaly, DWC2/vc4 fault, Oops,
+pstore record, watchdog event, or Pi reboot.
+
+This satisfies the adaptive diagnostic matrix's technical acceptance
+criteria. Under the standing project instruction, however, the status has
+not been changed to verified and P0.2 has not been started.
 `XDISP-P0.1` remains **blocked** and `XDISP-P0.2` remains prohibited.
 Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-matrix-2026-07-26T1256COT/`
 and
-`backport-4.9/env/local/evidence/xdisp-p0.1-detach-restart-repair-2026-07-26T1446COT/`.
+`backport-4.9/env/local/evidence/xdisp-p0.1-detach-restart-repair-2026-07-26T1446COT/`
+and
+`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-matrix-2026-07-26T1454COT/`.
 
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the

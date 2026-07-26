@@ -186,6 +186,14 @@ architecture decision.
     re-enumerated, and a fresh five-rectangle frame completed with a
     12,735-byte maximum and every receive returned to `Idle`. Restart the
     ten-cycle matrix from cycle 1; do not credit the old cycle-1 pass.
+  - The replacement matrix passed 10/10: five Pi rebind and five OnePlus
+    reconnect cycles, ten complete RGB565 frames, 45 matching payload
+    completions and `Idle` returns, and a 12,799-byte matrix maximum. All five
+    reconnects recreated the service automatically. No host `-110`, receive
+    anomaly, DWC2/vc4 fault, Oops, pstore record, watchdog event, or Pi reboot
+    occurred. This meets the adaptive diagnostic's technical matrix criteria,
+    but retain the blocked status and do not start P0.2 until the standing
+    no-verification instruction is explicitly lifted.
 - [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
   phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
 - [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume
