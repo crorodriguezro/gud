@@ -27,6 +27,9 @@ struct gud_xdisp_chunk {
 	size_t source_length;
 	size_t payload_length;
 	bool compressed;
+	u32 compression_attempts;
+	u32 rejected_compression_attempts;
+	u64 compression_source_bytes;
 };
 
 size_t gud_xdisp_lz4_compress_bound(size_t source_length);
@@ -44,7 +47,9 @@ size_t gud_xdisp_lz4_compress(const u8 *source, size_t source_length,
  * Plan one complete-row rectangle.  scratch_capacity must accommodate the
  * compression bound for max_rows * bytes_per_line.  On success, scratch holds
  * the compressed payload when chunk->compressed is true.  A raw chunk is read
- * directly from source by the caller.
+ * directly from source by the caller.  The compression counters include every
+ * candidate processed while choosing the returned rectangle, including
+ * candidates rejected for exceeding payload_limit or not reducing the source.
  */
 int gud_xdisp_plan_chunk(const u8 *source, u32 remaining_rows,
 			 size_t bytes_per_line, u32 max_rows,

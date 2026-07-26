@@ -416,6 +416,9 @@ int gud_xdisp_plan_chunk(const u8 *source, u32 remaining_rows,
 			 struct gud_xdisp_chunk *chunk)
 {
 	u32 raw_fallback_rows;
+	u32 compression_attempts = 0;
+	u32 rejected_compression_attempts = 0;
+	u64 compression_source_bytes = 0;
 	u32 rows;
 
 	if (!source || !remaining_rows || !bytes_per_line || !max_rows ||
@@ -443,6 +446,8 @@ int gud_xdisp_plan_chunk(const u8 *source, u32 remaining_rows,
 		if (!bound || bound > scratch_capacity)
 			return -ENOSPC;
 
+		compression_attempts++;
+		compression_source_bytes += source_length;
 		compressed_length = gud_xdisp_lz4_compress(
 			source, source_length, scratch, bound, workmem);
 		if (!compressed_length)
@@ -454,14 +459,25 @@ int gud_xdisp_plan_chunk(const u8 *source, u32 remaining_rows,
 			chunk->source_length = source_length;
 			chunk->payload_length = compressed_length;
 			chunk->compressed = true;
+			chunk->compression_attempts = compression_attempts;
+			chunk->rejected_compression_attempts =
+				rejected_compression_attempts;
+			chunk->compression_source_bytes =
+				compression_source_bytes;
 			return 0;
 		}
 
+		rejected_compression_attempts++;
 		if (source_length <= payload_limit) {
 			chunk->rows = rows;
 			chunk->source_length = source_length;
 			chunk->payload_length = source_length;
 			chunk->compressed = false;
+			chunk->compression_attempts = compression_attempts;
+			chunk->rejected_compression_attempts =
+				rejected_compression_attempts;
+			chunk->compression_source_bytes =
+				compression_source_bytes;
 			return 0;
 		}
 

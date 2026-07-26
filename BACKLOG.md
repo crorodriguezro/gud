@@ -225,10 +225,13 @@ creates the output is not sufficient.
     one-frame-per-five-seconds observation.
   - Instrument the adaptive planner with per-frame compression-attempt,
     rejected-attempt, source-bytes-compressed, and compression-time counters.
-    Benchmark the current doubling row hint against a recent-ratio/target-margin
-    policy on compressible desktop, scrolling, video, and incompressible test
-    content. Report both the CPU cost of discarded compression attempts and
-    whether fewer retries change end-to-end frame cadence.
+    Before promoting this into the normal driver, target 90--95% of the
+    payload cap instead of doubling the previous row count, reuse the recent
+    measured compression ratio to predict the next rectangle, and benchmark
+    video, scrolling, desktop activity, and incompressible patterns. Compare
+    that recent-ratio/target-margin policy with the current doubling row hint.
+    Report both the CPU cost of discarded compression attempts and whether
+    fewer retries change end-to-end frame cadence.
   - Implement any 512-byte comparison with the current poison/teardown
     containment; do not redeploy the old artifact or treat it as the
     reliability fallback or normal default.

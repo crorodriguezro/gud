@@ -262,6 +262,9 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	u32 row_hint;
 	u32 raw_rects = 0;
 	u32 rectangles = 0;
+	u64 compression_attempts = 0;
+	u64 rejected_compression_attempts = 0;
+	u64 compression_source_bytes = 0;
 	int ret;
 
 	length = (size_t)plane_state->fb->width * 2 *
@@ -322,6 +325,9 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 				(size_t)chunk.rows * bytes_per_line;
 			chunk.payload_length = chunk.source_length;
 			chunk.compressed = false;
+			chunk.compression_attempts = 0;
+			chunk.rejected_compression_attempts = 0;
+			chunk.compression_source_bytes = 0;
 		}
 
 		/*
@@ -389,6 +395,11 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 			compressed_rects++;
 		else
 			raw_rects++;
+		compression_attempts += chunk.compression_attempts;
+		rejected_compression_attempts +=
+			chunk.rejected_compression_attempts;
+		compression_source_bytes +=
+			chunk.compression_source_bytes;
 		row_hint = gud_xdisp_next_row_hint(chunk.rows, max_rows);
 	}
 	mutex_unlock(&gud->lock);
@@ -396,9 +407,12 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	if (!ret)
 		dev_info_ratelimited(
 			&gud->intf->dev,
-			"XDISP frame source=%zu payload=%zu rectangles=%u compressed=%u raw=%u max_payload=%u cap=%u\n",
+			"XDISP frame source=%zu payload=%zu rectangles=%u compressed=%u raw=%u max_payload=%u cap=%u compress_attempts=%llu compress_rejected=%llu compress_source_bytes=%llu\n",
 			length, total_payload, rectangles, compressed_rects,
-			raw_rects, max_payload, GUD_XDISP_PAYLOAD_LIMIT);
+			raw_rects, max_payload, GUD_XDISP_PAYLOAD_LIMIT,
+			(unsigned long long)compression_attempts,
+			(unsigned long long)rejected_compression_attempts,
+			(unsigned long long)compression_source_bytes);
 
 	return ret;
 }

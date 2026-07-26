@@ -98,6 +98,9 @@ static void run_frame_case(const char *name, u32 width, u32 height,
 	uint8_t *workmem;
 	uint8_t *frame;
 	size_t offset = 0;
+	u64 compression_attempts = 0;
+	u64 rejected_compression_attempts = 0;
+	u64 compression_source_bytes = 0;
 	u32 rows_done = 0;
 	u32 chunks = 0;
 	u32 row_hint = height;
@@ -150,6 +153,14 @@ static void run_frame_case(const char *name, u32 width, u32 height,
 			fail(name, "compressor wrote outside scratch");
 			goto out;
 		}
+		if (!chunk.compression_attempts ||
+		    chunk.rejected_compression_attempts >
+			    chunk.compression_attempts ||
+		    chunk.compression_source_bytes <
+			    chunk.source_length) {
+			fail(name, "planner returned invalid compression counters");
+			goto out;
+		}
 
 		if (chunk.compressed) {
 			int decoded = LZ4_decompress_safe(
@@ -177,6 +188,11 @@ static void run_frame_case(const char *name, u32 width, u32 height,
 		offset += chunk.source_length;
 		rows_done += chunk.rows;
 		chunks++;
+		compression_attempts += chunk.compression_attempts;
+		rejected_compression_attempts +=
+			chunk.rejected_compression_attempts;
+		compression_source_bytes +=
+			chunk.compression_source_bytes;
 		row_hint = gud_xdisp_next_row_hint(chunk.rows, height);
 		if (chunks > height) {
 			fail(name, "planner failed to terminate");
@@ -186,8 +202,21 @@ static void run_frame_case(const char *name, u32 width, u32 height,
 
 	if (rows_done != height || offset != frame_length)
 		fail(name, "rows were dropped or duplicated");
+	if (compression_attempts < chunks ||
+	    rejected_compression_attempts > compression_attempts ||
+	    compression_source_bytes < frame_length)
+		fail(name, "frame compression counters are inconsistent");
 	if (pattern == PATTERN_ZERO && chunks != 1)
 		fail(name, "compressible full frame was unnecessarily split");
+	if (pattern == PATTERN_ZERO &&
+	    (compression_attempts != 1 ||
+	     rejected_compression_attempts != 0 ||
+	     compression_source_bytes != frame_length))
+		fail(name, "single-attempt frame counters are incorrect");
+	if (pattern == PATTERN_RANDOM && frame_length > payload_limit &&
+	    (!rejected_compression_attempts ||
+	     compression_source_bytes <= frame_length))
+		fail(name, "retry overhead was not reflected in counters");
 
 out:
 	free(decompressed);
