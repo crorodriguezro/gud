@@ -398,6 +398,30 @@ pass, and `XDISP-P0.2` must not start. Evidence is under
 and
 `backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-mini-cycles-2026-07-26T1236COT/`.
 
+**Adaptive-LZ4 first matrix result (2026-07-26):** cycle 1 passed after a
+fresh detached Pi service rebind: five compressed complete-row rectangles
+covered the full frame, every payload completed in one read and returned to
+`Idle`, and the maximum actual payload was 12,790 bytes. Cycle 2 then failed
+before payload during its OnePlus reconnect reset. The unchanged Pi service
+processed a stale queued `Disable`, safely unbound UDC, removed FunctionFS,
+dropped endpoint ownership, and intentionally exited status 1 with
+`USB detached after active host session; restart to recreate gadget`.
+Containment's `Restart=no` correctly prevented an automatic restart, leaving
+no gadget for the phone's new high-speed enumeration attempt. There was no
+short read, DWC2 stop timeout, vc4 fault, Pi Oops, pstore record, or watchdog
+event.
+
+This is a userspace lifecycle-policy incompatibility, not a kernel failure.
+The proposed repair is to let only the proven-idle, safely torn-down detach
+path exit successfully and set the containment drop-in to
+`Restart=on-success`. Explicit service stops remain non-restarting, while
+real status-1 failures, poisoned receives, and crashes remain contained. Do
+not resume the matrix or reuse cycle 1: after implementation and a dedicated
+post-payload reconnect gate, restart all ten cycles from cycle 1.
+`XDISP-P0.1` remains **blocked** and `XDISP-P0.2` remains prohibited.
+Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-matrix-2026-07-26T1256COT/`.
+
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the
 phone because it did synchronous USB work in Mir's commit path, and it has

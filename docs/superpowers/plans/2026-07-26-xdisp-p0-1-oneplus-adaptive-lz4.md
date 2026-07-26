@@ -2,7 +2,7 @@
 
 Date: 2026-07-26
 Status: isolated frame, post-payload lifecycle, and three mini-cycles passed;
-ten-cycle matrix is next and has not started
+first matrix attempt halted at cycle 2 before payload on detach lifecycle
 
 ## Decision
 
@@ -192,6 +192,22 @@ five OnePlus USB reconnect/reboots. Continue to require complete row coverage
 and every actual payload at or below 12,800 bytes; do not restore the
 historical 29-by-64,000-byte transfer shape. `XDISP-P0.1` remains blocked and
 `XDISP-P0.2` remains prohibited until all ten matrix cycles pass.
+
+The first matrix attempt subsequently passed cycle 1 after a Pi gadget rebind
+but failed cycle 2 before payload. During the reconnect-only reset, a stale
+queued `Disable` reached the safely detached Pi service. It unbound UDC,
+removed FunctionFS, released the endpoint, and exited status 1 to request
+gadget recreation. The containment drop-in had `Restart=no`, so systemd left
+the service failed and the phone could not complete enumeration. The Pi
+kernel remained clean.
+
+Do not continue this matrix. The next userspace-only change is to classify
+only the proven-idle safe-detach teardown as a successful exit and set the
+containment drop-in to `Restart=on-success`. Keep all genuine status-1,
+poisoned-receive, signal, and crash outcomes non-restarting. After unit tests,
+staging, and one post-payload disconnect/reconnect gate pass, start a fresh
+ten-cycle matrix from cycle 1. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-matrix-2026-07-26T1256COT/`.
 
 ## Failure handling
 

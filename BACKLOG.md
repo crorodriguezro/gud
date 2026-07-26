@@ -174,6 +174,14 @@ architecture decision.
     separate stop/start gates exited zero without host `-110`, DWC2/vc4
     failure, or Pi Oops. Start a new ten-cycle matrix from cycle 1 with the
     adaptive module. This does not yet unblock XDISP-P0.1.
+  - The first adaptive matrix attempt passed cycle 1 (Pi rebind, five
+    rectangles, 12,790-byte maximum) but failed cycle 2 before payload. On a
+    reconnect-only reset, the Pi safely tore down the detached gadget and
+    intentionally exited 1; containment's `Restart=no` left it failed, so the
+    phone could not re-enumerate. Repair only this clean-detach lifecycle
+    outcome in userspace and use `Restart=on-success`, retaining containment
+    for status-1/poison/crash failures. Requalify reconnect, then restart the
+    ten-cycle matrix from cycle 1.
 - [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
   phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
 - [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume
