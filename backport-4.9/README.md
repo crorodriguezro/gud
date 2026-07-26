@@ -189,6 +189,28 @@ The runner commits eight vertical color bars and keeps them visible for 30
 seconds. Record its output, the matching `dmesg`, and an observed or photographed
 HDMI pattern. Do not mark Ticket 5 complete until that hardware evidence shows
 no GUD transfer error or kernel warning.
+
+For a deterministic direct-KMS motion benchmark, build:
+
+```bash
+cc -Wall -Wextra -Werror -O2 $(pkg-config --cflags libdrm) \
+  -o tests/gud-kms-animate tests/gud-kms-animate.c \
+  $(pkg-config --libs libdrm)
+```
+
+The benchmark uses two RGB565 dumb buffers and synchronous atomic FB swaps so
+each generated frame reaches the GUD update callback. It supports `scroll`,
+`desktop`, and `noise` workloads:
+
+```bash
+gud-kms-animate /dev/dri/cardX desktop 60 20
+```
+
+Arguments are card path, workload, frame count, and target FPS (`0` means run
+without pacing). Start with a short `desktop` run. Treat any host transfer
+error or Pi `InFlight`/`Poisoned` state as terminal for that boot and follow
+the XDISP-P0.1 physical-recovery containment procedure. The `noise` workload
+is intentionally incompressible and should be run last with very few frames.
 In particular, verify `drm_gem_get_pages`, `drm_gem_put_pages`,
 `drm_gem_mmap`, and `drm_gem_handle_create` remain target-exported.
 
