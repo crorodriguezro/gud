@@ -217,6 +217,18 @@ creates the output is not sufficient.
   - Hold host, mode, compression, content, and duration constant; record
     presented FPS, dropped frames, median/tail latency, Pi and host CPU, USB
     throughput, and errors.
+  - Quantify the actual performance gain from fewer rectangles/transfers.
+    Compare safe fixed-row splitting against adaptive splitting while keeping
+    every submitted payload at or below 12,800 bytes. Record rectangles and
+    SET_BUFFER/bulk pairs per frame alongside FPS, latency, CPU, and USB
+    throughput; do not infer causality from the earlier subjective
+    one-frame-per-five-seconds observation.
+  - Instrument the adaptive planner with per-frame compression-attempt,
+    rejected-attempt, source-bytes-compressed, and compression-time counters.
+    Benchmark the current doubling row hint against a recent-ratio/target-margin
+    policy on compressible desktop, scrolling, video, and incompressible test
+    content. Report both the CPU cost of discarded compression attempts and
+    whether fewer retries change end-to-end frame cadence.
   - Implement any 512-byte comparison with the current poison/teardown
     containment; do not redeploy the old artifact or treat it as the
     reliability fallback or normal default.
