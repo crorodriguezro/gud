@@ -211,6 +211,14 @@ without pacing). Start with a short `desktop` run. Treat any host transfer
 error or Pi `InFlight`/`Poisoned` state as terminal for that boot and follow
 the XDISP-P0.1 physical-recovery containment procedure. The `noise` workload
 is intentionally incompressible and should be run last with very few frames.
+
+The diagnostic driver's `XDISP frame` messages are rate-limited. They are
+useful samples during a short run, but their totals are not complete when
+frames arrive in a burst. Use the Pi's `InFlight`/`Idle` and `frame_stats`
+counts to prove transfer completion. Before comparing compression policies,
+add a non-rate-limited cumulative counter snapshot so compression attempts,
+rejections, source bytes, and compression time cannot be omitted by printk
+rate limiting.
 In particular, verify `drm_gem_get_pages`, `drm_gem_put_pages`,
 `drm_gem_mmap`, and `drm_gem_handle_create` remain target-exported.
 

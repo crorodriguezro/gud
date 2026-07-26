@@ -232,6 +232,19 @@ creates the output is not sufficient.
     that recent-ratio/target-margin policy with the current doubling row hint.
     Report both the CPU cost of discarded compression attempts and whether
     fewer retries change end-to-end frame cadence.
+  - A short 2026-07-26 direct-KMS hardware characterization passed without a
+    transport or kernel fault: desktop reached 9.015 synchronous updates/s,
+    scrolling 4.671 updates/s, and two incompressible frames 0.165 updates/s.
+    The Pi matched all 367 `InFlight` entries with 367 `Idle` returns. Each
+    noise frame required 144 rectangles and 287 compression attempts; one
+    rejected all 287 attempts. Treat these as characterization numbers, not a
+    completed P2.1 benchmark.
+  - Replace or supplement the rate-limited per-frame diagnostic summaries
+    with non-rate-limited cumulative counters before the comparison benchmark.
+    The short run retained only 22 of 26 host frame summaries (353 of 367
+    transfers), so its sampled attempt/rejection totals are lower bounds.
+    Evidence:
+    `backport-4.9/env/local/evidence/xdisp-p2.1-oneplus-motion-2026-07-26T1611COT/RESULTS.md`.
   - Implement any 512-byte comparison with the current poison/teardown
     containment; do not redeploy the old artifact or treat it as the
     reliability fallback or normal default.
