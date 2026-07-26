@@ -1,8 +1,8 @@
 # XDISP-P0.1 OnePlus Adaptive-LZ4 Diagnostic Plan
 
 Date: 2026-07-26
-Status: implementation and offline verification in progress; hardware result
-not yet established
+Status: isolated frame and post-payload lifecycle passed; three mini-cycles
+and the ten-cycle matrix have not started
 
 ## Decision
 
@@ -144,6 +144,43 @@ After Gate 4 only:
 
 If cadence is usable and restart is clean, run three fresh mini-cycles. Only
 then may the ten-cycle XDISP-P0.1 matrix restart from cycle 1.
+
+## First hardware result
+
+Gate 4 and the first Gate 5 lifecycle test passed on 2026-07-26. A clean
+OnePlus reboot was required to recover the phone's host controller after
+repeated host-mode writes and cable/hub reseats did not enumerate any external
+device. Forcing `host` before loading either GUD module then immediately found
+the known powered-hub topology and Pi at `1-1.2` / `1d50:614d`. Only the
+diagnostic module was loaded.
+
+One deterministic 1280x720 RGB565 color-bar frame covered all 720 rows with
+four LZ4 rectangles. Their actual payloads were 11,260, 12,144, 12,380, and
+10,204 bytes, totaling 45,988 bytes. The largest payload was 12,380 bytes
+against the independent 12,800-byte submission cap. Every Pi payload completed
+in one 16 KiB FunctionFS read and returned the receive session to `Idle`.
+There was no host `-110`, short/impossible Pi read, warning, Oops, or poisoned
+state.
+
+The Pi's per-rectangle processing totals were 72, 48, 46, and 42 ms, or
+208 ms across the isolated full frame. That is approximately 4.8 full
+frames/s for this highly compressible pattern, not a sustained-cadence
+benchmark.
+
+After the sender exited, physical detach removed the OnePlus GUD device and
+DRM card. The Pi UDC retained a stale `configured` value, but all transfers
+were proven `Idle`. The controlled post-payload restart then exited the old
+service zero, unbound the UDC before FunctionFS/DRM release, started a new
+service instance on the same Pi boot, and returned the UDC to `not attached`.
+There was no DWC2 endpoint-stop timeout, vc4 Oops, paging fault, warning, or
+panic.
+
+Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-frame-2026-07-26T1154COT/`.
+The three fresh mini-cycles are now the next gate. Each proven-idle,
+physically detached cycle must use separate `systemctl stop` and
+`systemctl start` operations rather than another `restart`. `XDISP-P0.1`
+remains blocked and `XDISP-P0.2` remains prohibited.
 
 ## Failure handling
 

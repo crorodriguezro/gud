@@ -162,9 +162,12 @@ architecture decision.
     kernel work is required; do not ship the `g_dma=0` diagnostic.
   - The host-only variant is now implemented as a separate build under
     `variants/xdisp-lz4-12800/`. Offline LZ4 round-trip, payload-cap, row
-    coverage, and exact-kernel build gates must pass before staging; one
-    isolated hardware frame and safe lifecycle test are still required before
-    mini-cycles. This does not unblock XDISP-P0.1.
+    coverage, and exact-kernel build gates passed. Its first OnePlus hardware
+    frame used four LZ4 payloads totaling 45,988 bytes, with a 12,380-byte
+    maximum under the 12,800-byte cap. All four Pi reads completed, physical
+    detach was clean, and the post-payload service restart exited zero without
+    DWC2/vc4 failure. Three fresh mini-cycles are next before the ten-cycle
+    matrix. This does not unblock XDISP-P0.1.
 - [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
   phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
 - [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume

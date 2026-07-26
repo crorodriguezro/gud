@@ -350,9 +350,17 @@ are tracked in
 `2026-07-26-xdisp-p0-1-oneplus-adaptive-lz4.md`. Authorization does not change
 this plan's blocked verification state and does not authorize P0.2.
 
-No gate starts the mini-cycles or changes `XDISP-P0.1` from **blocked**. One
-complete OnePlus frame and a safe controlled stop/start remain prerequisites
-for three mini-cycles and the ten-cycle matrix.
+**Hardware revision on 2026-07-26:** the adaptive-LZ4 diagnostic completed one
+full OnePlus RGB565 frame as four compressed actual payloads, all at or below
+12,380 bytes, then survived the physically detached post-payload lifecycle
+test. The old service exited zero, the Pi boot remained alive, the new service
+returned to `not attached`, and neither kernel logged the DWC2/vc4 failure.
+The one-frame and safe controlled lifecycle prerequisites are now satisfied.
+Three fresh mini-cycles are the next gate; they must use the adaptive module,
+complete-row coverage, the final 12,800-byte cap, physical detach, and
+separate `systemctl stop` / `systemctl start` operations. The ten-cycle matrix
+does not begin until all three pass. `XDISP-P0.1` remains **blocked** and P0.2
+remains unauthorized.
 
 The previously outstanding post-payload crash evidence is preserved under
 `backport-4.9/env/local/evidence/xdisp-p0.1-step2-predeploy-2026-07-25/`.

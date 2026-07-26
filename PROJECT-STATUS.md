@@ -369,6 +369,27 @@ implementation alone is not a reliability result. The execution and rollback
 plan is
 `docs/superpowers/plans/2026-07-26-xdisp-p0-1-oneplus-adaptive-lz4.md`.
 
+**Adaptive-LZ4 first hardware result (2026-07-26):** the separate diagnostic
+module completed one 1280x720 RGB565 OnePlus frame as four contiguous LZ4
+rectangles. Actual payloads were 11,260, 12,144, 12,380, and 10,204 bytes;
+the maximum was 12,380 against the final 12,800-byte submission cap. All four
+Pi transfers completed in one 16 KiB read, returned to `Idle`, and presented
+the complete frame. The host logged no `-110`; neither kernel logged a warning
+or Oops. After physical detach, the OnePlus GUD device/card disappeared. The
+Pi UDC retained stale `configured` state, but a controlled post-payload
+restart cleanly unbound UDC first, exited zero, started a new service instance
+on the same boot, and returned to `not attached` without DWC2 stop timeouts or
+the vc4 release fault.
+
+The Pi processing totals were 208 ms across the four rectangles, an isolated
+upper bound of about 4.8 full frames/s for the highly compressible color-bar
+pattern rather than a sustained benchmark. The first-frame and lifecycle
+prerequisites have passed; three fresh mini-cycles are next, using separate
+stop/start operations after proven-idle physical detach. Do not start the
+ten-cycle matrix before all three pass. `XDISP-P0.1` remains **blocked** and
+`XDISP-P0.2` must not start. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.1-oneplus-adaptive-frame-2026-07-26T1154COT/`.
+
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the
 phone because it did synchronous USB work in Mir's commit path, and it has
