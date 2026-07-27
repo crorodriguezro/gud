@@ -155,6 +155,23 @@ changed, and P0.2 remains **in progress**. This resolves only the fixed-mode
 KMS setup boundary, not responsiveness or recovery acceptance. Evidence is
 under `backport-4.9/env/local/evidence/xdisp-p0.2-mode-startup-2026-07-27T1249COT/`.
 
+**XDISP-P0.2 compositor-health comparison gate (2026-07-27):** a fresh
+packaged-plugin sample ran the mandatory dynamic host gate (`FOUND:` at
+`1-1.3`) but found the packaged baseline already emitting binder `-12` and
+KGSL `-24` errors. They persisted through a LightDM-only restart despite the
+new compositor having 89 FDs; the binder-owning Android HWC2 service had 22
+FDs. The P0.2 worker and HWC2 present-fence source both have bounded ownership,
+so this rules out neither a kernel/HWC allocation leak nor unrelated phone
+health, but does not support an unbounded Mir FD/queue finding. No experimental
+plugin was mounted and no payload, kernel, normal module, Pi mode, or Pi service
+was changed. Commit `20e54b0` adds bounded worker/FD counters and component
+assertions; its phone-matched artifact SHA-256 is
+`72648f4b5d9c00abcbbc3201f14182c262ed6c512987587374edca58eee366ea` and six
+focused tests pass. Do not deploy it until the packaged plugin has a clean
+no-error baseline. P0.2 remains **in progress**, with no added responsiveness
+or recovery acceptance. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.2-health-comparison-2026-07-27T1259COT/`.
+
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
 bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
