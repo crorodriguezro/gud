@@ -265,8 +265,15 @@ creates the output is not sufficient.
   - Replace the test-only physical-mode environment override with dynamic
     matching on successful GUD state commit: select an exact physical
     connector timing, recreate matching scanout buffers once, use native
-    rectangle copies, and retain scaling only when no exact mode exists. Keep
-    USB advertised preference independent of physical mode selection.
+    rectangle copies, and retain scaling when no exact mode exists or an exact
+    activation fails. Keep USB advertised preference independent of physical
+    mode selection.
+    Formal design:
+    `docs/superpowers/specs/2026-07-26-xdisp-p2-1-dynamic-mode-matching-design.md`.
+    Ordered implementation plan:
+    `docs/superpowers/plans/2026-07-26-xdisp-p2-1-dynamic-mode-matching.md`.
+    Component gate:
+    `../gud-gadget/docs/XDISP-P2.1-DYNAMIC-MODE-MATCHING-TEST.md`.
   - After dynamic mode matching, run an unpaced native comparison. The paced
     result proves at least 5 fps but does not establish maximum throughput,
     CPU use, dropped frames, tearing, or Mir/Lomiri/video-decode behavior.
