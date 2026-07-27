@@ -136,7 +136,7 @@ path and hard-codes the DRM node. See `PROJECT-STATUS.md` (`XDISP-*`) for the
 cross-repository board and `docs/lomiri-gud-integration-options.md` for the
 architecture decision.
 
-- [ ] `XDISP-P0.1` — Pi FunctionFS first-transfer reliability is verified over
+- [x] `XDISP-P0.1` — Pi FunctionFS first-transfer reliability is verified over
   ten fresh rebind/reconnect cycles. Owner: `gud-gadget`.
   - Laptop Gate A passed with LZ4; Gate B reproduced the impossible DWC2
     residual on the first upstream-host uncompressed 61,440-byte URB. Gate C
@@ -200,6 +200,10 @@ architecture decision.
     occurred. This meets the adaptive diagnostic's technical matrix criteria,
     but retain the blocked status and do not start P0.2 until the standing
     no-verification instruction is explicitly lifted.
+  - **2026-07-27 decision:** the user explicitly lifted that standing block.
+    `XDISP-P0.1` is verified with the 12,800-byte actual-payload ceiling as
+    its operating constraint. The unexplained larger-payload boundary remains
+    a non-blocking reliability investigation; it does not reopen this item.
 - [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
   phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
 - [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume

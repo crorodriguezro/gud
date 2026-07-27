@@ -39,11 +39,19 @@ Use these states consistently:
 
 | ID | Priority | Owner | State | Required acceptance evidence |
 | --- | --- | --- | --- | --- |
-| `XDISP-P0.1` | Make the Pi FunctionFS first bulk transfer reliable after a gadget rebind or phone reconnect. See `docs/superpowers/specs/2026-07-25-xdisp-p0-1-functionfs-rebind-design.md` and its implementation plan. | `gud-gadget` | blocked | Ten fresh adaptive-module rebind/reconnect cycles cover the complete 1,843,200-byte RGB565 frame with contiguous complete-row rectangles, every actual payload at or below 12,800 bytes, matching Pi completion/`Idle` evidence, and no host `-110`, short read, DWC2 stop timeout, or Pi Oops. |
+| `XDISP-P0.1` | Make the Pi FunctionFS first bulk transfer reliable after a gadget rebind or phone reconnect. See `docs/superpowers/specs/2026-07-25-xdisp-p0-1-functionfs-rebind-design.md` and its implementation plan. | `gud-gadget` | verified | Ten fresh adaptive-module rebind/reconnect cycles cover the complete 1,843,200-byte RGB565 frame with contiguous complete-row rectangles, every actual payload at or below 12,800 bytes, matching Pi completion/`Idle` evidence, and no host `-110`, short read, DWC2 stop timeout, or Pi Oops. |
 | `XDISP-P0.2` | Move GUD presentation off Mir's compositor commit path; retain only the newest pending frame on overload. | `mir-android2-platform-gud` | planned | Phone input and internal display remain responsive while the Pi is slow, absent, or returns an I/O error. |
 | `XDISP-P0.3` | Discover the live GUD DRM card and handle remove/re-add; do not hard-code `card1` or use a symlink. | `mir-android2-platform-gud`, `gud` | planned | Reconnect succeeds when the card number changes, with no manual node changes or compositor restart. |
 | `XDISP-P1.1` | Validate external-output geometry and Lomiri placement, including the intermittent narrow/cropped image. | `mir-android2-platform-gud`, `gud-gadget` | planned | A 1280x720 extended desktop fills the selected output correctly across repeated enable/disable cycles. |
 | `XDISP-P2.1` | Improve usable performance with damage-aware updates, mode matching, measurement, and optional compression. See `docs/superpowers/specs/2026-07-26-xdisp-p2-1-dynamic-mode-matching-design.md` and `docs/superpowers/plans/2026-07-26-xdisp-p2-1-dynamic-mode-matching.md`. | all three | in progress | Recorded end-to-end FPS, latency, CPU use, and frame-drop behavior at the chosen mode. |
+
+**Decision (2026-07-27):** the user authorized lifting the standing block.
+`XDISP-P0.1` is therefore **verified**: the replacement matrix met its stated
+acceptance evidence (ten fresh cycles, complete frames, matching `Idle`
+returns, `<= 12,800`-byte actual payloads, and no host or Pi fault). The
+unexplained larger-payload boundary remains a non-blocking reliability
+investigation; the verified operating constraint is to retain the actual
+payload ceiling at or below 12,800 bytes.
 
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
