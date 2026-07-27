@@ -128,6 +128,17 @@ active/configured without a service action. This is contained pre-transfer
 evidence only. P0.2 remains **in progress**; slow-output, I/O-error,
 reappearance, shutdown, and manual responsiveness acceptance remain unverified.
 
+**XDISP-P0.2 exact KMS result (2026-07-27):** commit `7185800` logged the
+contained exception from the worker itself. Its
+`2065484f746e766b245d828a0f40465996d4fcaeb6099a7162a9b355d00ccb39` module
+passed the six focused tests and, after the required hardware gate, reported
+`no connected 1280x720 GUD output`. Read-only DRM evidence resolves this:
+the connected dynamic GUD connector advertised only `1920x1080`. This is a
+P1/P2 geometry/mode-matching boundary, not P0.2 queue, KMS-error-containment,
+USB, payload, or card-number work. No modes, kernels, normal module, or Pi
+service were changed. P0.2 stays **in progress** with its hardware acceptance
+matrix unverified.
+
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
 bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
