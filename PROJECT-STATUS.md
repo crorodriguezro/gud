@@ -240,6 +240,22 @@ Mir/normal GUD were restored and LightDM returned active. P0.2 remains **in
 progress**; the fresh boot is no longer a clean baseline. Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.2-return-fence-fix-2026-07-27T1431COT/`.
 
+**XDISP-P0.2 synthetic render-only control (2026-07-27):** `a0fb290` retained
+the synthetic Android EGL window surface but dropped frames before worker/KMS/
+USB/Pi activity. Its compatible artifact SHA-256 is
+`84d67e85f52760ad474436d28e9fa1dac82485fe374e79e216278427711d1531`; 20
+focused tests pass. Following a fresh OnePlus reboot, clean packaged 90-FD
+control, active/configured/Idle Pi preflight, host gate, and unchanged normal
+GUD discovery, render-only synthetic EGL reached a stable 757--758 FDs and
+658--659 sync files. There was no worker, KMS, USB, Pi payload, binder `-12`,
+or KGSL `-24` event. This isolates retention to the synthetic Android
+`eglCreateWindowSurface`/`MirNativeWindow` path, not P0.2 worker ownership or
+GUD transport. The next source design is an offscreen gralloc/EGL synthetic
+target with direct worker lease handoff; do not add more fence exceptions.
+Packaged Mir and normal GUD were restored. P0.2 remains **in progress**.
+Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.2-render-only-2026-07-27T1633COT/`.
+
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
 bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
