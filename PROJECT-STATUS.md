@@ -406,6 +406,27 @@ is P2.1 performance evidence only: `XDISP-P0.1` remains **blocked** and
 `XDISP-P0.2` remains unstarted. Evidence:
 `backport-4.9/env/local/evidence/xdisp-p2.1-lz4-planner-ab-2026-07-27T0420COT/RESULTS.md`.
 
+**Bounded incompressible backoff gate (2026-07-27):** the diagnostic module
+now carries frame-local bounded-policy state. After its first non-beneficial
+discovery returns a raw cap-safe rectangle, it skips LZ4 for the rest of that
+atomic update and sends direct complete-row raw chunks; the next update starts
+with a fresh discovery state. The final submission-side 12,800-byte guard is
+unchanged. Offline round-trip, sanitizer, contract, and exact target-kernel
+build gates pass. A random 1280x720 unit frame proves one discovery followed
+by 143 direct five-row raw chunks with zero further compression attempts.
+
+The OnePlus/Pi repeat noise gate then reached 6.528 FPS with a 142.210-ms mean
+commit (old bounded: 3.908 FPS / 244.925 ms). Phone telemetry reported one
+attempt, 143 backoff rectangles, 3.506 ms planner time, and a 12,800-byte
+maximum per frame. The raw 300-frame clip remained healthy at 32.348 FPS and
+25.806-ms mean commits, with no raw fallback. Phone and Pi scans contained no
+new transport or kernel failure; Pi service stayed active, UDC configured,
+and service restarts at zero. The policy remains test-only pending repeated
+four-workload, CPU, latency, and throughput measurement. This does not change
+the standing status: `XDISP-P0.1` remains **blocked** and `XDISP-P0.2` remains
+unstarted. Evidence:
+`backport-4.9/env/local/evidence/xdisp-p2.1-bounded-backoff-2026-07-27T1440COT/RESULTS.md`.
+
 **Adaptive-LZ4 first hardware result (2026-07-26):** the separate diagnostic
 module completed one 1280x720 RGB565 OnePlus frame as four contiguous LZ4
 rectangles. Actual payloads were 11,260, 12,144, 12,380, and 10,204 bytes;

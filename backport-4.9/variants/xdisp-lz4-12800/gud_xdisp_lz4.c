@@ -45,6 +45,37 @@ size_t gud_xdisp_lz4_compress(const u8 *source, size_t source_length,
 	return compressed_length;
 }
 
+static int gud_xdisp_plan_raw_chunk(u32 remaining_rows,
+				    size_t bytes_per_line, u32 max_rows,
+				    size_t payload_limit,
+				    struct gud_xdisp_chunk *chunk)
+{
+	u32 rows;
+
+	if (!remaining_rows || !bytes_per_line || !max_rows || !payload_limit ||
+	    !chunk)
+		return -EINVAL;
+	if (bytes_per_line > payload_limit)
+		return -E2BIG;
+
+	rows = remaining_rows;
+	if (rows > max_rows)
+		rows = max_rows;
+	if (rows > payload_limit / bytes_per_line)
+		rows = payload_limit / bytes_per_line;
+	if (!rows)
+		return -E2BIG;
+
+	chunk->rows = rows;
+	chunk->source_length = (size_t)rows * bytes_per_line;
+	chunk->payload_length = chunk->source_length;
+	chunk->compressed = false;
+	chunk->compression_attempts = 0;
+	chunk->rejected_compression_attempts = 0;
+	chunk->compression_source_bytes = 0;
+	return 0;
+}
+
 int gud_xdisp_plan_chunk(const u8 *source, u32 remaining_rows,
 			 size_t bytes_per_line, u32 max_rows,
 			 size_t payload_limit, void *workmem,
@@ -152,6 +183,7 @@ int gud_xdisp_plan_chunk_bounded(const u8 *source, u32 remaining_rows,
 	u32 raw_fallback_rows;
 	u32 raw_rows;
 	u32 rows;
+	int ret;
 
 	if (!source || !remaining_rows || !bytes_per_line || !max_rows ||
 	    !payload_limit || !workmem || !scratch || !chunk)
@@ -233,14 +265,38 @@ int gud_xdisp_plan_chunk_bounded(const u8 *source, u32 remaining_rows,
 	}
 
 raw_fallback:
-	chunk->rows = raw_rows;
-	chunk->source_length = (size_t)raw_rows * bytes_per_line;
-	chunk->payload_length = chunk->source_length;
-	chunk->compressed = false;
+	ret = gud_xdisp_plan_raw_chunk(remaining_rows, bytes_per_line,
+					 raw_rows, payload_limit, chunk);
+	if (ret)
+		return ret;
 	chunk->compression_attempts = 1;
 	chunk->rejected_compression_attempts = 0;
 	chunk->compression_source_bytes = source_length;
 	return 0;
+}
+
+int gud_xdisp_plan_chunk_bounded_frame(
+				 const u8 *source, u32 remaining_rows,
+				 size_t bytes_per_line, u32 max_rows,
+				 size_t payload_limit, void *workmem,
+				 u8 *scratch, size_t scratch_capacity,
+				 struct gud_xdisp_bounded_frame *frame,
+				 struct gud_xdisp_chunk *chunk)
+{
+	int ret;
+
+	if (!frame)
+		return -EINVAL;
+	if (frame->raw_backoff)
+		return gud_xdisp_plan_raw_chunk(remaining_rows, bytes_per_line,
+						max_rows, payload_limit, chunk);
+
+	ret = gud_xdisp_plan_chunk_bounded(source, remaining_rows,
+					  bytes_per_line, max_rows, payload_limit,
+					  workmem, scratch, scratch_capacity, chunk);
+	if (!ret && !chunk->compressed)
+		frame->raw_backoff = true;
+	return ret;
 }
 
 u32 gud_xdisp_next_row_hint(u32 selected_rows, u32 absolute_max_rows)

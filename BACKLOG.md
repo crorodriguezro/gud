@@ -255,12 +255,17 @@ creates the output is not sufficient.
     sample regressed. On noise, bounded discovery repeatedly scanned a wide
     source candidate before each five-row raw fallback, consuming 78.98 ms of
     planning per frame and yielding 3.908 FPS; ratio-cache reached 6.372 FPS.
-    Add a safe **per-frame incompressible backoff**: after a non-beneficial
-    bounded candidate selects raw fallback, plan remaining chunks in that
-    frame directly at the known cap-safe raw-row size. Keep the final
-    `<= 12,800` check, retry discovery on the next frame, then repeat all four
-    workloads with multiple trials before changing any default. Evidence:
-    `backport-4.9/env/local/evidence/xdisp-p2.1-lz4-planner-ab-2026-07-27T0420COT/RESULTS.md`.
+    **Implemented and gated:** frame-local bounded state records the first raw
+    fallback, then sends the remaining chunks of that frame as direct cap-safe
+    raw rows with zero compression work; a fresh update retries discovery. The
+    adjacent `<= 12,800` submission guard is unchanged. The random-frame unit
+    test proves one discovery plus 143 direct raw chunks. On a repeat 10-frame
+    noise gate, planner time fell from 78.98 to 3.506 ms/frame and cadence
+    rose from 3.908 to 6.528 FPS, with one attempt and 143 backoff rectangles
+    per frame. The raw 300-frame clip remained at 32.348 FPS. Keep it
+    test-only and repeat all four workloads with multiple trials before
+    changing any default. Evidence:
+    `backport-4.9/env/local/evidence/xdisp-p2.1-bounded-backoff-2026-07-27T1440COT/RESULTS.md`.
   - [ ] Upstream Linux GUD follow-up: evaluate contributing a generic optional
     bounded-output / complete-row LZ4 planner. Current upstream
     `drivers/gpu/drm/gud/gud_pipe.c` splits damage before compression using the

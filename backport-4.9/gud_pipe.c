@@ -282,6 +282,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	struct gud_framebuffer *gfb = to_gud_framebuffer(plane_state->fb);
 	struct gud_gem_object *obj = to_gud_gem(gfb->obj);
 	struct gud_set_buffer_req request;
+	struct gud_xdisp_bounded_frame bounded_frame = { 0 };
 	size_t bytes_per_line;
 	size_t framebuffer_offset;
 	size_t length;
@@ -294,6 +295,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	u32 max_rows;
 	u32 row_hint;
 	u32 raw_rects = 0;
+	u32 raw_backoff_rects = 0;
 	u32 rectangles = 0;
 	u64 compression_attempts = 0;
 	u64 rejected_compression_attempts = 0;
@@ -372,13 +374,14 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 		if (gud->compression & GUD_COMPRESSION_LZ4) {
 			phase_start_ns = ktime_get_ns();
 			if (xdisp_bounded_discovery)
-				ret = gud_xdisp_plan_chunk_bounded(
+				ret = gud_xdisp_plan_chunk_bounded_frame(
 					(u8 *)vaddr + offset, remaining_rows,
 					bytes_per_line, max_rows,
 					plan_payload_limit,
 					gud->xdisp_lz4_workmem,
 					gud->xdisp_lz4_scratch,
-					gud->xdisp_lz4_scratch_size, &chunk);
+					gud->xdisp_lz4_scratch_size,
+					&bounded_frame, &chunk);
 			else
 				ret = gud_xdisp_plan_chunk(
 					(u8 *)vaddr + offset, remaining_rows,
@@ -475,6 +478,9 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 			compressed_rects++;
 		else
 			raw_rects++;
+		if (xdisp_bounded_discovery && bounded_frame.raw_backoff &&
+		    !chunk.compression_attempts)
+			raw_backoff_rects++;
 		compression_attempts += chunk.compression_attempts;
 		rejected_compression_attempts +=
 			chunk.rejected_compression_attempts;
@@ -513,12 +519,13 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	if (!ret && xdisp_frame_stats)
 		dev_info(
 			&gud->intf->dev,
-			"XDISP frame policy=%s source=%zu payload=%zu rectangles=%u compressed=%u raw=%u max_payload=%u cap=%u target=%zu compress_attempts=%llu compress_rejected=%llu compress_source_bytes=%llu planner_us=%llu copy_us=%llu set_buffer_us=%llu bulk_wait_us=%llu transfer_us=%llu\n",
+			"XDISP frame policy=%s source=%zu payload=%zu rectangles=%u compressed=%u raw=%u raw_backoff_rectangles=%u max_payload=%u cap=%u target=%zu compress_attempts=%llu compress_rejected=%llu compress_source_bytes=%llu planner_us=%llu copy_us=%llu set_buffer_us=%llu bulk_wait_us=%llu transfer_us=%llu\n",
 			xdisp_bounded_discovery ? "bounded-lz4" :
 			xdisp_ratio_cache ? "ratio-cache" :
 			xdisp_target_policy ? "target95" : "doubling",
 			length, total_payload, rectangles, compressed_rects,
-			raw_rects, max_payload, GUD_XDISP_PAYLOAD_LIMIT,
+			raw_rects, raw_backoff_rects, max_payload,
+			GUD_XDISP_PAYLOAD_LIMIT,
 			reported_target,
 			(unsigned long long)compression_attempts,
 			(unsigned long long)rejected_compression_attempts,
@@ -531,9 +538,10 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	else if (!ret)
 		dev_info_ratelimited(
 			&gud->intf->dev,
-			"XDISP frame source=%zu payload=%zu rectangles=%u compressed=%u raw=%u max_payload=%u cap=%u compress_attempts=%llu compress_rejected=%llu compress_source_bytes=%llu\n",
+			"XDISP frame source=%zu payload=%zu rectangles=%u compressed=%u raw=%u raw_backoff_rectangles=%u max_payload=%u cap=%u compress_attempts=%llu compress_rejected=%llu compress_source_bytes=%llu\n",
 			length, total_payload, rectangles, compressed_rects,
-			raw_rects, max_payload, GUD_XDISP_PAYLOAD_LIMIT,
+			raw_rects, raw_backoff_rects, max_payload,
+			GUD_XDISP_PAYLOAD_LIMIT,
 			(unsigned long long)compression_attempts,
 			(unsigned long long)rejected_compression_attempts,
 			(unsigned long long)compression_source_bytes);

@@ -311,6 +311,108 @@ out:
 	free(source);
 }
 
+static void run_bounded_frame_backoff_case(void)
+{
+	const char *name = "bounded-frame-incompressible-backoff";
+	const u32 width = 1280;
+	const u32 height = 720;
+	const size_t bytes_per_line = (size_t)width * 2U;
+	const size_t frame_length = bytes_per_line * height;
+	const size_t scratch_capacity =
+		gud_xdisp_lz4_compress_bound(frame_length);
+	struct gud_xdisp_bounded_frame frame = { 0 };
+	struct gud_xdisp_bounded_frame next_frame = { 0 };
+	struct gud_xdisp_chunk next_chunk;
+	uint8_t *source = malloc(frame_length);
+	uint8_t *scratch_allocation =
+		malloc(scratch_capacity + 2U * GUARD_SIZE);
+	uint8_t *workmem = malloc(gud_xdisp_lz4_upstream_workmem_size());
+	size_t offset = 0;
+	u64 compression_attempts = 0;
+	u64 compression_source_bytes = 0;
+	u32 chunks = 0;
+	u32 direct_raw_chunks = 0;
+	int saw_first_raw = 0;
+	int ret;
+
+	if (!source || !scratch_allocation || !workmem) {
+		fail(name, "allocation failed");
+		goto out;
+	}
+	fill_pattern(source, frame_length, bytes_per_line, PATTERN_RANDOM);
+	memset(scratch_allocation, 0xcc,
+	       scratch_capacity + 2U * GUARD_SIZE);
+	memset(scratch_allocation, 0xa5, GUARD_SIZE);
+	memset(scratch_allocation + GUARD_SIZE + scratch_capacity, 0x5a,
+	       GUARD_SIZE);
+
+	while (offset < frame_length) {
+		struct gud_xdisp_chunk chunk;
+		u32 remaining_rows = (frame_length - offset) / bytes_per_line;
+
+		ret = gud_xdisp_plan_chunk_bounded_frame(
+			source + offset, remaining_rows, bytes_per_line, height,
+			GUD_XDISP_PAYLOAD_LIMIT, workmem,
+			scratch_allocation + GUARD_SIZE, scratch_capacity,
+			&frame, &chunk);
+		if (ret || !chunk.rows || chunk.rows > remaining_rows ||
+		    chunk.source_length != (size_t)chunk.rows * bytes_per_line ||
+		    !chunk.payload_length ||
+		    chunk.payload_length > GUD_XDISP_PAYLOAD_LIMIT ||
+		    !guards_intact(scratch_allocation, scratch_capacity)) {
+			fail(name, "bounded backoff did not return a safe chunk");
+			goto out;
+		}
+		if (!saw_first_raw && !chunk.compressed) {
+			saw_first_raw = 1;
+			if (!frame.raw_backoff || chunk.compression_attempts != 1 ||
+			    chunk.compression_source_bytes != frame_length) {
+				fail(name, "first raw fallback did not record discovery");
+				goto out;
+			}
+		} else if (saw_first_raw) {
+			if (chunk.compressed || chunk.compression_attempts ||
+			    chunk.rejected_compression_attempts ||
+			    chunk.compression_source_bytes ||
+			    chunk.rows > GUD_XDISP_PAYLOAD_LIMIT / bytes_per_line) {
+				fail(name, "backoff chunk performed compression work");
+				goto out;
+			}
+			direct_raw_chunks++;
+		}
+
+		offset += chunk.source_length;
+		compression_attempts += chunk.compression_attempts;
+		compression_source_bytes += chunk.compression_source_bytes;
+		chunks++;
+	}
+
+	if (!saw_first_raw || !direct_raw_chunks || chunks != 144 ||
+	    compression_attempts != 1 ||
+	    compression_source_bytes != frame_length) {
+		fail(name, "frame backoff did not eliminate repeated discovery");
+		goto out;
+	}
+
+	/* A fresh frame state must retry discovery rather than caching raw forever. */
+	ret = gud_xdisp_plan_chunk_bounded_frame(
+		source, height, bytes_per_line, height,
+		GUD_XDISP_PAYLOAD_LIMIT, workmem,
+		scratch_allocation + GUARD_SIZE, scratch_capacity,
+		&next_frame, &next_chunk);
+	if (ret || !next_frame.raw_backoff ||
+	    next_chunk.compression_attempts != 1 ||
+	    next_chunk.compression_source_bytes != frame_length) {
+		fail(name, "fresh frame did not retry bounded discovery");
+		goto out;
+	}
+
+out:
+	free(workmem);
+	free(scratch_allocation);
+	free(source);
+}
+
 static void run_direct_compressor_case(void)
 {
 	const char *name = "direct-lz4-bound-and-guard";
@@ -526,6 +628,7 @@ int main(void)
 		       12800, gud_xdisp_plan_chunk_bounded, 0);
 	run_frame_case("bounded-random-1280x720", 1280, 720, PATTERN_RANDOM,
 		       12800, gud_xdisp_plan_chunk_bounded, 0);
+	run_bounded_frame_backoff_case();
 	run_invalid_cases();
 
 	printf("xdisp-lz4 tests: %d failures\n", failures);

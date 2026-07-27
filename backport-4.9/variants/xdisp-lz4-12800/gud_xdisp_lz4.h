@@ -34,6 +34,15 @@ struct gud_xdisp_chunk {
 	u64 compression_source_bytes;
 };
 
+/*
+ * Per-frame state for the bounded-output policy. It is intentionally local
+ * to one atomic update: raw fallback avoids more wide discovery only until
+ * the next frame gets a new chance to compress.
+ */
+struct gud_xdisp_bounded_frame {
+	bool raw_backoff;
+};
+
 size_t gud_xdisp_lz4_compress_bound(size_t source_length);
 
 /*
@@ -82,6 +91,20 @@ int gud_xdisp_plan_chunk_bounded(const u8 *source, u32 remaining_rows,
 				 size_t bytes_per_line, u32 max_rows,
 				 size_t payload_limit, void *workmem,
 				 u8 *scratch, size_t scratch_capacity,
+				 struct gud_xdisp_chunk *chunk);
+
+/*
+ * Bounded discovery with frame-local incompressible backoff. The first raw
+ * fallback records frame->raw_backoff; remaining chunks in that frame are
+ * direct cap-safe raw rows with zero compression work. The caller must create
+ * a fresh frame state for every new framebuffer update.
+ */
+int gud_xdisp_plan_chunk_bounded_frame(
+				 const u8 *source, u32 remaining_rows,
+				 size_t bytes_per_line, u32 max_rows,
+				 size_t payload_limit, void *workmem,
+				 u8 *scratch, size_t scratch_capacity,
+				 struct gud_xdisp_bounded_frame *frame,
 				 struct gud_xdisp_chunk *chunk);
 
 u32 gud_xdisp_next_row_hint(u32 selected_rows, u32 absolute_max_rows);

@@ -18,6 +18,10 @@ require() {
 
 require "$variant/gud_xdisp_lz4.h" \
 	'#define GUD_XDISP_PAYLOAD_LIMIT 12800U'
+require "$variant/gud_xdisp_lz4.c" \
+	'gud_xdisp_plan_chunk_bounded_frame('
+require "$pipe" 'struct gud_xdisp_bounded_frame bounded_frame'
+require "$pipe" 'raw_backoff_rectangles=%u'
 require "$pipe" 'chunk.payload_length > GUD_XDISP_PAYLOAD_LIMIT'
 require "$pipe" 'request.length = cpu_to_le32(chunk.source_length);'
 require "$pipe" 'request.compression = GUD_COMPRESSION_LZ4;'

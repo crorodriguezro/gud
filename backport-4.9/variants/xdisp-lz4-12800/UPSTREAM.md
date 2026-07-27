@@ -42,14 +42,16 @@ is unchanged until this opt-in path has hardware evidence.
 
 ## Measured incompressible-content limitation
 
-The planner remains test-only until it has an incompressible backoff. The
-2026-07-27 A/B showed that noisy RGB565 falls back safely to five raw rows per
-payload, but it performs a wide `destSize()` discovery again for each payload.
-This preserves the transfer cap but wastes phone CPU. A future per-frame
-backoff may skip further wide discovery after a non-beneficial candidate
-selects raw fallback; it must keep final exact complete-row, `<= 12,800`
-validation and retry normal discovery on a new frame. See
-`backport-4.9/env/local/evidence/xdisp-p2.1-lz4-planner-ab-2026-07-27T0420COT/RESULTS.md`.
+The policy remains test-only while its mixed-workload behavior is qualified.
+The 2026-07-27 implementation adds frame-local backoff: the first
+non-beneficial discovery returns the existing complete-row raw rectangle and
+sets its caller-owned frame state; later chunks bypass `destSize()` and use
+the known cap-safe raw-row size. A fresh framebuffer update recreates state
+and retries normal discovery. The exact complete-row `<= 12,800` validation
+remains at the adjacent submission path. The repeat noise gate reduced planner
+work from 78.98 to 3.506 ms/frame and reached 6.528 FPS without a transport or
+kernel fault. See
+`backport-4.9/env/local/evidence/xdisp-p2.1-bounded-backoff-2026-07-27T1440COT/RESULTS.md`.
 
 ## First hardware gate
 
