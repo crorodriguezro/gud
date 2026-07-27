@@ -172,6 +172,22 @@ no-error baseline. P0.2 remains **in progress**, with no added responsiveness
 or recovery acceptance. Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.2-health-comparison-2026-07-27T1259COT/`.
 
+**XDISP-P0.2 rebooted control (2026-07-27):** after an authorized OnePlus-only
+reboot, the packaged plugin passed a 30-second clean control: 90 compositor
+FDs and zero binder `-12`/KGSL `-24` errors. The mandatory dynamic gate found
+the Pi at `1-1.3`; its read-only preflight remained active/configured and safe.
+The `20e54b0` commit-qualified observability plugin then ran for 20 seconds at
+89--90 compositor FDs and five--six sync fences with zero resource errors. It
+was immediately rolled back and the packaged hash restored. This verifies only
+that plugin loading alone did not reproduce the earlier resource failure. After
+the phone reboot, DRM exposed only `card0` and Mir saw DisplayPort disconnected,
+so no GUD synthetic output, worker, KMS, payload, or Pi receive ran. The missing
+live GUD card/output is P0.3 reappearance/card-lifecycle evidence; no symlink,
+card-number workaround, kernel, normal module, Pi mode, or Pi service action
+was used. P0.2 remains **in progress** with no responsiveness or recovery
+acceptance. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.2-reboot-baseline-2026-07-27T1313COT/`.
+
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
 bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
