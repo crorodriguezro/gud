@@ -36,6 +36,13 @@ buffer, read gralloc memory, convert pixels, or issue a KMS ioctl. The worker
 removes that one frame from the slot and is the only thread that constructs,
 uses, and destroys `Kms` and its DRM fd.
 
+The synthetic GUD output is a Mir-rendered sink, not an Android physical HWC
+display. `HwcDevice` therefore omits only that external `DisplayContents`
+entry from its Android HWC `prepare()` and `set()` lists; primary and virtual
+entries retain their ordinary HWC path. Mir still renders the synthetic entry
+and gives its resulting Android buffer to the worker. This makes the boundary
+explicit rather than relying on an unsupported HWC external slot being ignored.
+
 ## Invariants
 
 1. There is at most one active frame and one pending frame. Replacing the
@@ -102,6 +109,26 @@ and shutdown discard/join. Exact commands and raw output are retained in
 `backport-4.9/env/local/evidence/xdisp-p0.2-container-build-2026-07-27T0000COT/`.
 This validates the source/build boundary only; it is not phone/Pi responsiveness
 or reconnect acceptance evidence.
+
+### Follow-up boundary validation (2026-07-27)
+
+After the rollback, source review established that the old POC logged `GUD POC
+output enabled` during eager presenter construction, while P0.2 starts its
+worker only after it obtains an external Android `mga::Buffer`. The failed
+hardware session therefore proves that no P0.2 worker/KMS transfer happened;
+it does not identify why the output had no submitted Android buffer. The
+reported binder/KGSL faults remain a phone-health correlation, not a confirmed
+worker cause.
+
+The scoped follow-up makes the synthetic-output/HWC boundary explicit and adds
+one-time worker-idle/start logs for the next hardware attempt. In a fresh
+Noble build tree it produced `graphics-android2.so.16` SHA-256
+`2ce05a584bcea36b5138e2b53e4849e511671a79a91f03a212881bba3fba2d40` from
+`mir-android2-platform-gud` commit `01d1f23` and passed six focused checks under
+`GudPresentationWorker.*:GudHwcBoundary.*`: the original five worker tests
+plus the policy that only a synthetic external entry is excluded from Android
+HWC. This is offline evidence only; it neither deploys the uncommitted module
+nor claims resolution of the previous compositor health failure.
 
 ## Hardware deployment result (2026-07-27)
 

@@ -98,6 +98,24 @@ This is failed/rollback evidence, not a worker, transport, responsiveness, or
 recovery success. P0.2 remains in progress with every slow/absent/I/O-error and
 reappearance/shutdown hardware acceptance case unverified.
 
+**XDISP-P0.2 boundary follow-up (2026-07-27):** source review distinguished
+the old POC's eager `GUD POC output enabled` log from P0.2's buffer-gated worker
+start. The stopped session proves no worker/KMS transfer ran, but not why the
+synthetic output had no Android buffer; the binder/KGSL failures remain a
+phone-health correlation, not a confirmed worker cause. The scoped
+`mir-android2-platform-gud` follow-up explicitly omits a synthetic GUD
+external entry from Android HWC `prepare()`/`set()` while preserving primary
+and virtual paths, and adds one-time worker idle/start diagnostics. A fresh
+phone-matched Noble build from `mir-android2-platform-gud` commit `01d1f23`
+produced module SHA-256
+`2ce05a584bcea36b5138e2b53e4849e511671a79a91f03a212881bba3fba2d40` and
+passed six focused checks (`GudPresentationWorker.*:GudHwcBoundary.*`). This
+is offline evidence only and changes neither the 12,800-byte transport ceiling,
+normal `/home/phablet/gud.ko`, kernels, Pi service, nor P0.2's **in progress**
+state. The next commit-qualified hardware retry must use the mandatory
+host/enumeration gate and inspect the new Mir diagnostics before any transfer
+conclusion.
+
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
 bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without

@@ -19,6 +19,9 @@ and the component procedure before a phone/Pi session.
 - [x] Catch worker-side exceptions, log them, discard stale KMS state, and
   retry only after a one-second cooldown.
 - [x] Discard pending work and join active work on HWC/Mir teardown.
+- [x] Keep the synthetic GUD external entry out of Android HWC `prepare()` and
+  `set()` while leaving primary and virtual entries unchanged; render it in Mir
+  and submit its resulting Android buffer only to the worker.
 
 ## 2. Keep discovery minimal and P0.3 explicit
 
@@ -32,13 +35,13 @@ and the component procedure before a phone/Pi session.
 ## 3. Verify offline behavior
 
 - [x] Add focused component tests for coalescing, non-blocking submit,
-  exception containment, and shutdown lifecycle.
+  exception containment, shutdown lifecycle, and the synthetic HWC boundary.
 - [x] Build the Android2 platform and run the focused tests in the tracked
   phone-matched Ubuntu 24.04/UBports Noble ARM64 container. Commit `1bf8d53`
   adds the reproducible container helper, `c34344b` fetches the signed UBports
   archive/key over HTTPS, and `d47b771` selects the versioned Mir 1 ABI the
   phone actually provides; it builds the graphics module and the test binary,
-  then runs `GudPresentationWorker.*` directly.
+  then runs `GudPresentationWorker.*:GudHwcBoundary.*` directly.
 - [x] Syntax-check the standalone worker with C++14 and pthreads.
 
 The retained source evidence is
@@ -61,6 +64,18 @@ the compatible `graphics-android2.so.16` (SHA-256
 passed all five focused GTests. The normal Fedora host remains unsuitable for
 directly mixing its libraries with the UBports Mir/libhybris ABI; the container
 is the documented laptop build environment.
+
+### Boundary follow-up (2026-07-27)
+
+The stopped deployment did not construct the worker: the old eager
+`GUD POC output enabled` log and P0.2's buffer-gated worker lifecycle are not
+equivalent. Source review consequently added worker-idle/start diagnostics and
+the explicit synthetic-output/HWC separation above. The fresh Noble build
+artifact from `mir-android2-platform-gud` commit `01d1f23` was
+`2ce05a584bcea36b5138e2b53e4849e511671a79a91f03a212881bba3fba2d40`; the
+focused `GudPresentationWorker.*:GudHwcBoundary.*` filter passed six tests.
+This is not a hardware retry and does not attribute the previous binder/KGSL
+health failure to HWC or the worker.
 
 ## 4. Hardware acceptance (only after a commit-qualified plugin build)
 
