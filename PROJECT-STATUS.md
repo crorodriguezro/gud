@@ -139,6 +139,22 @@ USB, payload, or card-number work. No modes, kernels, normal module, or Pi
 service were changed. P0.2 stays **in progress** with its hardware acceptance
 matrix unverified.
 
+**XDISP-P0.2 advertised-startup-mode result (2026-07-27):** commit `406b464`
+selects the connected GUD connector's preferred advertised startup mode (or
+the first usable mode) for both the synthetic Mir output and worker KMS
+framebuffers. The Noble/UBports artifact SHA-256
+`c3c80df697180a513c3943999b2e6fa88b568efd479fca01360b5c8eaa1461d2` passed
+eight focused tests. After the mandatory dynamic gate found `1d50:614d` at
+`1-1.3`, it reached a `1920x1080` Mir output and fresh Pi direct-exact
+receives, with observed actual payloads no greater than 12,157 bytes and Idle
+returns. The trial immediately reproduced phone binder `-12` and KGSL `-24`
+errors, a compositor-health stop condition. It was rolled back to the packaged
+plugin (including a safe lazy unmount after ordinary teardown left an idle bind
+mount busy); LightDM is active, the normal module/kernels/Pi service were not
+changed, and P0.2 remains **in progress**. This resolves only the fixed-mode
+KMS setup boundary, not responsiveness or recovery acceptance. Evidence is
+under `backport-4.9/env/local/evidence/xdisp-p0.2-mode-startup-2026-07-27T1249COT/`.
+
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
 bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without

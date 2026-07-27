@@ -84,9 +84,11 @@ health failure to HWC or the worker.
 - [x] Add and exercise worker/KMS-stage observability: `0b09f77` proves that
   the worker processes a frame and opens GUD DRM, but fails before allocation,
   modeset, or USB in atomic KMS resource setup.
-- [ ] Expose the exact setup exception in retained Mir logs before attempting
-  a transfer/error scenario; do not recast this pre-transfer result as P0.2
-  hardware acceptance.
+- [x] Expose the exact setup exception in retained Mir logs before attempting
+  a transfer/error scenario; `7185800` reported the fixed 1280x720 mismatch.
+  Commit `406b464` then selected the connector's advertised startup mode and
+  crossed the KMS/transfer boundary, but its phone-health regression remains a
+  stop condition rather than P0.2 acceptance.
 
 ## 4. Hardware acceptance (only after a commit-qualified plugin build)
 
@@ -119,3 +121,18 @@ until logs establish whether it is a buffer-lifetime, queue, KMS, or transport
 fault. A card-number change or need to remove/re-add output redirects to P0.3;
 no symlink/manual card path is an acceptable result. Any required payload,
 kernel, or normal-module change is out of scope and stops this plan.
+
+### Advertised-startup-mode retry (2026-07-27)
+
+- [x] Replace the fixed synthetic 1280x720 requirement with the connected
+  GUD connector's preferred advertised startup mode, falling back only to its
+  first usable mode; test the selection rule without changing Pi modes.
+- [x] Build commit `406b464` in the supported Noble/UBports container and run
+  eight focused tests (`GudPresentationWorker.*:GudHwcBoundary.*:GudModeSelection.*`).
+- [x] Run one bounded, commit-qualified hardware attempt after the VID/PID
+  gate. It selected 1920x1080, transferred with maximum observed payload
+  12,157 bytes, and left Pi receives Idle.
+- [ ] Do not continue hardware acceptance from that run: repeated binder
+  `-12` and KGSL `-24` failures require rollback and leave the slow-output,
+  disconnect/I/O-error, reappearance, shutdown, and manual responsiveness
+  rows unverified.

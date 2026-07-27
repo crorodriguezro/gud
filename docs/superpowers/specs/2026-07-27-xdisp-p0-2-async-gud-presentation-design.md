@@ -183,3 +183,24 @@ reappearance, shutdown, or responsiveness acceptance evidence.
 
 The unexplained larger-payload Pi boundary remains a non-blocking reliability
 investigation and supplies no reason to exceed the verified 12,800-byte cap.
+
+## Advertised-startup-mode follow-up (2026-07-27)
+
+The exact KMS exception showed that the POC's synthetic 1280x720 output did
+not exist in the live GUD connector's advertised list; the connected Pi
+advertised 1920x1080. P0.2 now selects one connected advertised startup mode:
+prefer DRM's preferred mode, else the connector's first usable mode. That
+immutable startup choice is used for the synthetic Mir output and the worker's
+RGB565 framebuffer/atomic dimensions. It changes neither what the Pi
+advertises nor the physical Pi mode, so it is not P1/P2 tuning.
+
+Commit `406b464` passed the phone-matched build and eight focused component
+tests. Its hardware retry reached a 1920x1080 synthetic output and Pi GUD
+receives with actual payloads at or below 12,157 bytes, proving the former
+fixed-mode boundary was crossed. The run immediately reproduced binder `-12`
+and KGSL `-24` phone-health failures, so it was rolled back and does not
+satisfy responsiveness, slow-transfer, disconnect, or reappearance acceptance.
+The synthetic output's startup mode is intentionally not updated after a
+card/mode change; failure remains contained by the worker and output
+remove/add remains P0.3. Evidence is at
+`backport-4.9/env/local/evidence/xdisp-p0.2-mode-startup-2026-07-27T1249COT/`.
