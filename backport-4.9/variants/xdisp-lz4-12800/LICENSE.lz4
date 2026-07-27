@@ -24,15 +24,19 @@ CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 
-Kernel adaptation provenance:
+Embedded upstream provenance:
 
-- Source paths: lib/lz4/lz4_compress.c and lib/lz4/lz4defs.h
-- Target repository:
-  https://gitlab.com/ubports/community-ports/android9/oneplus-6/kernel-oneplus-sdm845.git
-- Exact commit: 6b190d86bd895acf891617e26840b1a85df6602c
-- Original kernel-use changes:
-  Copyright (C) 2013, LG Electronics,
-  Kyungsik Lee <kyungsik.lee@lge.com>
+- Upstream repository: https://github.com/lz4/lz4
+- Exact revision: 0774d05537f9762f838f7ab541b7765f1a729cb5
+- Vendored files: vendor/lz4-1.10.0/lz4.c and lz4.h
+- Original file SHA-256:
+  - lz4.c: 53debdc44985bddbe4805e7f385ceae743598e90424b87798def5056363a6845
+  - lz4.h: 774f26afe507c3ea4e781faca51dfcad719f60804526cef7fe223e3c3e534eef
+
+The files have small, documented kernel-adaptation changes: Linux 4.9 type
+headers replace unavailable libc headers; all upstream symbols are local to
+gud.ko; stack-allocating entry points are excluded; and the external-state
+bounded-output entry point is retained. See UPSTREAM.md.
 
 The diagnostic source retains the full BSD notice and is linked into a
 GPL-licensed kernel module.

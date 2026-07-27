@@ -232,6 +232,14 @@ creates the output is not sufficient.
     that recent-ratio/target-margin policy with the current doubling row hint.
     Report both the CPU cost of discarded compression attempts and whether
     fewer retries change end-to-end frame cadence.
+  - A pinned upstream LZ4 bounded-output embedding is now available behind
+    the test-only `xdisp_bounded_discovery=1` module parameter. It uses
+    `LZ4_compress_destSize_extState()` to discover a candidate, rounds it down
+    to complete RGB565 rows, and validates the aligned rectangle against the
+    unchanged 12,800-byte cap. Offline round-trip, guard, sanitizer, exact
+    OnePlus-kernel build, and private-symbol gates passed; this has no hardware
+    result or performance claim yet. Compare it with the current ratio-cache
+    policy under the existing raw video, scrolling, desktop, and noise gates.
   - A short 2026-07-26 direct-KMS hardware characterization passed without a
     transport or kernel fault: desktop reached 9.015 synchronous updates/s,
     scrolling 4.671 updates/s, and two incompressible frames 0.165 updates/s.

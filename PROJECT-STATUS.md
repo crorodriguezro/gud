@@ -361,13 +361,25 @@ The design was authorized on 2026-07-26 and is being implemented as a separate
 build under `backport-4.9/variants/xdisp-lz4-12800/`. It compresses the
 largest legal source rectangle before splitting, uses measured compression
 size to reduce complete rows, and retains a final pre-submit `<= 12,800`
-check. A private Linux-4.9-derived LZ4 compressor is linked because the
-OnePlus kernel exports no LZ4 compressor. The normal build remains a separate
+check. The initial version linked a private Linux-4.9-derived LZ4 compressor
+because the OnePlus kernel exports none. The normal build remains a separate
 target and must retain its preserved SHA-256. Offline completion, staging, one
 real frame, safe restart, and cadence evidence are distinct gates;
 implementation alone is not a reliability result. The execution and rollback
 plan is
 `docs/superpowers/plans/2026-07-26-xdisp-p0-1-oneplus-adaptive-lz4.md`.
+
+**Upstream bounded-output embedding (2026-07-26):** the diagnostic variant
+now embeds a pinned modern upstream LZ4 block compressor inside `gud.ko`, not
+as a separately loadable module. Its caller-provided-state bounded-output API
+is exposed through a test-only `xdisp_bounded_discovery=1` planner policy.
+That policy discovers a source prefix, rounds down to complete RGB565 rows,
+then recompresses the aligned rectangle under the existing final 12,800-byte
+guard; it falls back to the largest raw cap-safe rectangle on any non-benefit
+or validation failure. Unit round-trip, red-zone, sanitizer, exact-kernel
+build, and private-symbol checks pass. It has not yet been loaded on the phone
+and supplies no reliability or performance result. `XDISP-P0.1` remains
+blocked and `XDISP-P0.2` remains unstarted.
 
 **Adaptive-LZ4 first hardware result (2026-07-26):** the separate diagnostic
 module completed one 1280x720 RGB565 OnePlus frame as four contiguous LZ4

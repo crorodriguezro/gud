@@ -15,12 +15,19 @@ struct gud_device {
 #ifdef GUD_XDISP_LZ4_12800
 	u8 compression;
 	void *xdisp_lz4_workmem;
+	size_t xdisp_lz4_workmem_size;
 	void *xdisp_lz4_scratch;
 	size_t xdisp_lz4_scratch_size;
 	size_t xdisp_max_source_length;
 	void *xdisp_bulk_buffer;
 	dma_addr_t xdisp_bulk_dma;
 	struct urb *xdisp_bulk_urb;
+	/* Protected by lock; diagnostic cached-ratio planner state. */
+	u32 xdisp_ratio_width;
+	size_t xdisp_ratio_bytes_per_line;
+	size_t xdisp_ratio_source_bytes;
+	size_t xdisp_ratio_payload_bytes;
+	bool xdisp_ratio_valid;
 #endif
 	u32 flags;
 	u32 max_buffer_size;

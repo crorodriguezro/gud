@@ -263,7 +263,7 @@ module_usb_driver(gud_usb_driver);
 
 #ifdef GUD_XDISP_LZ4_12800
 MODULE_DESCRIPTION("OnePlus 6 GUD XDISP adaptive LZ4 12800-byte diagnostic");
-MODULE_VERSION("xdisp-p0.1-adaptive-12800-v1");
+MODULE_VERSION("xdisp-p0.1-adaptive-12800-upstream-lz4-v2");
 #else
 MODULE_DESCRIPTION("OnePlus 6 GUD USB probe backport");
 #endif

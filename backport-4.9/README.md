@@ -135,11 +135,14 @@ gadget does not advertise LZ4, it uses complete-row raw rectangles that obey
 the same cap.
 
 The target kernel does not export an LZ4 compressor. The variant therefore
-links its private Linux-4.9-derived compressor and must have no unresolved LZ4
-symbol:
+embeds a pinned modern upstream LZ4 block compressor in `gud.ko`, in
+freestanding external-state mode. It is not a separate `lz4.ko`; its symbols
+remain private to this module. See `variants/xdisp-lz4-12800/UPSTREAM.md`.
+Check that it has neither an unresolved nor a global upstream LZ4 symbol:
 
 ```bash
-nm -u variants/xdisp-lz4-12800/gud.ko | grep -i lz4
+if nm -u variants/xdisp-lz4-12800/gud.ko | grep -qi lz4; then exit 1; fi
+if nm -g variants/xdisp-lz4-12800/gud.ko | grep -q ' LZ4_'; then exit 1; fi
 ```
 
 Stage only with a commit-qualified separate path. This runner refuses the

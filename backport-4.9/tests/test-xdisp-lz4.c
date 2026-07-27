@@ -22,6 +22,12 @@ enum pattern {
 
 static int failures;
 
+typedef int (*xdisp_planner_fn)(const u8 *source, u32 remaining_rows,
+				size_t bytes_per_line, u32 max_rows,
+				size_t payload_limit, void *workmem,
+				u8 *scratch, size_t scratch_capacity,
+				struct gud_xdisp_chunk *chunk);
+
 static void fail(const char *test, const char *message)
 {
 	fprintf(stderr, "FAIL [%s]: %s\n", test, message);
@@ -87,7 +93,8 @@ static int guards_intact(const uint8_t *allocation, size_t capacity)
 }
 
 static void run_frame_case(const char *name, u32 width, u32 height,
-			   enum pattern pattern, size_t payload_limit)
+			   enum pattern pattern, size_t payload_limit,
+			   xdisp_planner_fn planner, int expect_retry)
 {
 	size_t line_bytes = (size_t)width * 2U;
 	size_t frame_length = line_bytes * height;
@@ -104,9 +111,10 @@ static void run_frame_case(const char *name, u32 width, u32 height,
 	u32 rows_done = 0;
 	u32 chunks = 0;
 	u32 row_hint = height;
+	size_t workmem_size = gud_xdisp_lz4_upstream_workmem_size();
 
 	frame = malloc(frame_length);
-	workmem = malloc(GUD_XDISP_LZ4_WORKMEM_SIZE);
+	workmem = malloc(workmem_size);
 	scratch_allocation = malloc(scratch_capacity + 2U * GUARD_SIZE);
 	decompressed = malloc(frame_length);
 	if (!frame || !workmem || !scratch_allocation || !decompressed) {
@@ -125,7 +133,7 @@ static void run_frame_case(const char *name, u32 width, u32 height,
 		u32 remaining = height - rows_done;
 		int ret;
 
-		ret = gud_xdisp_plan_chunk(
+		ret = planner(
 			frame + offset, remaining, line_bytes, row_hint,
 			payload_limit, workmem,
 			scratch_allocation + GUARD_SIZE, scratch_capacity,
@@ -213,7 +221,8 @@ static void run_frame_case(const char *name, u32 width, u32 height,
 	     rejected_compression_attempts != 0 ||
 	     compression_source_bytes != frame_length))
 		fail(name, "single-attempt frame counters are incorrect");
-	if (pattern == PATTERN_RANDOM && frame_length > payload_limit &&
+	if (expect_retry && pattern == PATTERN_RANDOM &&
+	    frame_length > payload_limit &&
 	    (!rejected_compression_attempts ||
 	     compression_source_bytes <= frame_length))
 		fail(name, "retry overhead was not reflected in counters");
@@ -225,6 +234,83 @@ out:
 	free(frame);
 }
 
+static void run_bounded_dest_size_case(void)
+{
+	const char *name = "bounded-dest-size-row-alignment";
+	const size_t bytes_per_line = 1280U * 2U;
+	const size_t source_length = bytes_per_line * 720U;
+	const size_t target = GUD_XDISP_DISCOVERY_TARGET_PAYLOAD;
+	uint8_t *source = malloc(source_length);
+	uint8_t *decoded = malloc(source_length);
+	uint8_t *discovery_allocation = malloc(target + 2U * GUARD_SIZE);
+	uint8_t *final_allocation =
+		malloc(GUD_XDISP_PAYLOAD_LIMIT + 2U * GUARD_SIZE);
+	uint8_t *workmem = malloc(gud_xdisp_lz4_upstream_workmem_size());
+	size_t consumed = source_length;
+	size_t compressed;
+	size_t aligned;
+	int decoded_length;
+
+	if (!source || !decoded || !discovery_allocation || !final_allocation ||
+	    !workmem) {
+		fail(name, "allocation failed");
+		goto out;
+	}
+	fill_pattern(source, source_length, bytes_per_line, PATTERN_MIXED);
+	memset(discovery_allocation, 0xcc, target + 2U * GUARD_SIZE);
+	memset(discovery_allocation, 0xa5, GUARD_SIZE);
+	memset(discovery_allocation + GUARD_SIZE + target, 0x5a,
+	       GUARD_SIZE);
+	compressed = gud_xdisp_lz4_compress_dest_size(
+		source, &consumed, discovery_allocation + GUARD_SIZE, target,
+		workmem);
+	if (!compressed || compressed > target || !consumed ||
+	    consumed > source_length ||
+	    !guards_intact(discovery_allocation, target)) {
+		fail(name, "bounded discovery violated its destination contract");
+		goto out;
+	}
+	decoded_length = LZ4_decompress_safe(
+		(char *)discovery_allocation + GUARD_SIZE, (char *)decoded,
+		(int)compressed, (int)source_length);
+	if (decoded_length != (int)consumed ||
+	    memcmp(decoded, source, consumed)) {
+		fail(name, "bounded discovery did not reproduce its consumed prefix");
+		goto out;
+	}
+
+	aligned = consumed - consumed % bytes_per_line;
+	if (!aligned) {
+		fail(name, "bounded discovery did not reach a complete row");
+		goto out;
+	}
+	memset(final_allocation, 0xcc,
+	       GUD_XDISP_PAYLOAD_LIMIT + 2U * GUARD_SIZE);
+	memset(final_allocation, 0xa5, GUARD_SIZE);
+	memset(final_allocation + GUARD_SIZE + GUD_XDISP_PAYLOAD_LIMIT,
+	       0x5a, GUARD_SIZE);
+	compressed = gud_xdisp_lz4_compress(
+		source, aligned, final_allocation + GUARD_SIZE,
+		GUD_XDISP_PAYLOAD_LIMIT, workmem);
+	if (!compressed || compressed > GUD_XDISP_PAYLOAD_LIMIT ||
+	    !guards_intact(final_allocation, GUD_XDISP_PAYLOAD_LIMIT)) {
+		fail(name, "aligned validation escaped the hard transfer cap");
+		goto out;
+	}
+	decoded_length = LZ4_decompress_safe(
+		(char *)final_allocation + GUARD_SIZE, (char *)decoded,
+		(int)compressed, (int)aligned);
+	if (decoded_length != (int)aligned || memcmp(decoded, source, aligned))
+		fail(name, "aligned bounded rectangle did not round trip");
+
+out:
+	free(workmem);
+	free(final_allocation);
+	free(discovery_allocation);
+	free(decoded);
+	free(source);
+}
+
 static void run_direct_compressor_case(void)
 {
 	const char *name = "direct-lz4-bound-and-guard";
@@ -233,7 +319,7 @@ static void run_direct_compressor_case(void)
 	uint8_t *allocation = malloc(bound + 2U * GUARD_SIZE);
 	uint8_t *decoded = malloc(source_length);
 	uint8_t *source = malloc(source_length);
-	uint8_t *workmem = malloc(GUD_XDISP_LZ4_WORKMEM_SIZE);
+	uint8_t *workmem = malloc(gud_xdisp_lz4_upstream_workmem_size());
 	size_t compressed;
 	int decoded_length;
 
@@ -292,7 +378,7 @@ static void run_randomized_compressor_cases(void)
 		malloc(maximum_bound + 2U * GUARD_SIZE);
 	uint8_t *decoded = malloc(maximum_length);
 	uint8_t *source = malloc(maximum_length);
-	uint8_t *workmem = malloc(GUD_XDISP_LZ4_WORKMEM_SIZE);
+	uint8_t *workmem = malloc(gud_xdisp_lz4_upstream_workmem_size());
 	uint32_t random_state = 0x91e10da5U;
 	unsigned int test_index;
 
@@ -373,9 +459,14 @@ static void run_invalid_cases(void)
 	const char *name = "invalid-and-boundary-inputs";
 	uint8_t source[25600] = { 0 };
 	uint8_t scratch[25800];
-	uint8_t workmem[GUD_XDISP_LZ4_WORKMEM_SIZE];
+	uint8_t *workmem = malloc(gud_xdisp_lz4_upstream_workmem_size());
 	struct gud_xdisp_chunk chunk;
 	int ret;
+
+	if (!workmem) {
+		fail(name, "workmem allocation failed");
+		return;
+	}
 
 	ret = gud_xdisp_plan_chunk(source, 1, 12801, 1, 12800,
 				   workmem, scratch, sizeof(scratch), &chunk);
@@ -395,25 +486,46 @@ static void run_invalid_cases(void)
 	    gud_xdisp_next_row_hint(400, 720) != 720 ||
 	    gud_xdisp_next_row_hint(0, 720) != 0)
 		fail(name, "row-hint growth is not bounded");
+	chunk.source_length = 160U * 2560U;
+	chunk.payload_length = 12000U;
+	if (gud_xdisp_next_row_hint_target(&chunk, 2560, 720, 12160) !=
+	    162)
+		fail(name, "recent-ratio row prediction is incorrect");
 
 	run_frame_case("exact-12800-random", 1280, 5, PATTERN_RANDOM,
-		       12800);
-	run_frame_case("limit-12799", 1280, 9, PATTERN_MIXED, 12799);
-	run_frame_case("limit-12801", 1280, 9, PATTERN_MIXED, 12801);
+		       12800, gud_xdisp_plan_chunk, 1);
+	run_frame_case("limit-12799", 1280, 9, PATTERN_MIXED, 12799,
+		       gud_xdisp_plan_chunk, 1);
+	run_frame_case("limit-12801", 1280, 9, PATTERN_MIXED, 12801,
+		       gud_xdisp_plan_chunk, 1);
+	free(workmem);
 }
 
 int main(void)
 {
 	run_direct_compressor_case();
 	run_randomized_compressor_cases();
-	run_frame_case("solid-1280x720", 1280, 720, PATTERN_ZERO, 12800);
-	run_frame_case("bars-1280x720", 1280, 720, PATTERN_BARS, 12800);
+	run_bounded_dest_size_case();
+	run_frame_case("solid-1280x720", 1280, 720, PATTERN_ZERO, 12800,
+		       gud_xdisp_plan_chunk, 1);
+	run_frame_case("bars-1280x720", 1280, 720, PATTERN_BARS, 12800,
+		       gud_xdisp_plan_chunk, 1);
 	run_frame_case("gradient-1280x720", 1280, 720,
-		       PATTERN_GRADIENT, 12800);
-	run_frame_case("mixed-1280x719", 1280, 719, PATTERN_MIXED, 12800);
-	run_frame_case("random-1280x720", 1280, 720, PATTERN_RANDOM, 12800);
-	run_frame_case("random-640x41", 640, 41, PATTERN_RANDOM, 12800);
-	run_frame_case("mixed-1920x53", 1920, 53, PATTERN_MIXED, 12800);
+		       PATTERN_GRADIENT, 12800, gud_xdisp_plan_chunk, 1);
+	run_frame_case("mixed-1280x719", 1280, 719, PATTERN_MIXED, 12800,
+		       gud_xdisp_plan_chunk, 1);
+	run_frame_case("random-1280x720", 1280, 720, PATTERN_RANDOM, 12800,
+		       gud_xdisp_plan_chunk, 1);
+	run_frame_case("random-640x41", 640, 41, PATTERN_RANDOM, 12800,
+		       gud_xdisp_plan_chunk, 1);
+	run_frame_case("mixed-1920x53", 1920, 53, PATTERN_MIXED, 12800,
+		       gud_xdisp_plan_chunk, 1);
+	run_frame_case("bounded-solid-1280x720", 1280, 720, PATTERN_ZERO,
+		       12800, gud_xdisp_plan_chunk_bounded, 0);
+	run_frame_case("bounded-mixed-1280x719", 1280, 719, PATTERN_MIXED,
+		       12800, gud_xdisp_plan_chunk_bounded, 0);
+	run_frame_case("bounded-random-1280x720", 1280, 720, PATTERN_RANDOM,
+		       12800, gud_xdisp_plan_chunk_bounded, 0);
 	run_invalid_cases();
 
 	printf("xdisp-lz4 tests: %d failures\n", failures);

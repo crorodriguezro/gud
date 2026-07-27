@@ -20,7 +20,9 @@ typedef uint64_t u64;
  * host request: every submitted bulk URB is bounded here instead.
  */
 #define GUD_XDISP_PAYLOAD_LIMIT 12800U
-#define GUD_XDISP_LZ4_WORKMEM_SIZE 16384U
+#define GUD_XDISP_TARGET_PAYLOAD_PERCENT 95U
+#define GUD_XDISP_DISCOVERY_TARGET_PAYLOAD \
+	(GUD_XDISP_PAYLOAD_LIMIT * GUD_XDISP_TARGET_PAYLOAD_PERCENT / 100U)
 
 struct gud_xdisp_chunk {
 	u32 rows;
@@ -33,6 +35,19 @@ struct gud_xdisp_chunk {
 };
 
 size_t gud_xdisp_lz4_compress_bound(size_t source_length);
+
+/*
+ * Modern upstream LZ4 bounded-output compressor, embedded privately in
+ * gud.ko.  It consumes no more than *source_length bytes and returns the
+ * exact consumed prefix through that argument.  Callers must round that
+ * prefix down to a complete source row before a GUD SET_BUFFER submission.
+ */
+size_t gud_xdisp_lz4_upstream_workmem_size(void);
+size_t gud_xdisp_lz4_compress_dest_size(const u8 *source,
+					 size_t *source_length,
+					 u8 *destination,
+					 size_t destination_capacity,
+					 void *workmem);
 
 /*
  * Returns a raw LZ4 block length, or zero when the source cannot be encoded
@@ -57,6 +72,26 @@ int gud_xdisp_plan_chunk(const u8 *source, u32 remaining_rows,
 			 u8 *scratch, size_t scratch_capacity,
 			 struct gud_xdisp_chunk *chunk);
 
+/*
+ * One-pass bounded discovery. It asks upstream LZ4 for the largest source
+ * prefix fitting a target below the transport cap, rounds it down to complete
+ * rows, then validates that exact rectangle against payload_limit. For
+ * incompressible content it chooses the largest raw complete-row rectangle.
+ */
+int gud_xdisp_plan_chunk_bounded(const u8 *source, u32 remaining_rows,
+				 size_t bytes_per_line, u32 max_rows,
+				 size_t payload_limit, void *workmem,
+				 u8 *scratch, size_t scratch_capacity,
+				 struct gud_xdisp_chunk *chunk);
+
 u32 gud_xdisp_next_row_hint(u32 selected_rows, u32 absolute_max_rows);
+
+/* Predict a next complete-row candidate from the most recent measured LZ4
+ * ratio. The caller still validates every result against the hard payload cap.
+ */
+u32 gud_xdisp_next_row_hint_target(const struct gud_xdisp_chunk *chunk,
+				   size_t bytes_per_line,
+				   u32 absolute_max_rows,
+				   size_t target_payload);
 
 #endif
