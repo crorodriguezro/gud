@@ -244,6 +244,16 @@ creates the output is not sufficient.
     not a comparative performance claim or `XDISP-P0.1` verification. Compare
     it with the current ratio-cache policy under the existing raw video,
     scrolling, desktop, and noise gates.
+  - [ ] Upstream Linux GUD follow-up: evaluate contributing a generic optional
+    bounded-output / complete-row LZ4 planner. Current upstream
+    `drivers/gpu/drm/gud/gud_pipe.c` splits damage before compression using the
+    advertised `bulk_len`, then calls `LZ4_compress_default()` with the source
+    rectangle length as both input and output capacity, falling back to raw on
+    compression failure. It has no `LZ4_compress_destSize()` discovery,
+    post-compression adaptive splitting, or recent-ratio policy. Do not port
+    the Pi-specific 12,800-byte cap directly: first define a generic device
+    capability, transport limit, or quirk, retain the upstream SG bulk path,
+    and validate on compliant and constrained GUD devices.
   - A short 2026-07-26 direct-KMS hardware characterization passed without a
     transport or kernel fault: desktop reached 9.015 synchronous updates/s,
     scrolling 4.671 updates/s, and two incompressible frames 0.165 updates/s.
