@@ -85,19 +85,43 @@ hotplug management.
 
 ## Offline validation (2026-07-27)
 
-The tracked Ubuntu 20.04/UBports Focal ARM64 build environment in
-`mir-android2-platform-gud` commits `1bf8d53` and `c34344b` built the actual
-`graphics-android2.so.16` module from the worker implementation in `3fffb05`.
-Its SHA-256 is
-`77725859db7ac5149f20cd59ec8f56da0562e0250a1588bbab4dfd30fc729bd6`; `ldd`
-inside that same container resolved every module dependency. The direct GTest
-filter `GudPresentationWorker.*` passed five checks: newest-pending-frame
-coalescing, non-blocking submit while the presenter is held, active-buffer
+The original tracked Ubuntu 20.04/UBports Focal build environment in
+`mir-android2-platform-gud` commits `1bf8d53` and `c34344b` built the module and
+passed the focused tests, but its artifact required unversioned Mir sonames and
+was rejected by the Ubuntu Touch 24.04 phone loader. The supported laptop
+environment is therefore the phone-matched Ubuntu 24.04/UBports Noble ARM64
+container added by `d47b771`. It built the actual
+`graphics-android2.so.16` module from worker implementation `3fffb05`, SHA-256
+`cbcf648f26174413df718e5b5c71e41c6cf338dfe3e17dac32c52ef82581dac0`.
+`LD_TRACE_LOADED_OBJECTS` on the phone resolved its versioned Mir 1 and Boost
+1.83 dependencies before staging. The direct GTest filter
+`GudPresentationWorker.*` passed five checks: newest-pending-frame coalescing,
+non-blocking submit while the presenter is held, active-buffer
 lifetime/superseded release, error containment with subsequent presentation,
 and shutdown discard/join. Exact commands and raw output are retained in
 `backport-4.9/env/local/evidence/xdisp-p0.2-container-build-2026-07-27T0000COT/`.
 This validates the source/build boundary only; it is not phone/Pi responsiveness
 or reconnect acceptance evidence.
+
+## Hardware deployment result (2026-07-27)
+
+The mandatory OnePlus host/enumeration gate found `1d50:614d` before the
+commit-qualified Noble module was bind-mounted for the test. LightDM started
+and Mir reported a synthetic 1280x720 DisplayPort output as connected and
+used. No `GUD POC output enabled` log line appeared, and the Pi recorded no new
+FunctionFS receive session; the worker/KMS transfer path consequently did not
+run. In the same 52-second window, the phone kernel emitted sustained binder
+`-12` allocation failures and KGSL `-24` file-descriptor exhaustion. That
+temporal correlation is not a causal diagnosis, but it is a phone-health
+failure and blocks further test progression.
+
+The test module was immediately unmounted and LightDM restarted on the
+packaged plugin. The stock plugin hash was restored, normal
+`/home/phablet/gud.ko` was not changed, and the Pi service remained active with
+its UDC configured; it was not stopped or restarted. Full raw evidence is at
+`backport-4.9/env/local/evidence/xdisp-p0.2-hardware-2026-07-27T1125COT/`.
+This attempt provides no slow-output, absent-startup, GUD-I/O-error,
+reappearance, shutdown, or responsiveness acceptance evidence.
 
 ## Acceptance
 

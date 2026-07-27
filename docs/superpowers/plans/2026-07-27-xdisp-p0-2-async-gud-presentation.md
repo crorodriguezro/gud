@@ -34,9 +34,10 @@ and the component procedure before a phone/Pi session.
 - [x] Add focused component tests for coalescing, non-blocking submit,
   exception containment, and shutdown lifecycle.
 - [x] Build the Android2 platform and run the focused tests in the tracked
-  Ubuntu 20.04/UBports Focal ARM64 container. Commit `1bf8d53` adds the
-  reproducible Dockerfile/helper and `c34344b` fetches the signed UBports
-  archive/key over HTTPS; it builds the graphics module and the test binary,
+  phone-matched Ubuntu 24.04/UBports Noble ARM64 container. Commit `1bf8d53`
+  adds the reproducible container helper, `c34344b` fetches the signed UBports
+  archive/key over HTTPS, and `d47b771` selects the versioned Mir 1 ABI the
+  phone actually provides; it builds the graphics module and the test binary,
   then runs `GudPresentationWorker.*` directly.
 - [x] Syntax-check the standalone worker with C++14 and pthreads.
 
@@ -49,16 +50,17 @@ reported as a clean race/leak result.
 
 The supported-project build evidence is
 `backport-4.9/env/local/evidence/xdisp-p0.2-container-build-2026-07-27T0000COT/`.
-On the source content committed as `mir-android2-platform-gud` `1bf8d53` and
-`c34344b` (with async implementation `3fffb05`), the Focal container
-`mir-android2-platform-gud-p02-build:ubuntu20.04-focal` used CMake 3.16.3 and
-GCC 9.4.0. It built
-`graphics-android2.so.16` (SHA-256
-`77725859db7ac5149f20cd59ec8f56da0562e0250a1588bbab4dfd30fc729bd6`), resolved
-its dependencies in that same container, and passed all five focused GTests.
-The normal Fedora host remains unsuitable for directly mixing its libraries
-with the UBports Mir/libhybris ABI; the container is the documented laptop
-build environment.
+The original Focal artifact
+`77725859db7ac5149f20cd59ec8f56da0562e0250a1588bbab4dfd30fc729bd6` passed
+offline testing but required unversioned Mir sonames and was rejected by the
+phone loader. The Noble container
+`mir-android2-platform-gud-p02-build:ubuntu24.04-noble` at
+`mir-android2-platform-gud` `d47b771` (async implementation `3fffb05`) built
+the compatible `graphics-android2.so.16` (SHA-256
+`cbcf648f26174413df718e5b5c71e41c6cf338dfe3e17dac32c52ef82581dac0`) and
+passed all five focused GTests. The normal Fedora host remains unsuitable for
+directly mixing its libraries with the UBports Mir/libhybris ABI; the container
+is the documented laptop build environment.
 
 ## 4. Hardware acceptance (only after a commit-qualified plugin build)
 
@@ -73,6 +75,18 @@ build environment.
 - [ ] If the Pi service says `Poisoned` or a FunctionFS receive is in flight,
   do not stop, restart, reboot, shut down, or retry it. Preserve evidence and
   recover only by the documented physical reset path.
+
+### 2026-07-27 stopped hardware attempt
+
+The enumeration gate passed and the compatible Noble module loaded, but the
+synthetic output appeared without a worker start or Pi receive session. In its
+52-second test window the phone logged sustained binder `-12` allocation
+failures and KGSL `-24` file-descriptor exhaustion. The test was immediately
+rolled back to the packaged plugin. The normal OnePlus module was untouched and
+the Pi service stayed active/configured without a restart. This failed
+compositor-health gate leaves every hardware checkbox above unchecked; exact
+logs are retained in
+`backport-4.9/env/local/evidence/xdisp-p0.2-hardware-2026-07-27T1125COT/`.
 
 **Stop conditions:** a failure in the worker must leave P0.2 **in progress**
 until logs establish whether it is a buffer-lifetime, queue, KMS, or transport

@@ -53,8 +53,8 @@ unexplained larger-payload boundary remains a non-blocking reliability
 investigation; the verified operating constraint is to retain the actual
 payload ceiling at or below 12,800 bytes.
 
-**XDISP-P0.2 source result (2026-07-27):** implementation is **in progress**
-in `mir-android2-platform-gud`. The synchronous
+**XDISP-P0.2 source/deployment result (2026-07-27):** implementation is **in
+progress** in `mir-android2-platform-gud`. The synchronous
 `HwcDevice::commit() -> GudOutput::present_external() -> Buffer::read() ->
 drmModeAtomicCommit()` path is replaced by a one-pending-frame worker that
 retains the buffer until its serial KMS operation returns. The source now scans
@@ -62,19 +62,41 @@ for a DRM driver named `gud`, logs and contains worker failures, and joins the
 worker before KMS teardown. A standalone C++14 AddressSanitizer/UBSan
 component harness passed queue coalescing, active-frame lifetime, non-blocking
 submit, error containment, and shutdown behavior. The direct Fedora host lacks
-the compatible Android2/Mir ABI stack, but the tracked Ubuntu 20.04/UBports
-Focal ARM64 container at `mir-android2-platform-gud` `1bf8d53`/`c34344b` built
-the actual `graphics-android2.so.16` module from implementation `3fffb05` and
-passed all five `GudPresentationWorker.*` GTests. The module SHA-256 is
-`77725859db7ac5149f20cd59ec8f56da0562e0250a1588bbab4dfd30fc729bd6`; its
-runtime dependencies resolve inside the same Focal container. Exact source and
-container commands, output, and artifact data are retained under
+the compatible Android2/Mir ABI stack. The initial Focal build at
+`mir-android2-platform-gud` `1bf8d53`/`c34344b` built and tested successfully,
+but its SHA-256
+`77725859db7ac5149f20cd59ec8f56da0562e0250a1588bbab4dfd30fc729bd6` module
+required unversioned Mir sonames and the phone's loader rejected it. The
+phone-matched Ubuntu Touch Noble/UBports 24.04 build at `d47b771`, from
+implementation `3fffb05`, built the actual AArch64
+`graphics-android2.so.16` module with SHA-256
+`cbcf648f26174413df718e5b5c71e41c6cf338dfe3e17dac32c52ef82581dac0` and
+passed all five `GudPresentationWorker.*` GTests. `LD_TRACE_LOADED_OBJECTS` on
+the phone resolved its versioned Mir 1 and Boost 1.83 dependencies before
+staging. Exact source and container commands, output, and artifact data are
+retained under
 `backport-4.9/env/local/evidence/xdisp-p0.2-source-2026-07-27T0000COT/` and
 `backport-4.9/env/local/evidence/xdisp-p0.2-container-build-2026-07-27T0000COT/`.
 ThreadSanitizer remains unavailable on the direct host and is not claimed as a
-clean race result. No phone/Pi plugin deployment or hardware claim is made, so
-P0.2 remains in progress pending the documented slow/absent/I/O-error hardware
-matrix.
+clean race result.
+
+The required OnePlus host/enumeration gate passed before the Noble test, and
+the commit-qualified module loaded: Mir reported the synthetic 1280x720
+DisplayPort output as connected and used. It never logged `GUD POC output
+enabled` and the Pi recorded no new FunctionFS `InFlight` receive session, so
+the worker/KMS transfer path did not run. During the same 52-second test window
+the phone reported sustained binder `-12` allocation failures and KGSL `-24`
+file-descriptor exhaustion. The temporal association is not a worker-cause
+finding, but it is a compositor health failure. The test module was immediately
+unmounted; the packaged plugin hash
+`cd0ddc0342d19df63798e9bbcf496e3657b543bd9827d53004b997454f00ae74` was
+restored and LightDM returned healthy. The normal `/home/phablet/gud.ko` was
+neither replaced nor rebuilt; the Pi remained active/configured and was not
+stopped or restarted. Retained deployment logs are under
+`backport-4.9/env/local/evidence/xdisp-p0.2-hardware-2026-07-27T1125COT/`.
+This is failed/rollback evidence, not a worker, transport, responsiveness, or
+recovery success. P0.2 remains in progress with every slow/absent/I/O-error and
+reappearance/shutdown hardware acceptance case unverified.
 
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
