@@ -210,6 +210,21 @@ acceptance. Packaged Mir and normal `gud.ko` were restored; the Pi stayed
 active/configured and Idle. P0.2 remains **in progress**. Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.2-fence-boundary-2026-07-27T1333COT/`.
 
+**XDISP-P0.2 render-fence flow stop (2026-07-27):** external-window counters
+from `694d591` established that only three Android buffers cycle while one new
+returned fence arrives per synthetic render; the 574-sync-file plateau is
+fence retention, not a worker queue or expanding external buffer pool. The
+minimal next diagnostic (`e9fb3a5`, artifact SHA-256
+`67a5730bafc735491788af8b5cfe3284dc9a5a0c1d8956f29dba19b17da639e7`) would
+distinguish returned fences from dequeue/EGL fence duplicates, but was not
+mounted. Pi read-only journal evidence showed an unsafe `InFlight` receive and
+later journal suppression, so no further hardware transfer or Pi action was
+performed. Packaged Mir and normal GUD remain restored and the phone has zero
+fresh-boot binder/KGSL errors. P0.2 remains **in progress**; do not proceed
+until documented physical Pi recovery returns a known-safe Idle state. Evidence
+is under
+`backport-4.9/env/local/evidence/xdisp-p0.2-render-fence-flow-2026-07-27T1358COT/`.
+
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
 bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
