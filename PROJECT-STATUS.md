@@ -497,6 +497,29 @@ began from a fresh, detached boot. Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p2.1-native-scanout-2026-07-26T1707COT/`.
 `XDISP-P0.1` remains **blocked**, and `XDISP-P0.2` remains unstarted.
 
+**Adaptive raw-30 transport gate (2026-07-26):** the test-only Pi descriptor
+override `GUD_TEST_MAX_BUFFER_SIZE=12800` was disabled after it was identified
+as the source of the 144-transfer/frame configuration: at 1280 RGB565 it
+limited the uncompressed source rectangle to five rows. The separately
+preserved OnePlus adaptive module still enforced its independent 12,800-byte
+actual-bulk-payload ceiling. With the normal 8,294,400-byte descriptor restored,
+one 1280x720 static frame used five compressed rectangles (maximum 12,712
+bytes), all of which returned to Pi `Idle`.
+
+The prepared 300-frame, nominal-30-fps raw RGB565 animation then completed
+twice with exit code zero: 19.481 fps (15.348 seconds, 44.550-ms mean commit)
+and 22.871 fps (13.073 seconds, 39.763-ms mean commit). The first run used
+2,360 adaptive rectangles (7.87/frame); the second used 4,024 (13.41/frame).
+All observed actual payloads remained at or below 12,800 bytes. The OnePlus
+recorded no new `-110`, atomic-update, bulk-transfer, or state-check failure;
+the Pi's final receives returned to `Idle`, its service remained active with
+the UDC `configured`, and its kernel contained no new DWC2/vc4/Oops fault.
+This removes the earlier control-cadence failure as the explanation for the
+raw-animation workload, but it is a transport characterization only: safe
+post-payload restart remains untested, `XDISP-P0.1` remains **blocked**, and
+`XDISP-P0.2` remains unstarted. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p2.1-adaptive-raw30-2026-07-26T2244COT/`.
+
 The proof of concept verified that Lomiri can expose an independent
 `DisplayPort-2` output backed by GUD. It also froze or severely slowed the
 phone because it did synchronous USB work in Mir's commit path, and it has

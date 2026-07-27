@@ -277,6 +277,14 @@ creates the output is not sufficient.
   - After dynamic mode matching, run an unpaced native comparison. The paced
     result proves at least 5 fps but does not establish maximum throughput,
     CPU use, dropped frames, tearing, or Mir/Lomiri/video-decode behavior.
+  - The 2026-07-26 adaptive raw-30 transport gate restored the normal Pi
+    descriptor maximum while retaining the OnePlus module's 12,800-byte actual
+    bulk-payload guard. A static frame fell from 144 to five rectangles; two
+    300-frame raw RGB565 runs completed at 19.481 and 22.871 fps without a
+    host `-110` or Pi DWC2/vc4 fault. Treat that as a transport result, not
+    30-fps acceptance: it lacks CPU, latency-percentile, drop/tear, and safe
+    post-payload restart measurements. Evidence:
+    `backport-4.9/env/local/evidence/xdisp-p2.1-adaptive-raw30-2026-07-26T2244COT/RESULTS.md`.
   - Align the 4.9 backport's mode serializer with upstream by translating
     `DRM_MODE_TYPE_PREFERRED` into `GUD_DISPLAY_MODE_FLAG_PREFERRED` when real
     gadget mode enumeration replaces the current fixed diagnostic mode. This
