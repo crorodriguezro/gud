@@ -194,6 +194,22 @@ acceptance. Evidence is under
 The normal-module recovery record is under
 `backport-4.9/env/local/evidence/xdisp-p0.2-normal-gud-recovery-2026-07-27T1322COT/`.
 
+**XDISP-P0.2 synthetic-output fence result (2026-07-27):** with a clean
+post-reboot packaged control, the bounded 1920x1080 diagnostic GUD module and
+`20e54b0` proved that worker coalescing was bounded but compositor sync-file FDs
+grew with external submissions to the 1024 limit, followed by binder `-12` and
+KGSL `-24`. Pi receives remained bounded (shown maximum 12,157 bytes) and Idle.
+Commit `1f9e8db` fixes the proven source cause: synthetic GUD frames no longer
+arm an Android HWC acquire fence when that output is excluded from HWC `set()`.
+Its compatible artifact SHA-256 is
+`b259a04b5f891b97d367ff9ca1d37cd076e5b8d277adf77c3981b223a8d009b4`; six
+focused tests pass. A clean fixed retry had no binder/KGSL failure and plateaued
+at 674 FDs/574 sync files, rather than growing to the limit. That remaining
+fence retention is not yet causally proven and still blocks responsiveness
+acceptance. Packaged Mir and normal `gud.ko` were restored; the Pi stayed
+active/configured and Idle. P0.2 remains **in progress**. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.2-fence-boundary-2026-07-27T1333COT/`.
+
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
 bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
