@@ -256,6 +256,19 @@ Packaged Mir and normal GUD were restored. P0.2 remains **in progress**.
 Evidence is under
 `backport-4.9/env/local/evidence/xdisp-p0.2-render-only-2026-07-27T1633COT/`.
 
+**XDISP-P0.2 synthetic offscreen gate (2026-07-27):** `eae00c7` replaced only
+the synthetic output's Android window surface with a pbuffer/FBO render-only
+target. Its compatible artifact SHA-256 was
+`0525a1d2d0d77d50d61970154e212963d52a6ef444db648592bb2c7a8abc1487`; 21
+focused checks passed. The phone gate failed before rendering with `cannot bind
+synthetic GUD offscreen framebuffer`; no worker, KMS, USB, or Pi payload ran.
+The test was immediately rolled back to packaged Mir and normal GUD. A
+plain-texture FBO refinement compiled but exhausted the local build volume while
+linking tests, so it was not committed or deployed. P0.2 remains **in progress**
+with the original window-surface path rejected and no phone-proven offscreen
+replacement yet. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.2-offscreen-gate-2026-07-27T1659COT/`.
+
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
 bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
