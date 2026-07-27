@@ -225,6 +225,21 @@ until documented physical Pi recovery returns a known-safe Idle state. Evidence
 is under
 `backport-4.9/env/local/evidence/xdisp-p0.2-render-fence-flow-2026-07-27T1358COT/`.
 
+**XDISP-P0.2 synthetic return-fence retry (2026-07-27):** after explicit Pi
+reboot/start authorization, clean active/configured/Idle and dynamic host gates,
+and a clean packaged-Mir control, `9c6d772` tested a synthetic-only returned
+fence wait/clear. Its phone-matched artifact SHA-256 is
+`72829fb6240048bfe7e63e8d3fec65d280635abb742409a0c1c77a2aeed52e98`; 19
+focused server-window, worker, and HWC-boundary tests pass. It did not resolve
+the remaining leak: the fixed interval reached 1024 FDs/925 sync files and
+reproduced binder `-12`/KGSL `-24`. Its flow counters had three buffers,
+`copied_fences=0`, and one returned fence per render, disproving returned-fence
+clearing as the final source fix without identifying the remaining handle owner.
+Pi payloads remained bounded (shown maximum 12,061 bytes) and Idle. Packaged
+Mir/normal GUD were restored and LightDM returned active. P0.2 remains **in
+progress**; the fresh boot is no longer a clean baseline. Evidence is under
+`backport-4.9/env/local/evidence/xdisp-p0.2-return-fence-fix-2026-07-27T1431COT/`.
+
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
 bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
