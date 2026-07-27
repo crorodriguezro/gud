@@ -77,6 +77,17 @@ focused `GudPresentationWorker.*:GudHwcBoundary.*` filter passed six tests.
 This is not a hardware retry and does not attribute the previous binder/KGSL
 health failure to HWC or the worker.
 
+### Guarded retry result (2026-07-27)
+
+- [x] Retest the commit-qualified boundary module after the mandatory dynamic
+  VID/PID gate, then restore the packaged plugin without a Pi service action.
+- [x] Add and exercise worker/KMS-stage observability: `0b09f77` proves that
+  the worker processes a frame and opens GUD DRM, but fails before allocation,
+  modeset, or USB in atomic KMS resource setup.
+- [ ] Expose the exact setup exception in retained Mir logs before attempting
+  a transfer/error scenario; do not recast this pre-transfer result as P0.2
+  hardware acceptance.
+
 ## 4. Hardware acceptance (only after a commit-qualified plugin build)
 
 - [ ] Follow the owning-repo procedure's mandatory OnePlus host/enumeration

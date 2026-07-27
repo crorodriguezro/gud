@@ -130,6 +130,20 @@ plus the policy that only a synthetic external entry is excluded from Android
 HWC. This is offline evidence only; it neither deploys the uncommitted module
 nor claims resolution of the previous compositor health failure.
 
+### Guarded hardware retries (2026-07-27)
+
+The `01d1f23` boundary build started the worker and connected the synthetic
+output without the prior binder/KGSL failure, but did not reach KMS setup or a
+Pi receive. The follow-up `0b09f77` build (module SHA-256
+`c7f8659faeb3646462248c0bc492328ab6fa42d4a844cdccddb56e74af1ae843`) retained
+the six focused test passes and added worker/KMS stage markers. Its guarded
+hardware session proved that the worker processes an external frame and opens
+GUD DRM, then fails during atomic KMS resource setup before allocation,
+modeset, or USB. Both sessions restored the packaged plugin and left the Pi
+active/configured without a service action. This is contained pre-transfer
+evidence only, not acceptance of responsiveness, slow output, I/O error,
+shutdown, or reconnect behavior.
+
 ## Hardware deployment result (2026-07-27)
 
 The mandatory OnePlus host/enumeration gate found `1d50:614d` before the
