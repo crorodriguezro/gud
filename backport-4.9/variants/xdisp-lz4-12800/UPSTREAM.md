@@ -40,6 +40,17 @@ Consequently every actual `SET_BUFFER` bulk payload still passes the existing
 adjacent `payload_length <= GUD_XDISP_PAYLOAD_LIMIT` check. The default policy
 is unchanged until this opt-in path has hardware evidence.
 
+## Measured incompressible-content limitation
+
+The planner remains test-only until it has an incompressible backoff. The
+2026-07-27 A/B showed that noisy RGB565 falls back safely to five raw rows per
+payload, but it performs a wide `destSize()` discovery again for each payload.
+This preserves the transfer cap but wastes phone CPU. A future per-frame
+backoff may skip further wide discovery after a non-beneficial candidate
+selects raw fallback; it must keep final exact complete-row, `<= 12,800`
+validation and retry normal discovery on a new frame. See
+`backport-4.9/env/local/evidence/xdisp-p2.1-lz4-planner-ab-2026-07-27T0420COT/RESULTS.md`.
+
 ## First hardware gate
 
 On 2026-07-27, the opt-in policy completed a OnePlus/Pi static-frame gate and

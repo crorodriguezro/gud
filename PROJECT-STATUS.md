@@ -387,6 +387,25 @@ controlled ratio-cache comparison, a post-payload restart result, or
 remains unstarted. Evidence:
 `backport-4.9/env/local/evidence/xdisp-p2.1-upstream-lz4-bounded-2026-07-27T0403COT/RESULTS.md`.
 
+**Unpaced bounded-LZ4 A/B (2026-07-27):** three 300-frame direct-KMS raw-video
+runs at 1280x720 RGB565 measured 31.644 FPS and 26.678-ms mean commit time for
+the test-only bounded-output policy, compared with 23.717 FPS and 37.065 ms
+for the preserved ratio-cache policy. Bounded output reduced raw-video work
+from 15.356 to 9.987 rectangles/frame, 25.123 to 18.973 compression
+attempts/frame, and 34.685 to 24.859 ms of planner-plus-transfer work/frame.
+It also improved the short desktop-motion sample (61.306 versus 57.318 FPS).
+The same short comparison identified a content-dependent regression: scroll
+was 25.997 versus 32.507 FPS, and incompressible noise was 3.908 versus 6.372
+FPS. Bounded discovery currently re-scans a wide candidate before every
+five-row raw fallback; that produced 78.98 ms of planning per noise frame and
+is the immediate avoidable bottleneck. The next module-only optimization is a
+per-frame incompressible backoff after a non-beneficial discovery, while
+preserving the actual 12,800-byte ceiling. The Pi service stayed active with
+UDC configured and neither side logged a new transport or kernel fault. This
+is P2.1 performance evidence only: `XDISP-P0.1` remains **blocked** and
+`XDISP-P0.2` remains unstarted. Evidence:
+`backport-4.9/env/local/evidence/xdisp-p2.1-lz4-planner-ab-2026-07-27T0420COT/RESULTS.md`.
+
 **Adaptive-LZ4 first hardware result (2026-07-26):** the separate diagnostic
 module completed one 1280x720 RGB565 OnePlus frame as four contiguous LZ4
 rectangles. Actual payloads were 11,260, 12,144, 12,380, and 10,204 bytes;

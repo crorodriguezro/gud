@@ -244,6 +244,23 @@ creates the output is not sufficient.
     not a comparative performance claim or `XDISP-P0.1` verification. Compare
     it with the current ratio-cache policy under the existing raw video,
     scrolling, desktop, and noise gates.
+  - **2026-07-27 unpaced A/B result:** with the same 1280x720 RGB565 raw clip,
+    the test-only bounded-output policy averaged 31.644 FPS / 26.678-ms commit
+    time across three 300-frame runs, versus ratio-cache's 23.717 FPS /
+    37.065 ms. It reduced the last-900-frame mean from 15.356 to 9.987
+    rectangles/frame, planner time from 21.662 to 15.704 ms/frame, and
+    `SET_BUFFER` plus bulk wait time from 12.943 to 9.094 ms/frame. Desktop
+    motion also improved (61.306 versus 57.318 FPS). Do not call it a general
+    default yet: one 120-frame scroll sample and a 10-frame incompressible
+    sample regressed. On noise, bounded discovery repeatedly scanned a wide
+    source candidate before each five-row raw fallback, consuming 78.98 ms of
+    planning per frame and yielding 3.908 FPS; ratio-cache reached 6.372 FPS.
+    Add a safe **per-frame incompressible backoff**: after a non-beneficial
+    bounded candidate selects raw fallback, plan remaining chunks in that
+    frame directly at the known cap-safe raw-row size. Keep the final
+    `<= 12,800` check, retry discovery on the next frame, then repeat all four
+    workloads with multiple trials before changing any default. Evidence:
+    `backport-4.9/env/local/evidence/xdisp-p2.1-lz4-planner-ab-2026-07-27T0420COT/RESULTS.md`.
   - [ ] Upstream Linux GUD follow-up: evaluate contributing a generic optional
     bounded-output / complete-row LZ4 planner. Current upstream
     `drivers/gpu/drm/gud/gud_pipe.c` splits damage before compression using the
