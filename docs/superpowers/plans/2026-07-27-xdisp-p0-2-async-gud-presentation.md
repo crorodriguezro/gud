@@ -33,10 +33,10 @@ and the component procedure before a phone/Pi session.
 
 - [x] Add focused component tests for coalescing, non-blocking submit,
   exception containment, and shutdown lifecycle.
-- [ ] Build the Android2 platform and run the focused tests in a supported Mir
-  SDK/build environment. The current host lacks Boost, Android-properties,
-  libhybris/Mir, and gtest development dependencies; record that configuration
-  result rather than treating a syntax-only check as a project build.
+- [x] Build the Android2 platform and run the focused tests in the tracked
+  Ubuntu 20.04/UBports Focal ARM64 container. Commit `1bf8d53` adds the
+  reproducible Dockerfile/helper; it builds the graphics module and the test
+  binary, then runs `GudPresentationWorker.*` directly.
 - [x] Syntax-check the standalone worker with C++14 and pthreads.
 
 The retained source evidence is
@@ -45,6 +45,19 @@ Its AddressSanitizer/UBSan harness passes coalescing, lifetime, non-blocking,
 error, and shutdown checks. LeakSanitizer cannot run under this traced session,
 and ThreadSanitizer cannot link because this host lacks `libtsan`; neither is
 reported as a clean race/leak result.
+
+The supported-project build evidence is
+`backport-4.9/env/local/evidence/xdisp-p0.2-container-build-2026-07-27T0000COT/`.
+On the source content committed as `mir-android2-platform-gud` `1bf8d53`
+(with async implementation `3fffb05`), the Focal container
+`mir-android2-platform-gud-p02-build:ubuntu20.04-focal` used CMake 3.16.3 and
+GCC 9.4.0. It built
+`graphics-android2.so.16` (SHA-256
+`77725859db7ac5149f20cd59ec8f56da0562e0250a1588bbab4dfd30fc729bd6`), resolved
+its dependencies in that same container, and passed all five focused GTests.
+The normal Fedora host remains unsuitable for directly mixing its libraries
+with the UBports Mir/libhybris ABI; the container is the documented laptop
+build environment.
 
 ## 4. Hardware acceptance (only after a commit-qualified plugin build)
 

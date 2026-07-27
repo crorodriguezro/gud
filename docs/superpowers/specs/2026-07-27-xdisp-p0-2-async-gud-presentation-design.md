@@ -83,6 +83,22 @@ hotplug management.
 - Rebuilding either kernel, changing normal `/home/phablet/gud.ko`, or
   stopping/restarting a Pi process in a poisoned receive state are prohibited.
 
+## Offline validation (2026-07-27)
+
+The tracked Ubuntu 20.04/UBports Focal ARM64 build environment in
+`mir-android2-platform-gud` commit `1bf8d53` built the actual
+`graphics-android2.so.16` module from the worker implementation in `3fffb05`.
+Its SHA-256 is
+`77725859db7ac5149f20cd59ec8f56da0562e0250a1588bbab4dfd30fc729bd6`; `ldd`
+inside that same container resolved every module dependency. The direct GTest
+filter `GudPresentationWorker.*` passed five checks: newest-pending-frame
+coalescing, non-blocking submit while the presenter is held, active-buffer
+lifetime/superseded release, error containment with subsequent presentation,
+and shutdown discard/join. Exact commands and raw output are retained in
+`backport-4.9/env/local/evidence/xdisp-p0.2-container-build-2026-07-27T0000COT/`.
+This validates the source/build boundary only; it is not phone/Pi responsiveness
+or reconnect acceptance evidence.
+
 ## Acceptance
 
 `XDISP-P0.2` remains **in progress** until all of these are retained:

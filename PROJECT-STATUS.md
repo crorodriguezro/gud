@@ -61,15 +61,20 @@ retains the buffer until its serial KMS operation returns. The source now scans
 for a DRM driver named `gud`, logs and contains worker failures, and joins the
 worker before KMS teardown. A standalone C++14 AddressSanitizer/UBSan
 component harness passed queue coalescing, active-frame lifetime, non-blocking
-submit, error containment, and shutdown behavior. The host cannot configure
-the full Mir project because Boost headers and `libandroid-properties` (and
-the rest of the Android2/Mir development stack) are absent; ThreadSanitizer is
-also unavailable because its runtime library is missing. Exact commands,
-outputs, and the harness are retained under
-`backport-4.9/env/local/evidence/xdisp-p0.2-source-2026-07-27T0000COT/`.
-No phone/Pi plugin deployment or hardware claim is made, so P0.2 remains in
-progress pending a supported build and the documented slow/absent/I/O-error
-hardware matrix.
+submit, error containment, and shutdown behavior. The direct Fedora host lacks
+the compatible Android2/Mir ABI stack, but the tracked Ubuntu 20.04/UBports
+Focal ARM64 container at `mir-android2-platform-gud` `1bf8d53` built the actual
+`graphics-android2.so.16` module from implementation `3fffb05` and passed all
+five `GudPresentationWorker.*` GTests. The module SHA-256 is
+`77725859db7ac5149f20cd59ec8f56da0562e0250a1588bbab4dfd30fc729bd6`; its
+runtime dependencies resolve inside the same Focal container. Exact source and
+container commands, output, and artifact data are retained under
+`backport-4.9/env/local/evidence/xdisp-p0.2-source-2026-07-27T0000COT/` and
+`backport-4.9/env/local/evidence/xdisp-p0.2-container-build-2026-07-27T0000COT/`.
+ThreadSanitizer remains unavailable on the direct host and is not claimed as a
+clean race result. No phone/Pi plugin deployment or hardware claim is made, so
+P0.2 remains in progress pending the documented slow/absent/I/O-error hardware
+matrix.
 
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
