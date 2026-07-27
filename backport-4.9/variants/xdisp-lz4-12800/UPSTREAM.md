@@ -40,6 +40,16 @@ Consequently every actual `SET_BUFFER` bulk payload still passes the existing
 adjacent `payload_length <= GUD_XDISP_PAYLOAD_LIMIT` check. The default policy
 is unchanged until this opt-in path has hardware evidence.
 
+## First hardware gate
+
+On 2026-07-27, the opt-in policy completed a OnePlus/Pi static-frame gate and
+a 300-frame 1280x720 raw RGB565 clip. The clip reached 29.972 paced updates/s
+against a 30-fps target, with a maximum actual payload of 12,797 bytes and no
+new phone/Pi transport or kernel fault. This establishes only a candidate
+bounded-planner result; it does not replace the default policy, prove a
+controlled performance gain, or complete XDISP-P0.1. See the committed
+evidence record below.
+
 ## Gates
 
 Run before hardware deployment:

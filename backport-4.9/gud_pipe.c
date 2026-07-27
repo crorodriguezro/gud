@@ -304,6 +304,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	u64 bulk_wait_ns = 0;
 	u64 frame_start_ns;
 	size_t plan_payload_limit;
+	size_t reported_target;
 	int ret;
 
 	length = (size_t)plane_state->fb->width * 2 *
@@ -335,6 +336,8 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	else if (xdisp_target_policy)
 		plan_payload_limit = GUD_XDISP_PAYLOAD_LIMIT *
 			GUD_XDISP_TARGET_PAYLOAD_PERCENT / 100U;
+	reported_target = xdisp_bounded_discovery ?
+		GUD_XDISP_DISCOVERY_TARGET_PAYLOAD : plan_payload_limit;
 	frame_start_ns = ktime_get_ns();
 
 	mutex_lock(&gud->lock);
@@ -516,7 +519,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 			xdisp_target_policy ? "target95" : "doubling",
 			length, total_payload, rectangles, compressed_rects,
 			raw_rects, max_payload, GUD_XDISP_PAYLOAD_LIMIT,
-			plan_payload_limit,
+			reported_target,
 			(unsigned long long)compression_attempts,
 			(unsigned long long)rejected_compression_attempts,
 			(unsigned long long)compression_source_bytes,

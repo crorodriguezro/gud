@@ -377,9 +377,15 @@ That policy discovers a source prefix, rounds down to complete RGB565 rows,
 then recompresses the aligned rectangle under the existing final 12,800-byte
 guard; it falls back to the largest raw cap-safe rectangle on any non-benefit
 or validation failure. Unit round-trip, red-zone, sanitizer, exact-kernel
-build, and private-symbol checks pass. It has not yet been loaded on the phone
-and supplies no reliability or performance result. `XDISP-P0.1` remains
-blocked and `XDISP-P0.2` remains unstarted.
+build, and private-symbol checks pass. Its first OnePlus/Pi gate completed a
+static frame and 300-frame raw RGB565 clip with a 12,797-byte maximum actual
+payload, all FunctionFS receives in one 16 KiB read, and no new host, DWC2,
+vc4, or Pi service fault. The paced clip reached 29.972 updates/s against its
+30-fps target. This is a single bounded-planner candidate result, not a
+controlled ratio-cache comparison, a post-payload restart result, or
+`XDISP-P0.1` verification. `XDISP-P0.1` remains blocked and `XDISP-P0.2`
+remains unstarted. Evidence:
+`backport-4.9/env/local/evidence/xdisp-p2.1-upstream-lz4-bounded-2026-07-27T0403COT/RESULTS.md`.
 
 **Adaptive-LZ4 first hardware result (2026-07-26):** the separate diagnostic
 module completed one 1280x720 RGB565 OnePlus frame as four contiguous LZ4
