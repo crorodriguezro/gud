@@ -134,6 +134,29 @@ submission that the actual bulk length is no larger than 12,800 bytes. If the
 gadget does not advertise LZ4, it uses complete-row raw rectangles that obey
 the same cap.
 
+### Bounded-output frame planning
+
+With the test-only `xdisp_bounded_discovery=1` parameter, the driver uses
+bounded LZ4 only to choose a complete-row rectangle that can fit safely. It
+rounds a partial result down to RGB565 scanlines and validates the final
+compressed rectangle before `SET_BUFFER` and bulk submission.
+
+For incompressible content, the first discovery can legitimately choose a raw
+five-row (12,800-byte at 1280 pixels) rectangle. The driver then marks only
+that **current framebuffer update** as raw-backoff: its remaining rectangles
+are sent directly as the same cap-safe complete rows without attempting LZ4
+again. The next framebuffer update begins with a fresh discovery attempt, so
+compression resumes automatically when the content becomes compressible.
+
+This feature avoids repeatedly scanning a wide incompressible input while
+preserving the actual-payload safety invariant. It does not change the normal
+module or remove the underlying cost of roughly 144 serial control/bulk pairs
+for a fully incompressible 1280x720 RGB565 frame. The optional frame-stat log
+reports `raw_backoff_rectangles`, compression attempts, source bytes planned,
+and phase timings. The design and qualification evidence are in
+`variants/xdisp-lz4-12800/UPSTREAM.md` and
+`env/local/evidence/xdisp-p2.1-bounded-backoff-2026-07-27T1440COT/RESULTS.md`.
+
 The target kernel does not export an LZ4 compressor. The variant therefore
 embeds a pinned modern upstream LZ4 block compressor in `gud.ko`, in
 freestanding external-state mode. It is not a separate `lz4.ko`; its symbols
