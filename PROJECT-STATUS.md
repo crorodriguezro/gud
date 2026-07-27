@@ -116,6 +116,18 @@ state. The next commit-qualified hardware retry must use the mandatory
 host/enumeration gate and inspect the new Mir diagnostics before any transfer
 conclusion.
 
+**XDISP-P0.2 guarded retry (2026-07-27):** separately named plugins from
+`01d1f23` and `0b09f77` were tested only after the mandatory gate found
+`1d50:614d` at dynamic path `1-1.3`. The former started the worker and exposed
+the synthetic output without a matched binder/KGSL regression. The latter
+(`c7f8659faeb3646462248c0bc492328ab6fa42d4a844cdccddb56e74af1ae843`, six
+focused tests passing) proved that the worker processes the frame and opens GUD
+DRM, then fails during atomic KMS resource setup before allocation, modeset, or
+USB transfer. Each session restored the packaged plugin and left the Pi
+active/configured without a service action. This is contained pre-transfer
+evidence only. P0.2 remains **in progress**; slow-output, I/O-error,
+reappearance, shutdown, and manual responsiveness acceptance remain unverified.
+
 `XDISP-P0.1` diagnostic evidence (2026-07-25) narrows the active failure to
 the Pi: the OnePlus submitted and successfully completed the first 64,000-byte
 bulk URB, while Pi `gud-drm` entered its 512-byte FunctionFS receive loop without
