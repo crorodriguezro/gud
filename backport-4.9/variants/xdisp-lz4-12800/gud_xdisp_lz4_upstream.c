@@ -31,6 +31,8 @@
 /* The one upstream function without LZ4LIB_API gets a GUD-private name. */
 #define LZ4_compress_destSize_extState \
 	gud_lz4_upstream_compress_dest_size_extstate
+#define LZ4_compress_fast_extState \
+	gud_lz4_upstream_compress_fast_extstate
 
 #include "vendor/lz4-1.10.0/lz4.c"
 
@@ -64,5 +66,30 @@ size_t gud_xdisp_lz4_compress_dest_size(const u8 *source,
 		return 0;
 
 	*source_length = source_size;
+	return result;
+}
+
+size_t gud_xdisp_lz4_compress_limited(const u8 *source,
+				      size_t source_length, u8 *destination,
+				      size_t destination_capacity, void *workmem)
+{
+	int result;
+
+	if (!source || !source_length || !destination || !destination_capacity ||
+	    !workmem || source_length > ((size_t)~0U >> 1) ||
+	    destination_capacity > ((size_t)~0U >> 1))
+		return 0;
+
+	/*
+	 * This is limited-output, not prefix discovery: a zero result means the
+	 * whole candidate did not fit. The caller must fall back rather than send
+	 * any partial result.
+	 */
+	result = gud_lz4_upstream_compress_fast_extstate(
+		workmem, (const char *)source, (char *)destination,
+		(int)source_length, (int)destination_capacity, 1);
+	if (result <= 0)
+		return 0;
+
 	return result;
 }

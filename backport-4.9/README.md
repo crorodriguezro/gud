@@ -157,6 +157,30 @@ and phase timings. The design and qualification evidence are in
 `variants/xdisp-lz4-12800/UPSTREAM.md` and
 `env/local/evidence/xdisp-p2.1-bounded-backoff-2026-07-27T1440COT/RESULTS.md`.
 
+### Test-only predictive bounded LZ4 policy
+
+`xdisp_predictive_bounded=1` is an experimental comparison policy. It never
+changes the normal module or raises the 12,800-byte actual-payload limit. After
+a verified compressed rectangle, it keeps a recent input/output ratio for the
+current mode and predicts a conservative complete-row candidate targeting 95%
+of the cap. It first attempts to compress that exact candidate once with a
+strict 12,800-byte output bound.
+
+Success sends the candidate only after the existing adjacent submission check.
+If a candidate is not beneficial or does not fit, no partial output is sent:
+the driver falls through to the existing bounded-output discovery and
+full-row validation path. That single miss places the rest of the current
+frame in prediction cooldown, so changing desktop content cannot cause a
+series of speculative retries. A raw discovery result continues to activate
+the existing frame-local raw backoff.
+
+The intent is to reduce two-pass discovery/validation work on stable video or
+desktop content while retaining bounded discovery as the correctness fallback.
+It must remain test-only until repeated raw-video, desktop, scroll, and
+incompressible tests show the same cap safety and no material desktop
+regression. Per-frame `predictive_hits` and `predictive_fallbacks` counters
+make the comparison auditable.
+
 The target kernel does not export an LZ4 compressor. The variant therefore
 embeds a pinned modern upstream LZ4 block compressor in `gud.ko`, in
 freestanding external-state mode. It is not a separate `lz4.ko`; its symbols

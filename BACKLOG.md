@@ -151,6 +151,12 @@ architecture decision.
     target frames at 12,800 bytes/25 packets and a clean stop: 2,592 target
     transfers with zero error. The observed aligned boundary is
     12,800 clean versus 15,360 failed.
+  - [ ] Investigate the origin of the current 12,800-byte actual-payload
+    safety boundary. Separate OnePlus host submission behavior from Pi
+    DWC2/FunctionFS receive and teardown behavior; vary aligned payload size,
+    read size, DMA mode, and gadget lifecycle under retained evidence. Do not
+    raise the driver cap or treat the boundary as a hardware specification
+    until a controlled matrix establishes a larger stable limit.
   - Gate F proved that a 12,800-byte userspace prefix read does not safely
     consume a larger host transfer under `g_dma=1`. The one-shot `g_dma=0`
     Pi kernel then failed its first 16,274-byte compressed payload: the host
@@ -266,6 +272,18 @@ creates the output is not sufficient.
     test-only and repeat all four workloads with multiple trials before
     changing any default. Evidence:
     `backport-4.9/env/local/evidence/xdisp-p2.1-bounded-backoff-2026-07-27T1440COT/RESULTS.md`.
+  - **2026-07-27 predictive-bounded 1080p test:** a separate test-only
+    `xdisp_predictive_bounded=1` policy attempted one exact, 95%-targeted
+    limited-output LZ4 rectangle from a recent verified ratio, then fell back
+    to bounded discovery and frame-local raw backoff on a miss. It preserved
+    the 12,800-byte cap and had no host/Pi fault. It improved one desktop
+    sample (52.182 versus 45.513 FPS), but did not improve the video target:
+    a global ratio did not describe successive horizontal video bands, causing
+    about one fallback per frame (32.75 versus 31.00 attempts and 28.197
+    versus 27.392 ms planner time). Keep it disabled and test-only; do not
+    promote it without a separately benchmarked frame-local or vertical-band
+    predictor. Evidence:
+    `backport-4.9/env/local/evidence/xdisp-p2.1-predictive-bounded-1080p-2026-07-27T1037COT/RESULTS.md`.
   - [ ] Upstream Linux GUD follow-up: evaluate contributing a generic optional
     bounded-output / complete-row LZ4 planner. Current upstream
     `drivers/gpu/drm/gud/gud_pipe.c` splits damage before compression using the

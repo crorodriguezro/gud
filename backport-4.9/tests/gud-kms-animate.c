@@ -19,8 +19,12 @@
 #include <xf86drm.h>
 #include <xf86drmMode.h>
 
+#ifndef WIDTH
 #define WIDTH 1280U
+#endif
+#ifndef HEIGHT
 #define HEIGHT 720U
+#endif
 #define BUFFER_COUNT 2U
 
 enum workload {
@@ -441,7 +445,7 @@ int main(int argc, char **argv)
 		drmModeFreeConnector(candidate);
 	}
 	if (!connector) {
-		fprintf(stderr, "no connected 1280x720 connector found\n");
+		fprintf(stderr, "no connected %ux%u connector found\n", WIDTH, HEIGHT);
 		goto out;
 	}
 	connector_id = connector->connector_id;

@@ -28,6 +28,12 @@ struct gud_device {
 	size_t xdisp_ratio_source_bytes;
 	size_t xdisp_ratio_payload_bytes;
 	bool xdisp_ratio_valid;
+	/* Protected by lock; test-only predictive bounded-LZ4 state. */
+	u32 xdisp_predictive_width;
+	size_t xdisp_predictive_bytes_per_line;
+	size_t xdisp_predictive_source_bytes;
+	size_t xdisp_predictive_payload_bytes;
+	bool xdisp_predictive_valid;
 #endif
 	u32 flags;
 	u32 max_buffer_size;

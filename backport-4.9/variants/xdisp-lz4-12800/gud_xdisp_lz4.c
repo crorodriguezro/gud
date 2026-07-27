@@ -73,6 +73,8 @@ static int gud_xdisp_plan_raw_chunk(u32 remaining_rows,
 	chunk->compression_attempts = 0;
 	chunk->rejected_compression_attempts = 0;
 	chunk->compression_source_bytes = 0;
+	chunk->predictive_hit = false;
+	chunk->predictive_fallback = false;
 	return 0;
 }
 
@@ -91,6 +93,8 @@ int gud_xdisp_plan_chunk(const u8 *source, u32 remaining_rows,
 	if (!source || !remaining_rows || !bytes_per_line || !max_rows ||
 	    !payload_limit || !workmem || !scratch || !chunk)
 		return -EINVAL;
+	chunk->predictive_hit = false;
+	chunk->predictive_fallback = false;
 	if (bytes_per_line > payload_limit)
 		return -E2BIG;
 
@@ -188,6 +192,8 @@ int gud_xdisp_plan_chunk_bounded(const u8 *source, u32 remaining_rows,
 	if (!source || !remaining_rows || !bytes_per_line || !max_rows ||
 	    !payload_limit || !workmem || !scratch || !chunk)
 		return -EINVAL;
+	chunk->predictive_hit = false;
+	chunk->predictive_fallback = false;
 	if (bytes_per_line > payload_limit)
 		return -E2BIG;
 
@@ -297,6 +303,78 @@ int gud_xdisp_plan_chunk_bounded_frame(
 	if (!ret && !chunk->compressed)
 		frame->raw_backoff = true;
 	return ret;
+}
+
+int gud_xdisp_plan_chunk_predictive_frame(
+				    const u8 *source, u32 remaining_rows,
+				    size_t bytes_per_line, u32 max_rows,
+				    u32 predicted_rows, size_t payload_limit,
+				    void *workmem, u8 *scratch,
+				    size_t scratch_capacity,
+				    struct gud_xdisp_bounded_frame *frame,
+				    struct gud_xdisp_chunk *chunk)
+{
+	u32 raw_fallback_rows;
+	u32 rows;
+	u32 attempted_rows = 0;
+	size_t source_length;
+	size_t compressed_length;
+	bool prediction_missed = false;
+	int ret;
+
+	if (!frame || !chunk)
+		return -EINVAL;
+	if (frame->raw_backoff)
+		return gud_xdisp_plan_raw_chunk(remaining_rows, bytes_per_line,
+						max_rows, payload_limit, chunk);
+
+	if (!frame->predictive_cooldown && predicted_rows) {
+		raw_fallback_rows = payload_limit / bytes_per_line;
+		rows = predicted_rows < remaining_rows ? predicted_rows :
+			remaining_rows;
+		if (rows > max_rows)
+			rows = max_rows;
+		if (rows >= raw_fallback_rows &&
+		    (size_t)rows <= (size_t)-1 / bytes_per_line) {
+			attempted_rows = rows;
+			source_length = (size_t)rows * bytes_per_line;
+			compressed_length = gud_xdisp_lz4_compress_limited(
+				source, source_length, scratch, payload_limit, workmem);
+			if (compressed_length && compressed_length < source_length &&
+			    compressed_length <= payload_limit) {
+				chunk->rows = rows;
+				chunk->source_length = source_length;
+				chunk->payload_length = compressed_length;
+				chunk->compressed = true;
+				chunk->compression_attempts = 1;
+				chunk->rejected_compression_attempts = 0;
+				chunk->compression_source_bytes = source_length;
+				chunk->predictive_hit = true;
+				chunk->predictive_fallback = false;
+				return 0;
+			}
+			/* Never retry prediction in this update after a stale estimate. */
+			frame->predictive_cooldown = true;
+			prediction_missed = true;
+		}
+	}
+
+	ret = gud_xdisp_plan_chunk_bounded(source, remaining_rows,
+					  bytes_per_line, max_rows, payload_limit,
+					  workmem, scratch, scratch_capacity, chunk);
+	if (ret)
+		return ret;
+	if (prediction_missed) {
+		/* Account for the one rejected direct whole-rectangle attempt. */
+		chunk->compression_attempts++;
+		chunk->rejected_compression_attempts++;
+		chunk->compression_source_bytes +=
+			(size_t)attempted_rows * bytes_per_line;
+		chunk->predictive_fallback = true;
+	}
+	if (!chunk->compressed)
+		frame->raw_backoff = true;
+	return 0;
 }
 
 u32 gud_xdisp_next_row_hint(u32 selected_rows, u32 absolute_max_rows)

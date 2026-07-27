@@ -2,6 +2,13 @@
 
 #include "gud_internal.h"
 
+#ifdef GUD_XDISP_LZ4_12800
+static bool xdisp_test_1080p;
+module_param_named(xdisp_test_1080p, xdisp_test_1080p, bool, 0644);
+MODULE_PARM_DESC(xdisp_test_1080p,
+	"Test-only: advertise the CEA 1920x1080@60 GUD mode instead of 1280x720");
+#endif
+
 static enum drm_connector_status
 gud_connector_detect(struct drm_connector *connector, bool force)
 {
@@ -31,15 +38,31 @@ static int gud_connector_get_modes(struct drm_connector *connector)
 		return 0;
 	dev_info(&gud->intf->dev, "GUD connector: mode created\n");
 
-	mode->clock = 74250;
-	mode->hdisplay = 1280;
-	mode->hsync_start = 1390;
-	mode->hsync_end = 1430;
-	mode->htotal = 1650;
-	mode->vdisplay = 720;
-	mode->vsync_start = 725;
-	mode->vsync_end = 730;
-	mode->vtotal = 750;
+	#ifdef GUD_XDISP_LZ4_12800
+	if (xdisp_test_1080p) {
+		/* CEA-861 1920x1080@60, matching the Pi HDMI catalog entry. */
+		mode->clock = 148500;
+		mode->hdisplay = 1920;
+		mode->hsync_start = 2008;
+		mode->hsync_end = 2052;
+		mode->htotal = 2200;
+		mode->vdisplay = 1080;
+		mode->vsync_start = 1084;
+		mode->vsync_end = 1089;
+		mode->vtotal = 1125;
+	} else
+	#endif
+	{
+		mode->clock = 74250;
+		mode->hdisplay = 1280;
+		mode->hsync_start = 1390;
+		mode->hsync_end = 1430;
+		mode->htotal = 1650;
+		mode->vdisplay = 720;
+		mode->vsync_start = 725;
+		mode->vsync_end = 730;
+		mode->vtotal = 750;
+	}
 	mode->flags = DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC;
 	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
 	drm_mode_set_name(mode);

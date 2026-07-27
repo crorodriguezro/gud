@@ -36,9 +36,15 @@ MODULE_PARM_DESC(xdisp_ratio_cache,
 
 static bool xdisp_bounded_discovery;
 module_param_named(xdisp_bounded_discovery, xdisp_bounded_discovery, bool,
-		   0644);
+			   0644);
 MODULE_PARM_DESC(xdisp_bounded_discovery,
 	"Use upstream LZ4 bounded-output discovery with complete-row validation");
+
+static bool xdisp_predictive_bounded;
+module_param_named(xdisp_predictive_bounded, xdisp_predictive_bounded, bool,
+			   0644);
+MODULE_PARM_DESC(xdisp_predictive_bounded,
+	"Test-only: predict bounded LZ4 rows, then fall back to verified discovery");
 #endif
 
 struct gud_bulk_context {
@@ -197,7 +203,7 @@ static int gud_pipe_state_check(struct gud_device *gud,
 #ifdef GUD_XDISP_LZ4_12800
 int gud_xdisp_buffers_init(struct gud_device *gud)
 {
-	size_t bytes_per_line = 1280U * 2U;
+	size_t bytes_per_line = (size_t)gud->max_width * 2U;
 	size_t max_source_length;
 	size_t scratch_size;
 	size_t workmem_size;
@@ -206,7 +212,7 @@ int gud_xdisp_buffers_init(struct gud_device *gud)
 		return -E2BIG;
 
 	max_source_length = min_t(size_t, gud->max_buffer_size,
-				  1280U * 720U * 2U);
+				  (size_t)gud->max_width * gud->max_height * 2U);
 	max_source_length -= max_source_length % bytes_per_line;
 	if (!max_source_length)
 		return -EINVAL;
@@ -293,10 +299,13 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	u32 compressed_rects = 0;
 	u32 max_payload = 0;
 	u32 max_rows;
+	u32 predictive_rows = 0;
 	u32 row_hint;
 	u32 raw_rects = 0;
 	u32 raw_backoff_rects = 0;
 	u32 rectangles = 0;
+	u32 predictive_hits = 0;
+	u32 predictive_fallbacks = 0;
 	u64 compression_attempts = 0;
 	u64 rejected_compression_attempts = 0;
 	u64 compression_source_bytes = 0;
@@ -307,6 +316,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	u64 frame_start_ns;
 	size_t plan_payload_limit;
 	size_t reported_target;
+	bool bounded_policy;
 	int ret;
 
 	length = (size_t)plane_state->fb->width * 2 *
@@ -332,13 +342,14 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 		   bytes_per_line;
 	if (!max_rows)
 		return -EINVAL;
+	bounded_policy = xdisp_bounded_discovery || xdisp_predictive_bounded;
 	plan_payload_limit = GUD_XDISP_PAYLOAD_LIMIT;
-	if (xdisp_bounded_discovery)
+	if (bounded_policy)
 		plan_payload_limit = GUD_XDISP_PAYLOAD_LIMIT;
 	else if (xdisp_target_policy)
 		plan_payload_limit = GUD_XDISP_PAYLOAD_LIMIT *
 			GUD_XDISP_TARGET_PAYLOAD_PERCENT / 100U;
-	reported_target = xdisp_bounded_discovery ?
+	reported_target = bounded_policy ?
 		GUD_XDISP_DISCOVERY_TARGET_PAYLOAD : plan_payload_limit;
 	frame_start_ns = ktime_get_ns();
 
@@ -357,6 +368,18 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 			GUD_XDISP_PAYLOAD_LIMIT *
 			GUD_XDISP_TARGET_PAYLOAD_PERCENT / 100U);
 	}
+	if (xdisp_predictive_bounded && gud->xdisp_predictive_valid &&
+	    gud->xdisp_predictive_width == plane_state->fb->width &&
+	    gud->xdisp_predictive_bytes_per_line == bytes_per_line) {
+		struct gud_xdisp_chunk cached = {
+			.source_length = gud->xdisp_predictive_source_bytes,
+			.payload_length = gud->xdisp_predictive_payload_bytes,
+		};
+
+		predictive_rows = gud_xdisp_next_row_hint_target(
+			&cached, bytes_per_line, max_rows,
+			GUD_XDISP_DISCOVERY_TARGET_PAYLOAD);
+	}
 	while (offset < length) {
 		struct gud_xdisp_chunk chunk;
 		const void *payload;
@@ -373,7 +396,16 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 
 		if (gud->compression & GUD_COMPRESSION_LZ4) {
 			phase_start_ns = ktime_get_ns();
-			if (xdisp_bounded_discovery)
+			if (xdisp_predictive_bounded)
+				ret = gud_xdisp_plan_chunk_predictive_frame(
+					(u8 *)vaddr + offset, remaining_rows,
+					bytes_per_line, max_rows,
+					predictive_rows, plan_payload_limit,
+					gud->xdisp_lz4_workmem,
+					gud->xdisp_lz4_scratch,
+					gud->xdisp_lz4_scratch_size,
+					&bounded_frame, &chunk);
+			else if (xdisp_bounded_discovery)
 				ret = gud_xdisp_plan_chunk_bounded_frame(
 					(u8 *)vaddr + offset, remaining_rows,
 					bytes_per_line, max_rows,
@@ -405,6 +437,8 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 			chunk.compression_attempts = 0;
 			chunk.rejected_compression_attempts = 0;
 			chunk.compression_source_bytes = 0;
+			chunk.predictive_hit = false;
+			chunk.predictive_fallback = false;
 		}
 
 		/*
@@ -478,9 +512,13 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 			compressed_rects++;
 		else
 			raw_rects++;
-		if (xdisp_bounded_discovery && bounded_frame.raw_backoff &&
+		if (bounded_policy && bounded_frame.raw_backoff &&
 		    !chunk.compression_attempts)
 			raw_backoff_rects++;
+		if (chunk.predictive_hit)
+			predictive_hits++;
+		if (chunk.predictive_fallback)
+			predictive_fallbacks++;
 		compression_attempts += chunk.compression_attempts;
 		rejected_compression_attempts +=
 			chunk.rejected_compression_attempts;
@@ -507,6 +545,26 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 				&chunk, bytes_per_line, max_rows,
 				GUD_XDISP_PAYLOAD_LIMIT *
 				GUD_XDISP_TARGET_PAYLOAD_PERCENT / 100U);
+		} else if (xdisp_predictive_bounded && chunk.compressed) {
+			if (!gud->xdisp_predictive_valid ||
+			    gud->xdisp_predictive_width != plane_state->fb->width ||
+			    gud->xdisp_predictive_bytes_per_line != bytes_per_line) {
+				gud->xdisp_predictive_width = plane_state->fb->width;
+				gud->xdisp_predictive_bytes_per_line = bytes_per_line;
+				gud->xdisp_predictive_source_bytes = chunk.source_length;
+				gud->xdisp_predictive_payload_bytes = chunk.payload_length;
+				gud->xdisp_predictive_valid = true;
+			} else {
+				gud->xdisp_predictive_source_bytes =
+					(3 * gud->xdisp_predictive_source_bytes +
+					 chunk.source_length) / 4;
+				gud->xdisp_predictive_payload_bytes =
+					(3 * gud->xdisp_predictive_payload_bytes +
+					 chunk.payload_length) / 4;
+			}
+			predictive_rows = gud_xdisp_next_row_hint_target(
+				&chunk, bytes_per_line, max_rows,
+				GUD_XDISP_DISCOVERY_TARGET_PAYLOAD);
 		} else if (xdisp_target_policy)
 			row_hint = gud_xdisp_next_row_hint_target(
 				&chunk, bytes_per_line, max_rows,
@@ -519,12 +577,14 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	if (!ret && xdisp_frame_stats)
 		dev_info(
 			&gud->intf->dev,
-			"XDISP frame policy=%s source=%zu payload=%zu rectangles=%u compressed=%u raw=%u raw_backoff_rectangles=%u max_payload=%u cap=%u target=%zu compress_attempts=%llu compress_rejected=%llu compress_source_bytes=%llu planner_us=%llu copy_us=%llu set_buffer_us=%llu bulk_wait_us=%llu transfer_us=%llu\n",
+			"XDISP frame policy=%s source=%zu payload=%zu rectangles=%u compressed=%u raw=%u raw_backoff_rectangles=%u predictive_hits=%u predictive_fallbacks=%u max_payload=%u cap=%u target=%zu compress_attempts=%llu compress_rejected=%llu compress_source_bytes=%llu planner_us=%llu copy_us=%llu set_buffer_us=%llu bulk_wait_us=%llu transfer_us=%llu\n",
+			xdisp_predictive_bounded ? "predictive-bounded-lz4" :
 			xdisp_bounded_discovery ? "bounded-lz4" :
 			xdisp_ratio_cache ? "ratio-cache" :
 			xdisp_target_policy ? "target95" : "doubling",
 			length, total_payload, rectangles, compressed_rects,
-			raw_rects, raw_backoff_rects, max_payload,
+			raw_rects, raw_backoff_rects, predictive_hits,
+			predictive_fallbacks, max_payload,
 			GUD_XDISP_PAYLOAD_LIMIT,
 			reported_target,
 			(unsigned long long)compression_attempts,
@@ -842,10 +902,17 @@ int gud_pipe_init(struct gud_device *gud)
 	int ret;
 
 	drm_mode_config_init(gud->drm);
+	#ifdef GUD_XDISP_LZ4_12800
+	gud->drm->mode_config.min_width = gud->min_width;
+	gud->drm->mode_config.max_width = gud->max_width;
+	gud->drm->mode_config.min_height = gud->min_height;
+	gud->drm->mode_config.max_height = gud->max_height;
+	#else
 	gud->drm->mode_config.min_width = 1280;
 	gud->drm->mode_config.max_width = 1280;
 	gud->drm->mode_config.min_height = 720;
 	gud->drm->mode_config.max_height = 720;
+	#endif
 	gud->drm->mode_config.funcs = &gud_mode_config_funcs;
 
 	ret = gud_connector_init(gud);

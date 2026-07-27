@@ -470,6 +470,80 @@ out:
 	free(allocation);
 }
 
+static void run_predictive_bounded_cases(void)
+{
+	const char *name = "predictive-bounded-policy";
+	const size_t bytes_per_line = 1280U * 2U;
+	const u32 height = 160U;
+	const size_t frame_length = bytes_per_line * height;
+	const size_t scratch_capacity = gud_xdisp_lz4_compress_bound(frame_length);
+	uint8_t *source = malloc(frame_length);
+	uint8_t *scratch_allocation =
+		malloc(scratch_capacity + 2U * GUARD_SIZE);
+	uint8_t *workmem = malloc(gud_xdisp_lz4_upstream_workmem_size());
+	struct gud_xdisp_bounded_frame frame = { 0 };
+	struct gud_xdisp_chunk discovered;
+	struct gud_xdisp_chunk predicted;
+	u32 rows;
+	int ret;
+
+	if (!source || !scratch_allocation || !workmem) {
+		fail(name, "allocation failed");
+		goto out;
+	}
+	fill_pattern(source, frame_length, bytes_per_line, PATTERN_BARS);
+	memset(scratch_allocation, 0xcc,
+	       scratch_capacity + 2U * GUARD_SIZE);
+	memset(scratch_allocation, 0xa5, GUARD_SIZE);
+	memset(scratch_allocation + GUARD_SIZE + scratch_capacity, 0x5a,
+	       GUARD_SIZE);
+
+	ret = gud_xdisp_plan_chunk_bounded(
+		source, height, bytes_per_line, height,
+		GUD_XDISP_PAYLOAD_LIMIT, workmem,
+		scratch_allocation + GUARD_SIZE, scratch_capacity, &discovered);
+	if (ret || !discovered.compressed) {
+		fail(name, "baseline bounded discovery did not compress");
+		goto out;
+	}
+	rows = gud_xdisp_next_row_hint_target(
+		&discovered, bytes_per_line, height,
+		GUD_XDISP_DISCOVERY_TARGET_PAYLOAD);
+	ret = gud_xdisp_plan_chunk_predictive_frame(
+		source, height, bytes_per_line, height, rows,
+		GUD_XDISP_PAYLOAD_LIMIT, workmem,
+		scratch_allocation + GUARD_SIZE, scratch_capacity,
+		&frame, &predicted);
+	if (ret || !predicted.compressed || !predicted.predictive_hit ||
+	    predicted.predictive_fallback || predicted.compression_attempts != 1 ||
+	    predicted.payload_length > GUD_XDISP_PAYLOAD_LIMIT ||
+	    !guards_intact(scratch_allocation, scratch_capacity)) {
+		fail(name, "stable prediction did not return one cap-safe block");
+		goto out;
+	}
+
+	fill_pattern(source, frame_length, bytes_per_line, PATTERN_RANDOM);
+	frame = (struct gud_xdisp_bounded_frame) { 0 };
+	ret = gud_xdisp_plan_chunk_predictive_frame(
+		source, height, bytes_per_line, height, rows,
+		GUD_XDISP_PAYLOAD_LIMIT, workmem,
+		scratch_allocation + GUARD_SIZE, scratch_capacity,
+		&frame, &predicted);
+	if (ret || predicted.compressed || !predicted.predictive_fallback ||
+	    !frame.predictive_cooldown || !frame.raw_backoff ||
+	    predicted.compression_attempts < 2 ||
+	    predicted.rejected_compression_attempts < 1 ||
+	    predicted.payload_length > GUD_XDISP_PAYLOAD_LIMIT ||
+	    !guards_intact(scratch_allocation, scratch_capacity)) {
+		fail(name, "prediction miss did not use bounded raw fallback");
+	}
+
+out:
+	free(workmem);
+	free(scratch_allocation);
+	free(source);
+}
+
 static void run_randomized_compressor_cases(void)
 {
 	const char *name = "randomized-lz4-roundtrip";
@@ -606,6 +680,7 @@ static void run_invalid_cases(void)
 int main(void)
 {
 	run_direct_compressor_case();
+	run_predictive_bounded_cases();
 	run_randomized_compressor_cases();
 	run_bounded_dest_size_case();
 	run_frame_case("solid-1280x720", 1280, 720, PATTERN_ZERO, 12800,

@@ -32,6 +32,8 @@ struct gud_xdisp_chunk {
 	u32 compression_attempts;
 	u32 rejected_compression_attempts;
 	u64 compression_source_bytes;
+	bool predictive_hit;
+	bool predictive_fallback;
 };
 
 /*
@@ -41,6 +43,8 @@ struct gud_xdisp_chunk {
  */
 struct gud_xdisp_bounded_frame {
 	bool raw_backoff;
+	/* A miss disables predictive probing for this frame only. */
+	bool predictive_cooldown;
 };
 
 size_t gud_xdisp_lz4_compress_bound(size_t source_length);
@@ -66,6 +70,16 @@ size_t gud_xdisp_lz4_compress_dest_size(const u8 *source,
 size_t gud_xdisp_lz4_compress(const u8 *source, size_t source_length,
 			      u8 *destination, size_t destination_capacity,
 			      void *workmem);
+
+/*
+ * Compress one exact source rectangle with a strict output limit. Unlike the
+ * bounded-prefix discovery helper, success means the complete input was
+ * encoded. It is used by the test-only predictive fast path; callers still
+ * validate the returned payload before USB submission.
+ */
+size_t gud_xdisp_lz4_compress_limited(const u8 *source,
+			      size_t source_length, u8 *destination,
+			      size_t destination_capacity, void *workmem);
 
 /*
  * Plan one complete-row rectangle.  scratch_capacity must accommodate the
@@ -106,6 +120,20 @@ int gud_xdisp_plan_chunk_bounded_frame(
 				 u8 *scratch, size_t scratch_capacity,
 				 struct gud_xdisp_bounded_frame *frame,
 				 struct gud_xdisp_chunk *chunk);
+
+/*
+ * Test-only hybrid policy. It first tries predicted_rows as one complete
+ * bounded LZ4 block. A miss is never submitted: the normal bounded discovery
+ * path chooses the chunk instead, and the frame enters a prediction cooldown.
+ */
+int gud_xdisp_plan_chunk_predictive_frame(
+				    const u8 *source, u32 remaining_rows,
+				    size_t bytes_per_line, u32 max_rows,
+				    u32 predicted_rows, size_t payload_limit,
+				    void *workmem, u8 *scratch,
+				    size_t scratch_capacity,
+				    struct gud_xdisp_bounded_frame *frame,
+				    struct gud_xdisp_chunk *chunk);
 
 u32 gud_xdisp_next_row_hint(u32 selected_rows, u32 absolute_max_rows);
 
