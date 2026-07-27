@@ -63,9 +63,9 @@ worker before KMS teardown. A standalone C++14 AddressSanitizer/UBSan
 component harness passed queue coalescing, active-frame lifetime, non-blocking
 submit, error containment, and shutdown behavior. The direct Fedora host lacks
 the compatible Android2/Mir ABI stack, but the tracked Ubuntu 20.04/UBports
-Focal ARM64 container at `mir-android2-platform-gud` `1bf8d53` built the actual
-`graphics-android2.so.16` module from implementation `3fffb05` and passed all
-five `GudPresentationWorker.*` GTests. The module SHA-256 is
+Focal ARM64 container at `mir-android2-platform-gud` `1bf8d53`/`c34344b` built
+the actual `graphics-android2.so.16` module from implementation `3fffb05` and
+passed all five `GudPresentationWorker.*` GTests. The module SHA-256 is
 `77725859db7ac5149f20cd59ec8f56da0562e0250a1588bbab4dfd30fc729bd6`; its
 runtime dependencies resolve inside the same Focal container. Exact source and
 container commands, output, and artifact data are retained under

@@ -86,7 +86,7 @@ hotplug management.
 ## Offline validation (2026-07-27)
 
 The tracked Ubuntu 20.04/UBports Focal ARM64 build environment in
-`mir-android2-platform-gud` commit `1bf8d53` built the actual
+`mir-android2-platform-gud` commits `1bf8d53` and `c34344b` built the actual
 `graphics-android2.so.16` module from the worker implementation in `3fffb05`.
 Its SHA-256 is
 `77725859db7ac5149f20cd59ec8f56da0562e0250a1588bbab4dfd30fc729bd6`; `ldd`

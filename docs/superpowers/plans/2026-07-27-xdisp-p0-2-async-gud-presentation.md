@@ -35,8 +35,9 @@ and the component procedure before a phone/Pi session.
   exception containment, and shutdown lifecycle.
 - [x] Build the Android2 platform and run the focused tests in the tracked
   Ubuntu 20.04/UBports Focal ARM64 container. Commit `1bf8d53` adds the
-  reproducible Dockerfile/helper; it builds the graphics module and the test
-  binary, then runs `GudPresentationWorker.*` directly.
+  reproducible Dockerfile/helper and `c34344b` fetches the signed UBports
+  archive/key over HTTPS; it builds the graphics module and the test binary,
+  then runs `GudPresentationWorker.*` directly.
 - [x] Syntax-check the standalone worker with C++14 and pthreads.
 
 The retained source evidence is
@@ -48,8 +49,8 @@ reported as a clean race/leak result.
 
 The supported-project build evidence is
 `backport-4.9/env/local/evidence/xdisp-p0.2-container-build-2026-07-27T0000COT/`.
-On the source content committed as `mir-android2-platform-gud` `1bf8d53`
-(with async implementation `3fffb05`), the Focal container
+On the source content committed as `mir-android2-platform-gud` `1bf8d53` and
+`c34344b` (with async implementation `3fffb05`), the Focal container
 `mir-android2-platform-gud-p02-build:ubuntu20.04-focal` used CMake 3.16.3 and
 GCC 9.4.0. It built
 `graphics-android2.so.16` (SHA-256
