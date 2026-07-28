@@ -151,9 +151,10 @@ int gud_get_display_descriptor(struct gud_device *gud)
 	}
 
 	dev_info(&gud->intf->dev,
-		 "GUD v%u bulk-out=0x%02x buffer=%u width=%u-%u height=%u-%u\n",
+		 "GUD v%u bulk-out=0x%02x buffer=%u compression=0x%02x width=%u-%u height=%u-%u\n",
 		 gud->protocol_version, gud->bulk_out_endpoint, gud->max_buffer_size,
-		 gud->min_width, gud->max_width, gud->min_height, gud->max_height);
+		 desc.compression, gud->min_width, gud->max_width, gud->min_height,
+		 gud->max_height);
 #ifdef GUD_XDISP_LZ4_12800
 	dev_info(&gud->intf->dev,
 		 "XDISP diagnostic variant: compression=0x%02x actual bulk payload cap=%u\n",

@@ -16,6 +16,17 @@
 #define GUD_BULK_EAGAIN_RETRIES 100
 #define GUD_BULK_CHUNK_SIZE (64 * 1024)
 
+static unsigned int gud_bulk_timeout_ms = GUD_USB_TIMEOUT_MS;
+module_param_named(bulk_timeout_ms, gud_bulk_timeout_ms, uint, 0644);
+MODULE_PARM_DESC(bulk_timeout_ms,
+	"GUD bulk OUT timeout in milliseconds (default: 3000)");
+
+/* Zero is the normal quiet path. Set this to trace only the first N payloads. */
+static unsigned int gud_bulk_trace_limit;
+module_param_named(bulk_trace_limit, gud_bulk_trace_limit, uint, 0644);
+MODULE_PARM_DESC(bulk_trace_limit,
+	"Trace the first N GUD SET_BUFFER/bulk OUT transactions (default: 0)");
+
 #ifdef GUD_XDISP_LZ4_12800
 /* Benchmark-only comparison policy. The hard USB submission cap remains
  * GUD_XDISP_PAYLOAD_LIMIT in both modes. */
@@ -62,6 +73,40 @@ static void gud_bulk_complete(struct urb *urb)
 	complete(&context->done);
 }
 
+/* The caller holds gud->lock, so this counter is intentionally non-atomic. */
+static u64 gud_bulk_trace_begin(struct gud_device *gud)
+{
+	if (!gud_bulk_trace_limit ||
+	    gud->bulk_trace_count >= gud_bulk_trace_limit)
+		return 0;
+
+	gud->bulk_trace_count++;
+	return ++gud->bulk_trace_sequence;
+}
+
+static void gud_trace_set_buffer(struct gud_device *gud, u64 trace,
+				 const struct gud_set_buffer_req *request,
+				 int transfer_length)
+{
+	u32 length;
+	u32 compressed_length;
+	u32 expected_length;
+
+	if (!trace)
+		return;
+
+	length = le32_to_cpu(request->length);
+	compressed_length = le32_to_cpu(request->compressed_length);
+	expected_length = compressed_length ? compressed_length : length;
+	dev_info(&gud->intf->dev,
+		 "GUD trace=%llu SET_BUFFER x=%u y=%u w=%u h=%u length=%u compression=%u compressed_length=%u expected=%u trlen=%d max_buffer_size=%u\n",
+		 (unsigned long long)trace, le32_to_cpu(request->x),
+		 le32_to_cpu(request->y), le32_to_cpu(request->width),
+		 le32_to_cpu(request->height), length, request->compression,
+		 compressed_length, expected_length, transfer_length,
+		 gud->max_buffer_size);
+}
+
 /*
  * The USB bulk-message helper allocates and submits its own URB, so it cannot
  * use the DMA address returned by usb_alloc_coherent().  On the target xHCI
@@ -70,10 +115,12 @@ static void gud_bulk_complete(struct urb *urb)
  */
 static int gud_usb_bulk_write(struct gud_device *gud, struct urb *urb,
 			      void *buffer, dma_addr_t dma, int length,
-			      int *actual)
+			      int *actual, u64 trace, int attempt)
 {
 	struct gud_bulk_context context;
 	unsigned long timeout;
+	u64 elapsed_ns;
+	u64 start_ns;
 	int ret;
 
 	init_completion(&context.done);
@@ -85,18 +132,44 @@ static int gud_usb_bulk_write(struct gud_device *gud, struct urb *urb,
 	urb->transfer_dma = dma;
 	urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
 
+	start_ns = ktime_get_ns();
+	if (trace)
+		dev_info(&gud->intf->dev,
+			 "GUD trace=%llu bulk attempt=%d submit length=%d endpoint=0x%02x timeout_ms=%u\n",
+			 (unsigned long long)trace, attempt, length,
+			 gud->bulk_out_endpoint, gud_bulk_timeout_ms);
 	ret = usb_submit_urb(urb, GFP_NOIO);
-	if (ret)
+	if (ret) {
+		elapsed_ns = ktime_get_ns() - start_ns;
+		if (trace)
+			dev_info(&gud->intf->dev,
+				 "GUD trace=%llu bulk attempt=%d result=%d actual=0 elapsed_us=%llu\n",
+				 (unsigned long long)trace, attempt, ret,
+				 (unsigned long long)(elapsed_ns / 1000));
 		return ret;
+	}
 
 	timeout = wait_for_completion_timeout(&context.done,
-					     msecs_to_jiffies(GUD_USB_TIMEOUT_MS));
+					     msecs_to_jiffies(gud_bulk_timeout_ms));
 	if (!timeout) {
 		usb_kill_urb(urb);
+		*actual = context.actual;
+		elapsed_ns = ktime_get_ns() - start_ns;
+		if (trace)
+			dev_info(&gud->intf->dev,
+				 "GUD trace=%llu bulk attempt=%d result=%d actual=%d elapsed_us=%llu\n",
+				 (unsigned long long)trace, attempt, -ETIMEDOUT,
+				 *actual, (unsigned long long)(elapsed_ns / 1000));
 		return -ETIMEDOUT;
 	}
 
 	*actual = context.actual;
+	elapsed_ns = ktime_get_ns() - start_ns;
+	if (trace)
+		dev_info(&gud->intf->dev,
+			 "GUD trace=%llu bulk attempt=%d result=%d actual=%d elapsed_us=%llu\n",
+			 (unsigned long long)trace, attempt, context.status,
+			 *actual, (unsigned long long)(elapsed_ns / 1000));
 	return context.status;
 }
 
@@ -388,6 +461,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 		int retries;
 		int transfer_length;
 		u64 phase_start_ns;
+		u64 trace;
 
 		if (gud->disconnected) {
 			ret = -ENODEV;
@@ -472,10 +546,17 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 				cpu_to_le32(chunk.payload_length);
 		}
 
+		trace = gud_bulk_trace_begin(gud);
+		gud_trace_set_buffer(gud, trace, &request, transfer_length);
 		phase_start_ns = ktime_get_ns();
 		ret = gud_usb_set(gud, GUD_REQ_SET_BUFFER, &request,
 				  sizeof(request));
 		set_buffer_ns += ktime_get_ns() - phase_start_ns;
+		if (trace)
+			dev_info(&gud->intf->dev,
+				 "GUD trace=%llu SET_BUFFER result=%d elapsed_us=%llu\n",
+				 (unsigned long long)trace, ret,
+				 (unsigned long long)((ktime_get_ns() - phase_start_ns) / 1000));
 		if (ret)
 			break;
 
@@ -485,7 +566,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 				gud, gud->xdisp_bulk_urb,
 				gud->xdisp_bulk_buffer,
 				gud->xdisp_bulk_dma,
-				transfer_length, &actual);
+				transfer_length, &actual, trace, retries);
 			if (ret != -EAGAIN ||
 			    retries == GUD_BULK_EAGAIN_RETRIES)
 				break;
@@ -673,6 +754,7 @@ static int gud_pipe_transfer(struct gud_device *gud,
 				     (length - offset) / bytes_per_line);
 		int chunk = rows * bytes_per_line;
 		int retries;
+		u64 trace;
 
 		if (gud->disconnected) {
 			ret = -ENODEV;
@@ -684,12 +766,18 @@ static int gud_pipe_transfer(struct gud_device *gud,
 		request.height = cpu_to_le32(rows);
 		request.length = cpu_to_le32(chunk);
 		memcpy(bulk_buffer, (u8 *)vaddr + offset, chunk);
+		trace = gud_bulk_trace_begin(gud);
+		gud_trace_set_buffer(gud, trace, &request, chunk);
 		ret = gud_usb_set(gud, GUD_REQ_SET_BUFFER, &request, sizeof(request));
+		if (trace)
+			dev_info(&gud->intf->dev,
+				 "GUD trace=%llu SET_BUFFER result=%d\n",
+				 (unsigned long long)trace, ret);
 		if (ret)
 			break;
 		for (retries = 0; ; retries++) {
 			ret = gud_usb_bulk_write(gud, bulk_urb, bulk_buffer, bulk_dma,
-						 chunk, &actual);
+						 chunk, &actual, trace, retries);
 			if (ret != -EAGAIN || retries == GUD_BULK_EAGAIN_RETRIES)
 				break;
 			msleep(10);

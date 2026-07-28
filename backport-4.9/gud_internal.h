@@ -41,6 +41,9 @@ struct gud_device {
 	u32 max_width;
 	u32 min_height;
 	u32 max_height;
+	/* Serialized by lock; bounded diagnostics for SET_BUFFER/bulk pairs. */
+	u32 bulk_trace_count;
+	u64 bulk_trace_sequence;
 	bool disconnected;
 	struct mutex lock;
 	struct drm_device *drm;
