@@ -192,6 +192,30 @@ static int gud_status_to_errno(u8 status)
 	}
 }
 
+static unsigned int gud_bytes_per_pixel(u32 pixel_format)
+{
+	switch (pixel_format) {
+	case DRM_FORMAT_RGB565:
+		return 2;
+	case DRM_FORMAT_XRGB8888:
+		return 4;
+	default:
+		return 0;
+	}
+}
+
+static u8 gud_to_protocol_format(u32 pixel_format)
+{
+	switch (pixel_format) {
+	case DRM_FORMAT_RGB565:
+		return GUD_PIXEL_FORMAT_RGB565;
+	case DRM_FORMAT_XRGB8888:
+		return GUD_PIXEL_FORMAT_XRGB8888;
+	default:
+		return 0;
+	}
+}
+
 /* The caller holds gud->lock, which serializes USB disconnect and transfers. */
 static int gud_usb_set(struct gud_device *gud, u8 request,
 			       const void *data, u16 length)
@@ -255,17 +279,23 @@ static int gud_pipe_state_check(struct gud_device *gud,
 				const struct drm_crtc_state *crtc_state)
 {
 	struct gud_state_req request;
+	u32 pixel_format;
 	int ret;
 
 	if (!plane_state->fb)
 		return 0;
 
+	pixel_format = plane_state->fb->pixel_format;
+	if (!gud_bytes_per_pixel(pixel_format))
+		return -EINVAL;
+
 	memset(&request, 0, sizeof(request));
 	gud_mode_to_request(&request.mode, &crtc_state->mode);
-	request.format = GUD_PIXEL_FORMAT_RGB565;
+	request.format = gud_to_protocol_format(pixel_format);
 	request.connector = 0;
 
 	mutex_lock(&gud->lock);
+	gud->current_format = pixel_format;
 	ret = gud_usb_set(gud, GUD_REQ_SET_STATE_CHECK, &request, sizeof(request));
 	mutex_unlock(&gud->lock);
 	if (ret)
@@ -276,7 +306,7 @@ static int gud_pipe_state_check(struct gud_device *gud,
 #ifdef GUD_XDISP_LZ4_12800
 int gud_xdisp_buffers_init(struct gud_device *gud)
 {
-	size_t bytes_per_line = (size_t)gud->max_width * 2U;
+	size_t bytes_per_line = (size_t)gud->max_width * 4U;
 	size_t max_source_length;
 	size_t scratch_size;
 	size_t workmem_size;
@@ -285,7 +315,7 @@ int gud_xdisp_buffers_init(struct gud_device *gud)
 		return -E2BIG;
 
 	max_source_length = min_t(size_t, gud->max_buffer_size,
-				  (size_t)gud->max_width * gud->max_height * 2U);
+				  (size_t)gud->max_width * gud->max_height * 4U);
 	max_source_length -= max_source_length % bytes_per_line;
 	if (!max_source_length)
 		return -EINVAL;
@@ -369,6 +399,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	size_t offset = 0;
 	size_t total_payload = 0;
 	void *vaddr;
+	u32 bpp;
 	u32 compressed_rects = 0;
 	u32 max_payload = 0;
 	u32 max_rows;
@@ -392,7 +423,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	bool bounded_policy;
 	int ret;
 
-	length = (size_t)plane_state->fb->width * 2 *
+	length = (size_t)plane_state->fb->width * 4 *
 		 plane_state->fb->height;
 	if (!length || length > U32_MAX || length > obj->base.size)
 		return -EINVAL;
@@ -408,7 +439,10 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 		return -EINVAL;
 	vaddr = (u8 *)vaddr + framebuffer_offset;
 
-	bytes_per_line = (size_t)plane_state->fb->width * 2;
+	bpp = gud_bytes_per_pixel(plane_state->fb->pixel_format);
+	if (!bpp)
+		return -EINVAL;
+	bytes_per_line = (size_t)plane_state->fb->width * bpp;
 	if (!bytes_per_line || bytes_per_line > GUD_XDISP_PAYLOAD_LIMIT)
 		return -E2BIG;
 	max_rows = min_t(size_t, gud->xdisp_max_source_length, length) /
@@ -710,11 +744,15 @@ static int gud_pipe_transfer(struct gud_device *gud,
 	size_t max_chunk_size;
 	size_t length;
 	size_t offset;
+	u32 bpp;
 	u32 rows_per_chunk;
 	int actual;
 	int ret;
 
-	length = (size_t)plane_state->fb->width * 2 * plane_state->fb->height;
+	bpp = gud_bytes_per_pixel(plane_state->fb->pixel_format);
+	if (!bpp)
+		return -EINVAL;
+	length = (size_t)plane_state->fb->width * bpp * plane_state->fb->height;
 	if (!length || length > U32_MAX || length > obj->base.size)
 		return -EINVAL;
 	if (!gud->max_buffer_size)
@@ -730,7 +768,7 @@ static int gud_pipe_transfer(struct gud_device *gud,
 	 * The host sends one bulk URB per SET_BUFFER, so each DMA-coherent
 	 * bounce buffer contains complete rows for exactly one buffer rectangle.
 	 */
-	bytes_per_line = (size_t)plane_state->fb->width * 2;
+	bytes_per_line = (size_t)plane_state->fb->width * bpp;
 	max_chunk_size = min_t(size_t, gud->max_buffer_size,
 				   GUD_BULK_CHUNK_SIZE);
 	rows_per_chunk = max_chunk_size / bytes_per_line;
@@ -836,7 +874,8 @@ static struct drm_framebuffer *gud_fb_create(struct drm_device *dev,
 		return ERR_PTR(-EINVAL);
 	if (!mode_cmd->handles[0])
 		return ERR_PTR(-EINVAL);
-	if (mode_cmd->pixel_format != DRM_FORMAT_RGB565)
+	if (mode_cmd->pixel_format != DRM_FORMAT_RGB565 &&
+	    mode_cmd->pixel_format != DRM_FORMAT_XRGB8888)
 		return ERR_PTR(-EINVAL);
 	if (mode_cmd->handles[1] || mode_cmd->handles[2] || mode_cmd->handles[3])
 		return ERR_PTR(-EINVAL);
@@ -850,7 +889,7 @@ static struct drm_framebuffer *gud_fb_create(struct drm_device *dev,
 	if (mode_cmd->modifier[1] || mode_cmd->modifier[2] || mode_cmd->modifier[3])
 		return ERR_PTR(-EINVAL);
 
-	line_bytes = (u64)mode_cmd->width * 2;
+	line_bytes = (u64)mode_cmd->width * gud_bytes_per_pixel(mode_cmd->pixel_format);
 	if (line_bytes > U32_MAX)
 		return ERR_PTR(-EINVAL);
 	if (mode_cmd->pitches[0] < line_bytes)
@@ -900,11 +939,13 @@ static int gud_pipe_check(struct drm_simple_display_pipe *pipe,
 	if (gud->disconnected)
 		return -ENODEV;
 	if (plane_state->fb &&
-	    plane_state->fb->pixel_format != DRM_FORMAT_RGB565)
+	    plane_state->fb->pixel_format != DRM_FORMAT_RGB565 &&
+	    plane_state->fb->pixel_format != DRM_FORMAT_XRGB8888)
 		return -EINVAL;
 	/* Full-frame Ticket 5 uploads deliberately do not repack padded rows. */
 	if (plane_state->fb &&
-	    plane_state->fb->pitches[0] != plane_state->fb->width * 2)
+	    plane_state->fb->pitches[0] !=
+	    plane_state->fb->width * gud_bytes_per_pixel(plane_state->fb->pixel_format))
 		return -EINVAL;
 
 	return gud_pipe_state_check(gud, plane_state, crtc_state);
@@ -970,6 +1011,7 @@ static void gud_pipe_update(struct drm_simple_display_pipe *pipe,
 
 static const u32 gud_formats[] = {
 	DRM_FORMAT_RGB565,
+	DRM_FORMAT_XRGB8888,
 };
 
 static const struct drm_simple_display_pipe_funcs gud_pipe_funcs = {

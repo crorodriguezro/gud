@@ -41,6 +41,7 @@ struct gud_device {
 	u32 max_width;
 	u32 min_height;
 	u32 max_height;
+	u32 current_format; /* DRM pixel format of the active framebuffer */
 	/* Serialized by lock; bounded diagnostics for SET_BUFFER/bulk pairs. */
 	u32 bulk_trace_count;
 	u64 bulk_trace_sequence;

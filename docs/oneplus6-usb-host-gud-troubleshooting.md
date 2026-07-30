@@ -85,6 +85,121 @@ it is not enough to conclude that the adapter, cable, or Pi is faulty. If the
 poll fails, keep the controller in `host`, reseat the Pi data connection, and
 run the same poll again before investigating anything above USB enumeration.
 
+## Recovery When Host Mode Does Not Enumerate The Pi
+
+If the phone reports `host` but the VID/PID poll still finds only the xHCI
+root hubs (`1d6b:0002` and `1d6b:0003`), reset the OnePlus controller role by
+cycling it through `device` and back to `host`:
+
+```bash
+ssh -t phablet@<phone-ip> '
+printf device | sudo tee /sys/bus/platform/devices/a600000.ssusb/mode >/dev/null
+sleep 2
+printf host | sudo tee /sys/bus/platform/devices/a600000.ssusb/mode >/dev/null
+cat /sys/bus/platform/devices/a600000.ssusb/mode
+'
+```
+
+Then run the complete dynamic VID/PID poll again. Do not treat the final
+`host` text as success; success still requires finding `1d50:614d`.
+
+This recovery was validated on 2026-07-27. Restarting
+`gud-userspace.service` cleanly rebound the Pi gadget, but the Pi UDC remained
+`not attached` and the phone still exposed only its root hubs. Cycling the
+OnePlus controller `device` -> `host` caused the Pi to enumerate at the
+dynamically assigned path `1-1.3` as `1d50:614d` (`Generic USB Display`) at
+480 Mbit/s. The Pi UDC changed to `configured`, and FunctionFS received its
+`Enable` event. This identifies a stale OnePlus host-controller/role state,
+not a GUD service failure.
+
+Use this role cycle only after confirming that the Pi service is active and
+the gadget is bound to its UDC. If the Pi still reports `not attached` after
+the cycle and the phone still sees only root hubs, reseat and verify the USB
+data/OTG connection; restarting GUD repeatedly will not repair a missing
+electrical attachment.
+
+## Recovery When The Powered Hub Itself Is Missing
+
+Before blaming the Pi or GUD, distinguish a missing external hub from a
+missing gadget. The validated powered-hub topology contains the hub
+`214b:7250`; one tested USB-C adapter behind it also identifies as
+`343c:0000`. These identities are diagnostic observations, not replacements
+for the mandatory dynamic `1d50:614d` gate.
+
+If the phone is in `host` mode but its USB tree contains only the xHCI root
+hubs, the failure is below GUD: the phone has not enumerated the external hub.
+A controller role cycle may not recover a hub that remains partially powered
+through another cable. Completely depower the topology:
+
+1. Disconnect the phone from the hub.
+2. Disconnect the hub power supply.
+3. Disconnect the Pi data cable and Pi power supply.
+4. Wait at least 15 seconds so every possible hub power path is removed.
+5. Power the hub first, then power the Pi separately.
+6. Connect the Pi gadget/data port to a hub downstream port.
+7. Connect the hub's dedicated upstream/host cable to the phone's OTG adapter.
+
+Then cycle the OnePlus controller `device` -> `host` and run the complete
+dynamic VID/PID poll again. Verify the complete phone tree as well. Seeing
+`214b:7250` proves the phone-to-hub data path recovered; it does not prove the
+Pi is ready.
+
+This recovery was validated on 2026-07-28. Before the complete power removal,
+repeated Pi service restarts, OnePlus reboots, and controller role cycles left
+the phone showing only its root hubs. After the ordered power cycle, the phone
+enumerated `214b:7250` at `1-1` and the adapter `343c:0000` at `1-1.1`.
+
+## Recovery After A Pi Power Cycle
+
+A Pi power cycle can introduce a second, independent failure. On the project
+Pi, `gud-userspace.service` is not enabled at boot. If it is inactive, the GUD
+configfs gadget does not exist and the phone cannot read `1d50:614d`, even
+though the hub is now working.
+
+When the hub enumerates but the Pi does not, inspect both sides before
+changing cables again:
+
+```bash
+ssh <pi-host> '
+systemctl is-active gud-userspace.service
+cat /sys/class/udc/3f980000.usb/state
+test ! -r /sys/kernel/config/usb_gadget/usb-gadget0/UDC || \
+    cat /sys/kernel/config/usb_gadget/usb-gadget0/UDC
+'
+
+ssh phablet@<phone-ip> '
+dmesg | grep -E "usb 1-|device descriptor|unable to enumerate" | tail -n 100
+'
+```
+
+An inactive service, missing `usb-gadget0`, and downstream phone errors such
+as `device descriptor read/64, error -110`, `device not accepting address`, or
+`unable to enumerate USB device` identify this post-reboot state. Start the
+service interactively and verify that it binds the expected UDC:
+
+```bash
+ssh -t <pi-host> '
+sudo systemctl start gud-userspace.service
+systemctl is-active gud-userspace.service
+cat /sys/kernel/config/usb_gadget/usb-gadget0/UDC
+cat /sys/class/udc/3f980000.usb/state
+'
+```
+
+Expected service/binding output includes `active` and `3f980000.usb`. The UDC
+may remain `not attached` until the phone retries enumeration. After starting
+the service, cycle the OnePlus controller `device` -> `host` once to clear the
+hub port's failed descriptor state, then run the mandatory VID/PID poll. The
+2026-07-28 recovery immediately found the Pi dynamically at `1-1.2` as
+`1d50:614d`.
+
+This sequence distinguishes two failures that can occur in one session:
+
+- only root hubs: recover the phone-to-hub attachment with a true full-topology
+  power cycle;
+- external hub present but GUD absent after a Pi reboot: restore the Pi GUD
+  service, then reset the phone role and poll again.
+
 Important session rules:
 
 - Match `1d50:614d`; never hardcode a topology such as `1-1.2` or `1-1.4`.
@@ -99,15 +214,21 @@ Important session rules:
 
 ## Do Not Use The USB-PD Status Node
 
-The Qualcomm USB-PD driver exposes this `data_role` attribute:
+The Qualcomm USB-PD driver exposes `data_role` and `power_role` attributes
+under this directory:
 
 ```text
-/sys/devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-02/c440000.qcom,spmi:qcom,pmi8998@2:qcom,usb-pdphy@1700/usbpd/usbpd0/otg_default/data_role
+/sys/devices/platform/soc/c440000.qcom,spmi/spmi-0/spmi0-02/c440000.qcom,spmi:qcom,pmi8998@2:qcom,usb-pdphy@1700/usbpd/usbpd0/otg_default/
 ```
 
-It reported `device` during the successful controller-host session, but writes
-to it fail with `Permission denied`, including from root. Treat it as status
-only. Do not attempt to force host mode through that node.
+They are read-only on this kernel. `data_role` reported `device` during a
+successful controller-host session. During the 2026-07-28 powered-hub
+recovery, `power_role` reported `sink` and the kernel reported a Type-C Source
+partner even though forcing the writable controller node to `host` later
+enumerated the hub and Pi successfully. Treat both values as status only; do
+not attempt to force the data role, power role, or VBUS through these nodes.
+Forcing a regulator or GPIO below USB-PD policy risks contention with the
+powered hub and is outside this procedure.
 
 The extcon state can also report `USB=0` and `USB_HOST=0` while the controller
 host mode successfully enumerates the Pi. Do not use either value as the sole

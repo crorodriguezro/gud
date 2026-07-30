@@ -80,21 +80,23 @@ void gud_gem_free_object(struct drm_gem_object *gem)
 	kfree(obj);
 }
 
-int gud_gem_dumb_create(struct drm_file *file, struct drm_device *dev,
+	int gud_gem_dumb_create(struct drm_file *file, struct drm_device *dev,
 			struct drm_mode_create_dumb *args)
 {
 	struct gud_gem_object *obj;
 	size_t pitch, size;
+	unsigned int bytes_per_pixel;
 	int ret;
 
-	if (args->bpp != 16)
+	if (args->bpp != 16 && args->bpp != 32)
 		return -EINVAL;
 	if (!args->width || !args->height)
 		return -EINVAL;
-	if (args->width > U32_MAX / 2)
+	bytes_per_pixel = args->bpp / 8;
+	if (args->width > U32_MAX / bytes_per_pixel)
 		return -EINVAL;
 
-	pitch = ALIGN((size_t)args->width * 2, 4);
+	pitch = ALIGN((size_t)args->width * bytes_per_pixel, 4);
 	if (args->height > SIZE_MAX / pitch)
 		return -EINVAL;
 
