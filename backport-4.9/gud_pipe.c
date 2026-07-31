@@ -306,6 +306,13 @@ static int gud_pipe_state_check(struct gud_device *gud,
 #ifdef GUD_XDISP_LZ4_12800
 int gud_xdisp_buffers_init(struct gud_device *gud)
 {
+	/*
+	 * Worst-case scratch capacity uses *4 (XRGB8888) for the largest
+	 * format.  This is intentional: the scratch buffer is allocated once
+	 * and reused for both RGB565 and XRGB8888, so sizing for the larger
+	 * format guarantees capacity for either.  Per-transfer sizing is
+	 * format-aware via gud_bytes_per_pixel() in gud_pipe_transfer_xdisp().
+	 */
 	size_t bytes_per_line = (size_t)gud->max_width * 4U;
 	size_t max_source_length;
 	size_t scratch_size;
@@ -423,11 +430,26 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	bool bounded_policy;
 	int ret;
 
-	length = (size_t)plane_state->fb->width * 4 *
-		 plane_state->fb->height;
-	if (!length || length > U32_MAX || length > obj->base.size)
+	bpp = gud_bytes_per_pixel(plane_state->fb->pixel_format);
+	if (!bpp)
 		return -EINVAL;
 	if (!gud->max_buffer_size)
+		return -EINVAL;
+
+	/*
+	 * Format-aware framebuffer sizing.  The framebuffer length is
+	 * derived from the actual pixel format (bpp), not a fixed *4
+	 * assumption that would reject valid 16-bpp RGB565 framebuffers.
+	 */
+	if ((size_t)plane_state->fb->width > (size_t)-1 / bpp)
+		return -EINVAL;
+	bytes_per_line = (size_t)plane_state->fb->width * bpp;
+	if (!bytes_per_line || bytes_per_line > GUD_XDISP_PAYLOAD_LIMIT)
+		return -E2BIG;
+	if ((size_t)plane_state->fb->height > (size_t)-1 / bytes_per_line)
+		return -EOVERFLOW;
+	length = bytes_per_line * (size_t)plane_state->fb->height;
+	if (!length || length > U32_MAX || length > obj->base.size)
 		return -EINVAL;
 
 	ret = gud_gem_vmap(obj, &vaddr, &map_size);
@@ -439,12 +461,6 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 		return -EINVAL;
 	vaddr = (u8 *)vaddr + framebuffer_offset;
 
-	bpp = gud_bytes_per_pixel(plane_state->fb->pixel_format);
-	if (!bpp)
-		return -EINVAL;
-	bytes_per_line = (size_t)plane_state->fb->width * bpp;
-	if (!bytes_per_line || bytes_per_line > GUD_XDISP_PAYLOAD_LIMIT)
-		return -E2BIG;
 	max_rows = min_t(size_t, gud->xdisp_max_source_length, length) /
 		   bytes_per_line;
 	if (!max_rows)
@@ -692,7 +708,9 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	if (!ret && xdisp_frame_stats)
 		dev_info(
 			&gud->intf->dev,
-			"XDISP frame policy=%s source=%zu payload=%zu rectangles=%u compressed=%u raw=%u raw_backoff_rectangles=%u predictive_hits=%u predictive_fallbacks=%u max_payload=%u cap=%u target=%zu compress_attempts=%llu compress_rejected=%llu compress_source_bytes=%llu planner_us=%llu copy_us=%llu set_buffer_us=%llu bulk_wait_us=%llu transfer_us=%llu\n",
+			"XDISP frame format=%s bpp=%u policy=%s source=%zu payload=%zu rectangles=%u compressed=%u raw=%u raw_backoff_rectangles=%u predictive_hits=%u predictive_fallbacks=%u max_payload=%u cap=%u target=%zu compress_attempts=%llu compress_rejected=%llu compress_source_bytes=%llu planner_us=%llu copy_us=%llu set_buffer_us=%llu bulk_wait_us=%llu transfer_us=%llu\n",
+			bpp == 2 ? "rgb565" : bpp == 4 ? "xrgb8888" : "unknown",
+			bpp,
 			xdisp_predictive_bounded ? "predictive-bounded-lz4" :
 			xdisp_bounded_discovery ? "bounded-lz4" :
 			xdisp_ratio_cache ? "ratio-cache" :
@@ -713,7 +731,9 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	else if (!ret)
 		dev_info_ratelimited(
 			&gud->intf->dev,
-			"XDISP frame source=%zu payload=%zu rectangles=%u compressed=%u raw=%u raw_backoff_rectangles=%u max_payload=%u cap=%u compress_attempts=%llu compress_rejected=%llu compress_source_bytes=%llu\n",
+			"XDISP frame format=%s bpp=%u source=%zu payload=%zu rectangles=%u compressed=%u raw=%u raw_backoff_rectangles=%u max_payload=%u cap=%u compress_attempts=%llu compress_rejected=%llu compress_source_bytes=%llu\n",
+			bpp == 2 ? "rgb565" : bpp == 4 ? "xrgb8888" : "unknown",
+			bpp,
 			length, total_payload, rectangles, compressed_rects,
 			raw_rects, raw_backoff_rects, max_payload,
 			GUD_XDISP_PAYLOAD_LIMIT,
@@ -942,7 +962,16 @@ static int gud_pipe_check(struct drm_simple_display_pipe *pipe,
 	    plane_state->fb->pixel_format != DRM_FORMAT_RGB565 &&
 	    plane_state->fb->pixel_format != DRM_FORMAT_XRGB8888)
 		return -EINVAL;
-	/* Full-frame Ticket 5 uploads deliberately do not repack padded rows. */
+	/*
+	 * Full-frame Ticket 5 uploads deliberately do not repack padded rows.
+	 *
+	 * Pitch assumption: pitches[0] must equal width * bytes_per_pixel
+	 * for both RGB565 (bpp=2) and XRGB8888 (bpp=4).  This is guaranteed
+	 * for 1280-wide dumb allocations because gud_gem_dumb_create()
+	 * ALIGNs pitch to 4, and 1280*2=2560 and 1280*4=5120 are both
+	 * already 4-aligned.  Do not silently handle padded rows differently
+	 * between formats.
+	 */
 	if (plane_state->fb &&
 	    plane_state->fb->pitches[0] !=
 	    plane_state->fb->width * gud_bytes_per_pixel(plane_state->fb->pixel_format))
