@@ -31,6 +31,9 @@ require "$pipe" 'GUD trace=%llu bulk attempt='
 require "$pipe" 'xdisp_payload_timing frame_seq=%llu'
 require "$pipe" 'bulk_completion_callback_ns=%llu'
 require "$pipe" 'set_buffer_result=%d bulk_result=%d'
+require "$pipe" 'xdisp_probe_payload_length'
+require "$pipe" 'XDISP_PROBE complete'
+require "$pipe" 'URB_ZERO_PACKET'
 require "$pipe" 'raw_backoff_rectangles=%u'
 require "$pipe" 'chunk.payload_length > GUD_XDISP_PAYLOAD_LIMIT'
 require "$pipe" 'request.length = cpu_to_le32(chunk.source_length);'
@@ -48,7 +51,6 @@ require "$variant/Kbuild" 'gud_xdisp_lz4.o'
 
 for forbidden in \
 	'usb_bulk_msg(' \
-	'URB_ZERO_PACKET' \
 	'lz4_compress('; do
 	if grep -qF "$forbidden" "$pipe"; then
 		printf 'FAIL [forbidden pipe path]: %s\n' "$forbidden" >&2

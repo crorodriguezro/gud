@@ -62,6 +62,17 @@ module_param_named(xdisp_predictive_bounded, xdisp_predictive_bounded, bool,
 			   0644);
 MODULE_PARM_DESC(xdisp_predictive_bounded,
 	"Test-only: predict bounded LZ4 rows, then fall back to verified discovery");
+
+static unsigned int xdisp_probe_payload_length;
+module_param_named(xdisp_probe_payload_length, xdisp_probe_payload_length,
+			   uint, 0644);
+MODULE_PARM_DESC(xdisp_probe_payload_length,
+	"Test-only single-payload LZ4 bulk length (1..12800; zero disables)");
+
+static bool xdisp_probe_zero_packet;
+module_param_named(xdisp_probe_zero_packet, xdisp_probe_zero_packet, bool, 0644);
+MODULE_PARM_DESC(xdisp_probe_zero_packet,
+	"Test-only add URB_ZERO_PACKET to an aligned single-payload probe");
 #endif
 
 struct gud_bulk_context {
@@ -77,6 +88,8 @@ struct gud_bulk_timing {
 	u64 wait_start_ns;
 	u64 wait_end_ns;
 	u64 completion_ns;
+	int submit_result;
+	int completion_wait_result;
 };
 
 static void gud_bulk_complete(struct urb *urb)
@@ -149,6 +162,13 @@ static int gud_usb_bulk_write(struct gud_device *gud, struct urb *urb,
 			  buffer, length, gud_bulk_complete, &context);
 	urb->transfer_dma = dma;
 	urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
+#ifdef GUD_XDISP_LZ4_12800
+	if (xdisp_probe_payload_length && xdisp_probe_zero_packet &&
+	    length == xdisp_probe_payload_length &&
+	    !(length % usb_maxpacket(gud->usb,
+		usb_sndbulkpipe(gud->usb, gud->bulk_out_endpoint), 1)))
+		urb->transfer_flags |= URB_ZERO_PACKET;
+#endif
 
 	start_ns = ktime_get_ns();
 	if (timing)
@@ -160,12 +180,16 @@ static int gud_usb_bulk_write(struct gud_device *gud, struct urb *urb,
 			 gud->bulk_out_endpoint, gud_bulk_timeout_ms);
 	ret = usb_submit_urb(urb, GFP_NOIO);
 	if (timing)
+		timing->submit_result = ret;
+	if (timing)
 		timing->submit_end_ns = ktime_get_ns();
 	if (ret) {
 		if (timing)
 			timing->wait_start_ns = timing->submit_end_ns;
 		if (timing)
 			timing->wait_end_ns = timing->submit_end_ns;
+		if (timing)
+			timing->completion_wait_result = ret;
 		elapsed_ns = ktime_get_ns() - start_ns;
 		if (trace)
 			dev_info(&gud->intf->dev,
@@ -190,12 +214,16 @@ static int gud_usb_bulk_write(struct gud_device *gud, struct urb *urb,
 				 "GUD trace=%llu bulk attempt=%d result=%d actual=%d elapsed_us=%llu\n",
 				 (unsigned long long)trace, attempt, -ETIMEDOUT,
 				 *actual, (unsigned long long)(elapsed_ns / 1000));
+		if (timing)
+			timing->completion_wait_result = -ETIMEDOUT;
 		return -ETIMEDOUT;
 	}
 
 	*actual = context.actual;
 	if (timing)
 		timing->completion_ns = context.completion_ns;
+	if (timing)
+		timing->completion_wait_result = context.status;
 	elapsed_ns = ktime_get_ns() - start_ns;
 	if (trace)
 		dev_info(&gud->intf->dev,
@@ -416,6 +444,108 @@ void gud_xdisp_buffers_fini(struct gud_device *gud)
 	gud->xdisp_lz4_workmem_size = 0;
 }
 
+static size_t gud_xdisp_lz4_extension_size(size_t length, size_t base)
+{
+	return length < base ? 0 : 1 + (length - base) / 255;
+}
+
+/*
+ * Generate one valid LZ4 sequence that expands to raw_length. The literal run
+ * absorbs the requested wire length and the final offset-one match completes
+ * the rectangle without adding bytes outside the GUD compressed payload.
+ */
+static int gud_xdisp_build_probe_payload(u8 *payload, size_t payload_length,
+					 size_t raw_length)
+{
+	size_t literals;
+
+	if (!payload || payload_length > GUD_XDISP_PAYLOAD_LIMIT ||
+	    raw_length <= payload_length)
+		return -EINVAL;
+	for (literals = 4; literals <= raw_length - 4; literals++) {
+		size_t match_length = raw_length - literals;
+		size_t encoded = 1 + literals + 2 +
+			gud_xdisp_lz4_extension_size(literals, 15) +
+			gud_xdisp_lz4_extension_size(match_length, 19);
+		size_t value;
+		size_t at = 0;
+
+		if (encoded != payload_length)
+			continue;
+		payload[at++] = (min_t(size_t, literals, 15) << 4) |
+			min_t(size_t, match_length - 4, 15);
+		if (literals >= 15) {
+			for (value = literals - 15; value >= 255; value -= 255)
+				payload[at++] = 255;
+			payload[at++] = value;
+		}
+		memset(payload + at, 0, literals);
+		at += literals;
+		payload[at++] = 1;
+		payload[at++] = 0;
+		if (match_length >= 19) {
+			for (value = match_length - 19; value >= 255; value -= 255)
+				payload[at++] = 255;
+			payload[at++] = value;
+		}
+		return at == payload_length ? 0 : -EINVAL;
+	}
+	return -EINVAL;
+}
+
+static int gud_pipe_transfer_xdisp_probe(struct gud_device *gud,
+					 const struct drm_plane_state *plane_state)
+{
+	struct gud_set_buffer_req request = { 0 };
+	struct gud_bulk_timing timing = { 0 };
+	u32 bpp = gud_format_bytes_per_pixel(plane_state->fb->pixel_format);
+	u32 width = 640;
+	u32 height;
+	size_t raw_length;
+	int actual = 0;
+	int set_buffer_result;
+	int bulk_result = 0;
+	int ret;
+
+	if (!bpp || xdisp_probe_payload_length > GUD_XDISP_PAYLOAD_LIMIT)
+		return -EINVAL;
+	raw_length = 15360;
+	if (raw_length % ((size_t)width * bpp))
+		return -EINVAL;
+	height = raw_length / ((size_t)width * bpp);
+	if (!height || height > plane_state->fb->height || width > plane_state->fb->width)
+		return -EINVAL;
+	ret = gud_xdisp_build_probe_payload(gud->xdisp_bulk_buffer,
+					    xdisp_probe_payload_length, raw_length);
+	if (ret)
+		return ret;
+	request.width = cpu_to_le32(width);
+	request.height = cpu_to_le32(height);
+	request.length = cpu_to_le32(raw_length);
+	request.compression = GUD_COMPRESSION_LZ4;
+	request.compressed_length = cpu_to_le32(xdisp_probe_payload_length);
+
+	dev_info(&gud->intf->dev,
+		 "XDISP_PROBE start payload_bytes=%u raw_bytes=%zu rect=%ux%u format=0x%08x zero_packet=%u\n",
+		 xdisp_probe_payload_length, raw_length, width, height,
+		 plane_state->fb->pixel_format, xdisp_probe_zero_packet);
+	set_buffer_result = gud_usb_set(gud, GUD_REQ_SET_BUFFER, &request,
+					sizeof(request));
+	if (!set_buffer_result) {
+		bulk_result = gud_usb_bulk_write(gud, gud->xdisp_bulk_urb,
+			gud->xdisp_bulk_buffer, gud->xdisp_bulk_dma,
+			xdisp_probe_payload_length, &actual, 1, 0, &timing);
+	}
+	dev_info(&gud->intf->dev,
+		 "XDISP_PROBE complete set_buffer_result=%d bulk_submit_start_ns=%llu bulk_submit_end_ns=%llu usb_submit_urb_result=%d bulk_completion_callback_ns=%llu urb_status=%d urb_actual_length=%d completion_wait_result=%d\n",
+		 set_buffer_result, (unsigned long long)timing.submit_start_ns,
+		 (unsigned long long)timing.submit_end_ns,
+		 timing.submit_result, (unsigned long long)timing.completion_ns,
+		 bulk_result, actual, timing.completion_wait_result);
+	return set_buffer_result ? set_buffer_result :
+		(bulk_result ? bulk_result : actual == xdisp_probe_payload_length ? 0 : -EIO);
+}
+
 static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 				   const struct drm_plane_state *plane_state)
 {
@@ -454,6 +584,9 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	size_t reported_target;
 	bool bounded_policy;
 	int ret;
+
+	if (xdisp_probe_payload_length)
+		return gud_pipe_transfer_xdisp_probe(gud, plane_state);
 
 	bpp = gud_format_bytes_per_pixel(plane_state->fb->pixel_format);
 	if (!gud->max_buffer_size)
