@@ -41,6 +41,11 @@ module_param_named(xdisp_frame_stats, xdisp_frame_stats, bool, 0644);
 MODULE_PARM_DESC(xdisp_frame_stats,
 	"Emit non-rate-limited per-frame XDISP planner counters for benchmarking");
 
+static bool xdisp_payload_timing;
+module_param_named(xdisp_payload_timing, xdisp_payload_timing, bool, 0644);
+MODULE_PARM_DESC(xdisp_payload_timing,
+	"Emit machine-readable timing for every XDISP SET_BUFFER/bulk payload");
+
 static bool xdisp_ratio_cache;
 module_param_named(xdisp_ratio_cache, xdisp_ratio_cache, bool, 0644);
 MODULE_PARM_DESC(xdisp_ratio_cache,
@@ -63,6 +68,15 @@ struct gud_bulk_context {
 	struct completion done;
 	int status;
 	int actual;
+	u64 completion_ns;
+};
+
+struct gud_bulk_timing {
+	u64 submit_start_ns;
+	u64 submit_end_ns;
+	u64 wait_start_ns;
+	u64 wait_end_ns;
+	u64 completion_ns;
 };
 
 static void gud_bulk_complete(struct urb *urb)
@@ -71,6 +85,7 @@ static void gud_bulk_complete(struct urb *urb)
 
 	context->status = urb->status;
 	context->actual = urb->actual_length;
+	context->completion_ns = ktime_get_ns();
 	complete(&context->done);
 }
 
@@ -116,7 +131,8 @@ static void gud_trace_set_buffer(struct gud_device *gud, u64 trace,
  */
 static int gud_usb_bulk_write(struct gud_device *gud, struct urb *urb,
 			      void *buffer, dma_addr_t dma, int length,
-			      int *actual, u64 trace, int attempt)
+			      int *actual, u64 trace, int attempt,
+			      struct gud_bulk_timing *timing)
 {
 	struct gud_bulk_context context;
 	unsigned long timeout;
@@ -127,6 +143,7 @@ static int gud_usb_bulk_write(struct gud_device *gud, struct urb *urb,
 	init_completion(&context.done);
 	context.status = 0;
 	context.actual = 0;
+	context.completion_ns = 0;
 	usb_fill_bulk_urb(urb, gud->usb,
 			  usb_sndbulkpipe(gud->usb, gud->bulk_out_endpoint),
 			  buffer, length, gud_bulk_complete, &context);
@@ -134,13 +151,21 @@ static int gud_usb_bulk_write(struct gud_device *gud, struct urb *urb,
 	urb->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
 
 	start_ns = ktime_get_ns();
+	if (timing)
+		timing->submit_start_ns = start_ns;
 	if (trace)
 		dev_info(&gud->intf->dev,
 			 "GUD trace=%llu bulk attempt=%d submit length=%d endpoint=0x%02x timeout_ms=%u\n",
 			 (unsigned long long)trace, attempt, length,
 			 gud->bulk_out_endpoint, gud_bulk_timeout_ms);
 	ret = usb_submit_urb(urb, GFP_NOIO);
+	if (timing)
+		timing->submit_end_ns = ktime_get_ns();
 	if (ret) {
+		if (timing)
+			timing->wait_start_ns = timing->submit_end_ns;
+		if (timing)
+			timing->wait_end_ns = timing->submit_end_ns;
 		elapsed_ns = ktime_get_ns() - start_ns;
 		if (trace)
 			dev_info(&gud->intf->dev,
@@ -150,8 +175,12 @@ static int gud_usb_bulk_write(struct gud_device *gud, struct urb *urb,
 		return ret;
 	}
 
+	if (timing)
+		timing->wait_start_ns = ktime_get_ns();
 	timeout = wait_for_completion_timeout(&context.done,
 					     msecs_to_jiffies(gud_bulk_timeout_ms));
+	if (timing)
+		timing->wait_end_ns = ktime_get_ns();
 	if (!timeout) {
 		usb_kill_urb(urb);
 		*actual = context.actual;
@@ -165,6 +194,8 @@ static int gud_usb_bulk_write(struct gud_device *gud, struct urb *urb,
 	}
 
 	*actual = context.actual;
+	if (timing)
+		timing->completion_ns = context.completion_ns;
 	elapsed_ns = ktime_get_ns() - start_ns;
 	if (trace)
 		dev_info(&gud->intf->dev,
@@ -418,6 +449,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	u64 set_buffer_ns = 0;
 	u64 bulk_wait_ns = 0;
 	u64 frame_start_ns;
+	u64 frame_seq;
 	size_t plan_payload_limit;
 	size_t reported_target;
 	bool bounded_policy;
@@ -460,6 +492,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	frame_start_ns = ktime_get_ns();
 
 	mutex_lock(&gud->lock);
+	frame_seq = ++gud->xdisp_frame_sequence;
 	row_hint = max_rows;
 	if (xdisp_ratio_cache && gud->xdisp_ratio_valid &&
 	    gud->xdisp_ratio_width == plane_state->fb->width &&
@@ -490,11 +523,21 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 		struct gud_xdisp_chunk chunk;
 		const void *payload;
 		u32 remaining_rows = (length - offset) / bytes_per_line;
-		int actual;
+		int actual = 0;
 		int retries;
+		int set_buffer_ret;
 		int transfer_length;
 		u64 phase_start_ns;
 		u64 trace;
+		u64 payload_seq;
+		u64 payload_start_ns = ktime_get_ns();
+		u64 planner_start_ns = 0;
+		u64 planner_end_ns = 0;
+		u64 copy_start_ns;
+		u64 copy_end_ns;
+		u64 set_buffer_start_ns;
+		u64 set_buffer_end_ns;
+		struct gud_bulk_timing bulk_timing = { 0 };
 
 		if (gud->disconnected) {
 			ret = -ENODEV;
@@ -503,6 +546,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 
 		if (gud->compression & GUD_COMPRESSION_LZ4) {
 			phase_start_ns = ktime_get_ns();
+			planner_start_ns = phase_start_ns;
 			if (xdisp_predictive_bounded)
 				ret = gud_xdisp_plan_chunk_predictive_frame(
 					(u8 *)vaddr + offset, remaining_rows,
@@ -529,10 +573,12 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 					gud->xdisp_lz4_workmem,
 					gud->xdisp_lz4_scratch,
 					gud->xdisp_lz4_scratch_size, &chunk);
-			planner_ns += ktime_get_ns() - phase_start_ns;
+			planner_end_ns = ktime_get_ns();
+			planner_ns += planner_end_ns - phase_start_ns;
 			if (ret)
 				break;
 		} else {
+			planner_start_ns = ktime_get_ns();
 			chunk.rows = gud_xdisp_raw_rows(remaining_rows,
 							 bytes_per_line, max_rows);
 			chunk.source_length =
@@ -544,6 +590,7 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 			chunk.compression_source_bytes = 0;
 			chunk.predictive_hit = false;
 			chunk.predictive_fallback = false;
+			planner_end_ns = ktime_get_ns();
 		}
 
 		/*
@@ -561,10 +608,11 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 
 		payload = chunk.compressed ? gud->xdisp_lz4_scratch :
 			  (u8 *)vaddr + offset;
-		phase_start_ns = ktime_get_ns();
+		copy_start_ns = ktime_get_ns();
 		memcpy(gud->xdisp_bulk_buffer, payload,
 		       chunk.payload_length);
-		copy_ns += ktime_get_ns() - phase_start_ns;
+		copy_end_ns = ktime_get_ns();
+		copy_ns += copy_end_ns - copy_start_ns;
 
 		memset(&request, 0, sizeof(request));
 		request.y = cpu_to_le32(offset / bytes_per_line);
@@ -578,32 +626,64 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 		}
 
 		trace = gud_bulk_trace_begin(gud);
+		payload_seq = ++gud->xdisp_payload_sequence;
 		gud_trace_set_buffer(gud, trace, &request, transfer_length);
 		phase_start_ns = ktime_get_ns();
+		set_buffer_start_ns = phase_start_ns;
 		ret = gud_usb_set(gud, GUD_REQ_SET_BUFFER, &request,
 				  sizeof(request));
-		set_buffer_ns += ktime_get_ns() - phase_start_ns;
+		set_buffer_ret = ret;
+		set_buffer_end_ns = ktime_get_ns();
+		set_buffer_ns += set_buffer_end_ns - phase_start_ns;
 		if (trace)
 			dev_info(&gud->intf->dev,
 				 "GUD trace=%llu SET_BUFFER result=%d elapsed_us=%llu\n",
 				 (unsigned long long)trace, ret,
-				 (unsigned long long)((ktime_get_ns() - phase_start_ns) / 1000));
-		if (ret)
-			break;
-
-		phase_start_ns = ktime_get_ns();
-		for (retries = 0; ; retries++) {
-			ret = gud_usb_bulk_write(
-				gud, gud->xdisp_bulk_urb,
-				gud->xdisp_bulk_buffer,
-				gud->xdisp_bulk_dma,
-				transfer_length, &actual, trace, retries);
-			if (ret != -EAGAIN ||
-			    retries == GUD_BULK_EAGAIN_RETRIES)
-				break;
-			msleep(10);
+				 (unsigned long long)((set_buffer_end_ns - set_buffer_start_ns) / 1000));
+		if (!ret) {
+			phase_start_ns = ktime_get_ns();
+			for (retries = 0; ; retries++) {
+				ret = gud_usb_bulk_write(
+					gud, gud->xdisp_bulk_urb,
+					gud->xdisp_bulk_buffer,
+					gud->xdisp_bulk_dma,
+					transfer_length, &actual, trace, retries, &bulk_timing);
+				if (ret != -EAGAIN ||
+				    retries == GUD_BULK_EAGAIN_RETRIES)
+					break;
+				msleep(10);
+			}
+			bulk_wait_ns += ktime_get_ns() - phase_start_ns;
+		} else {
+			retries = 0;
+			actual = 0;
 		}
-		bulk_wait_ns += ktime_get_ns() - phase_start_ns;
+		if (xdisp_payload_timing)
+			dev_info(&gud->intf->dev,
+				 "xdisp_payload_timing frame_seq=%llu rectangle_seq=%u payload_seq=%llu payload_bytes=%d planner_start_ns=%llu planner_end_ns=%llu compression_start_ns=%llu compression_end_ns=%llu copy_start_ns=%llu copy_end_ns=%llu set_buffer_ioctl_start_ns=%llu set_buffer_ioctl_end_ns=%llu bulk_submit_start_ns=%llu bulk_submit_end_ns=%llu bulk_completion_wait_start_ns=%llu bulk_completion_wait_end_ns=%llu bulk_completion_callback_ns=%llu atomic_commit_start_ns=0 atomic_commit_end_ns=0 planner_us=%llu compression_us=%llu copy_us=%llu set_buffer_us=%llu bulk_submit_us=%llu bulk_wait_us=%llu commit_us=0 total_us=%llu set_buffer_result=%d bulk_result=%d actual_bytes=%d\n",
+				 (unsigned long long)frame_seq, rectangles + 1,
+				 (unsigned long long)payload_seq, transfer_length,
+				 (unsigned long long)planner_start_ns,
+				 (unsigned long long)planner_end_ns,
+				 (unsigned long long)planner_start_ns,
+				 (unsigned long long)planner_end_ns,
+				 (unsigned long long)copy_start_ns,
+				 (unsigned long long)copy_end_ns,
+				 (unsigned long long)set_buffer_start_ns,
+				 (unsigned long long)set_buffer_end_ns,
+				 (unsigned long long)bulk_timing.submit_start_ns,
+				 (unsigned long long)bulk_timing.submit_end_ns,
+				 (unsigned long long)bulk_timing.wait_start_ns,
+				 (unsigned long long)bulk_timing.wait_end_ns,
+				 (unsigned long long)bulk_timing.completion_ns,
+				 (unsigned long long)((planner_end_ns - planner_start_ns) / 1000),
+				 (unsigned long long)((planner_end_ns - planner_start_ns) / 1000),
+				 (unsigned long long)((copy_end_ns - copy_start_ns) / 1000),
+				 (unsigned long long)((set_buffer_end_ns - set_buffer_start_ns) / 1000),
+				 (unsigned long long)((bulk_timing.submit_end_ns - bulk_timing.submit_start_ns) / 1000),
+				 (unsigned long long)((bulk_timing.wait_end_ns - bulk_timing.wait_start_ns) / 1000),
+				 (unsigned long long)((ktime_get_ns() - payload_start_ns) / 1000),
+				 set_buffer_ret, ret, actual);
 		if (ret) {
 			dev_err(&gud->intf->dev,
 				"GUD bulk transfer failed after %d retries: %d\n",
@@ -818,7 +898,7 @@ static int gud_pipe_transfer(struct gud_device *gud,
 			break;
 		for (retries = 0; ; retries++) {
 			ret = gud_usb_bulk_write(gud, bulk_urb, bulk_buffer, bulk_dma,
-						 chunk, &actual, trace, retries);
+						 chunk, &actual, trace, retries, NULL);
 			if (ret != -EAGAIN || retries == GUD_BULK_EAGAIN_RETRIES)
 				break;
 			msleep(10);
