@@ -21,6 +21,12 @@ done
 
 require backport-4.9/gud_pipe.c 'drm_mode_config_reset(gud->drm);'
 
+if grep -qF 'current_format' "$repo_root/backport-4.9/gud_pipe.c" ||
+   grep -qF 'current_format' "$repo_root/backport-4.9/gud_internal.h"; then
+    printf 'FAIL [stale state format cache remains in host driver]\n' >&2
+    failures=$((failures + 1))
+fi
+
 pipe_file="$repo_root/backport-4.9/gud_pipe.c"
 pipe_init_line=$(grep -nF 'ret = drm_simple_display_pipe_init' "$pipe_file" | cut -d: -f1)
 reset_line=$(grep -nF 'drm_mode_config_reset(gud->drm);' "$pipe_file" | cut -d: -f1)
@@ -71,6 +77,7 @@ done
 
 for text in \
 	'DRM_FORMAT_RGB565' \
+	'DRM_FORMAT_XRGB8888' \
 	'drm_simple_display_pipe_init' \
 	'if (plane_state->fb &&' \
 	'plane_state->fb->pixel_format != DRM_FORMAT_RGB565' \

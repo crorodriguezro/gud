@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "../variants/xdisp-lz4-12800/gud_xdisp_lz4.h"
+#include "../gud_frame_layout.h"
 
 int LZ4_decompress_safe(const char *source, char *destination,
 			int compressed_size, int destination_capacity);
@@ -647,153 +648,100 @@ out:
 	free(allocation);
 }
 
-/*
- * Verify that raw (incompressible) chunks never exceed the payload cap
- * in rows, and that every chunk contains only complete rows.  Tests both
- * RGB565 (bpp=2, 2560 bytes/row) and XRGB8888 (bpp=4, 5120 bytes/row).
- */
 static void run_raw_row_limit_case(const char *name, u32 width, u32 height,
-				   u32 bpp, size_t payload_limit)
+				   u32 pixel_format, u32 expected_chunks)
 {
-	size_t bytes_per_line = (size_t)width * bpp;
-	size_t frame_length = bytes_per_line * height;
-	size_t scratch_capacity =
-		gud_xdisp_lz4_compress_bound(frame_length);
-	u32 max_raw_rows = payload_limit / bytes_per_line;
-	uint8_t *source;
-	uint8_t *scratch_allocation;
-	uint8_t *workmem;
-	size_t offset = 0;
+	size_t bytes_per_line;
+	size_t frame_length;
+	size_t source_length = 0;
 	u32 rows_done = 0;
 	u32 chunks = 0;
-	u32 row_hint = height;
 	int ret;
 
-	if (!max_raw_rows) {
-		fail(name, "row does not fit payload limit");
+	ret = gud_format_frame_layout(width, height, pixel_format,
+				      &bytes_per_line, &frame_length);
+	if (ret) {
+		fail(name, "layout rejected a valid frame");
 		return;
 	}
-	source = malloc(frame_length);
-	scratch_allocation = malloc(scratch_capacity + 2U * GUARD_SIZE);
-	workmem = malloc(gud_xdisp_lz4_upstream_workmem_size());
-	if (!source || !scratch_allocation || !workmem) {
-		fail(name, "allocation failed");
-		goto out;
-	}
-	fill_pattern(source, frame_length, bytes_per_line, PATTERN_RANDOM);
-	memset(scratch_allocation, 0xcc,
-	       scratch_capacity + 2U * GUARD_SIZE);
-	memset(scratch_allocation, 0xa5, GUARD_SIZE);
-	memset(scratch_allocation + GUARD_SIZE + scratch_capacity, 0x5a,
-	       GUARD_SIZE);
 
 	while (rows_done < height) {
 		struct gud_xdisp_chunk chunk;
 		u32 remaining = height - rows_done;
 
-		ret = gud_xdisp_plan_chunk(source + offset, remaining,
-					   bytes_per_line, row_hint,
-					   payload_limit, workmem,
-					   scratch_allocation + GUARD_SIZE,
-					   scratch_capacity, &chunk);
-		if (ret) {
-			fail(name, "planner rejected a valid frame");
-			goto out;
-		}
+		chunk.rows = gud_xdisp_raw_rows(remaining, bytes_per_line, height);
+		chunk.source_length = (size_t)chunk.rows * bytes_per_line;
+		chunk.payload_length = chunk.source_length;
+		chunk.compressed = false;
 		if (!chunk.rows || chunk.rows > remaining) {
 			fail(name, "planner did not make bounded row progress");
-			goto out;
+			return;
 		}
-		if (chunk.rows > max_raw_rows) {
-			fail(name, "chunk exceeded raw row limit");
-			goto out;
-		}
-		if (chunk.rows !=
-		    (remaining < max_raw_rows ? remaining : max_raw_rows)) {
+		if (chunk.rows != gud_xdisp_raw_rows(remaining, bytes_per_line,
+						   height)) {
 			fail(name, "raw chunk did not use the cap-safe row count");
-			goto out;
+			return;
 		}
 		if (chunk.source_length !=
 		    (size_t)chunk.rows * bytes_per_line) {
 			fail(name, "source length does not match rectangle");
-			goto out;
+			return;
 		}
-		if (chunk.payload_length > payload_limit) {
+		if (chunk.compressed || chunk.payload_length != chunk.source_length ||
+		    chunk.payload_length > GUD_XDISP_PAYLOAD_LIMIT) {
 			fail(name, "payload escaped the requested cap");
-			goto out;
-		}
-		if (!guards_intact(scratch_allocation, scratch_capacity)) {
-			fail(name, "compressor wrote outside scratch");
-			goto out;
+			return;
 		}
 
-		offset += chunk.source_length;
+		source_length += chunk.source_length;
 		rows_done += chunk.rows;
 		chunks++;
-		row_hint = gud_xdisp_next_row_hint(chunk.rows, height);
 		if (chunks > height) {
 			fail(name, "planner failed to terminate");
-			goto out;
+			return;
 		}
 	}
 
-	if (rows_done != height || offset != frame_length)
+	if (rows_done != height || source_length != frame_length)
 		fail(name, "rows were dropped or duplicated");
-
-out:
-	free(workmem);
-	free(scratch_allocation);
-	free(source);
+	if (chunks != expected_chunks)
+		fail(name, "unexpected raw chunk count");
 }
 
-/*
- * Mirror the overflow-safe framebuffer length arithmetic from
- * gud_pipe_transfer_xdisp() so the host driver and the test agree on
- * the same invariant for both 16-bpp and 32-bpp framebuffers.
- */
 static void run_framebuffer_length_case(const char *name, u32 width,
-					u32 height, u32 bpp,
-					size_t object_size,
+					u32 height, u32 pixel_format,
+					size_t mapped_size,
 					size_t framebuffer_offset,
 					int expect_ok)
 {
 	size_t bytes_per_line;
 	size_t length;
-	size_t map_size = object_size;
-	int ok = 1;
+	int ret;
 
-	if (!bpp) {
-		ok = 0;
-		goto done;
-	}
-	if ((size_t)width > (size_t)-1 / bpp) {
-		ok = 0;
-		goto done;
-	}
-	bytes_per_line = (size_t)width * bpp;
-	if (!bytes_per_line || bytes_per_line > GUD_XDISP_PAYLOAD_LIMIT) {
-		ok = 0;
-		goto done;
-	}
-	if ((size_t)height > (size_t)-1 / bytes_per_line) {
-		ok = 0;
-		goto done;
-	}
-	length = bytes_per_line * (size_t)height;
-	if (!length || length > UINT32_MAX || length > object_size) {
-		ok = 0;
-		goto done;
-	}
-	if (framebuffer_offset > map_size ||
-	    length > map_size - framebuffer_offset) {
-		ok = 0;
-		goto done;
-	}
+	ret = gud_format_frame_layout(width, height, pixel_format,
+				      &bytes_per_line, &length);
+	if (!ret)
+		ret = gud_validate_framebuffer_range(framebuffer_offset, length,
+						     mapped_size);
+	if ((!ret) != expect_ok)
+		fail(name, ret ? "valid input was incorrectly rejected" :
+			  "invalid input was incorrectly accepted");
+}
 
-done:
-	if (ok != expect_ok)
-		fail(name, ok ? "invalid input was incorrectly accepted" :
-			  "valid input was incorrectly rejected");
+static void run_framebuffer_layout_case(const char *name, u32 width,
+					u32 height, u32 pixel_format,
+					size_t expected_bytes_per_line,
+					size_t expected_length)
+{
+	size_t bytes_per_line;
+	size_t length;
+	int ret;
+
+	ret = gud_format_frame_layout(width, height, pixel_format,
+				      &bytes_per_line, &length);
+	if (ret || bytes_per_line != expected_bytes_per_line ||
+	    length != expected_length)
+		fail(name, "layout does not match the framebuffer format");
 }
 
 static void run_invalid_cases(void)
@@ -882,30 +830,51 @@ int main(void)
 			   PATTERN_RANDOM, 12800, gud_xdisp_plan_chunk_bounded,
 			   0, 4);
 	run_bounded_frame_backoff_case();
-	run_raw_row_limit_case("rgb565-raw-rows", 1280, 720, 2, 12800);
+	run_raw_row_limit_case("rgb565-raw-rows", 1280, 720,
+			       DRM_FORMAT_RGB565, 144);
 	run_bounded_frame_backoff_case_bpp(4U);
-	run_raw_row_limit_case("rgb565-one-raw-row", 1280, 1, 2, 12800);
-	run_raw_row_limit_case("rgb565-five-raw-rows", 1280, 5, 2, 12800);
-	run_raw_row_limit_case("rgb565-six-raw-rows", 1280, 6, 2, 12800);
-	run_raw_row_limit_case("xrgb8888-one-raw-row", 1280, 1, 4, 12800);
-	run_raw_row_limit_case("xrgb8888-two-raw-rows", 1280, 2, 4, 12800);
-	run_raw_row_limit_case("xrgb8888-three-raw-rows", 1280, 3, 4, 12800);
-	run_framebuffer_length_case("rgb565-fb-ok", 1280, 720, 2,
-				    1280 * 2 * 720, 0, 1);
-	run_framebuffer_length_case("xrgb8888-fb-ok", 1280, 720, 4,
-				    1280 * 4 * 720, 0, 1);
-	run_framebuffer_length_case("rgb565-fb-too-small", 1280, 720, 2,
-				    1280 * 2 * 719, 0, 0);
-	run_framebuffer_length_case("xrgb8888-fb-too-small", 1280, 720, 4,
-				    1280 * 4 * 719, 0, 0);
-	run_framebuffer_length_case("rgb565-fb-offset-overflow", 1280, 720, 2,
-				    1280 * 2 * 720, 1, 0);
-	run_framebuffer_length_case("xrgb8888-fb-offset-overflow", 1280, 720, 4,
-				    1280 * 4 * 720, 1, 0);
-	run_framebuffer_length_case("rgb565-fb-zero-bpp", 1280, 720, 0,
+	run_raw_row_limit_case("rgb565-one-raw-row", 1280, 1,
+			       DRM_FORMAT_RGB565, 1);
+	run_raw_row_limit_case("rgb565-five-raw-rows", 1280, 5,
+			       DRM_FORMAT_RGB565, 1);
+	run_raw_row_limit_case("rgb565-six-raw-rows", 1280, 6,
+			       DRM_FORMAT_RGB565, 2);
+	run_raw_row_limit_case("xrgb8888-raw-rows", 1280, 720,
+			       DRM_FORMAT_XRGB8888, 360);
+	run_raw_row_limit_case("xrgb8888-one-raw-row", 1280, 1,
+			       DRM_FORMAT_XRGB8888, 1);
+	run_raw_row_limit_case("xrgb8888-two-raw-rows", 1280, 2,
+			       DRM_FORMAT_XRGB8888, 1);
+	run_raw_row_limit_case("xrgb8888-three-raw-rows", 1280, 3,
+			       DRM_FORMAT_XRGB8888, 2);
+	run_framebuffer_layout_case("rgb565-layout", 1280, 720,
+				    DRM_FORMAT_RGB565, 2560, 1843200);
+	run_framebuffer_layout_case("xrgb8888-layout", 1280, 720,
+				    DRM_FORMAT_XRGB8888, 5120, 3686400);
+	run_framebuffer_length_case("rgb565-fb-ok", 1280, 720,
+				    DRM_FORMAT_RGB565, 1280 * 2 * 720, 0, 1);
+	run_framebuffer_length_case("xrgb8888-fb-ok", 1280, 720,
+				    DRM_FORMAT_XRGB8888, 1280 * 4 * 720, 0, 1);
+	run_framebuffer_length_case("rgb565-fb-nonzero-offset", 1280, 720,
+				    DRM_FORMAT_RGB565, 1 + 1280 * 2 * 720, 1, 1);
+	run_framebuffer_length_case("xrgb8888-fb-at-map-end", 1280, 720,
+				    DRM_FORMAT_XRGB8888, 1280 * 4 * 720, 1280 * 4 * 720, 0);
+	run_framebuffer_length_case("rgb565-fb-exact-map-end", 1280, 720,
+				    DRM_FORMAT_RGB565, 7 + 1280 * 2 * 720, 7, 1);
+	run_framebuffer_length_case("xrgb8888-fb-too-small", 1280, 720,
+				    DRM_FORMAT_XRGB8888, 1280 * 4 * 720, 1, 0);
+	run_framebuffer_length_case("rgb565-fb-offset-past-map", 1280, 720,
+				    DRM_FORMAT_RGB565, 1280 * 2 * 720, 1280 * 2 * 720 + 1, 0);
+	run_framebuffer_length_case("unsupported-format", 1280, 720, 0,
 				    0, 0, 0);
-	run_framebuffer_length_case("xrgb8888-fb-zero-bpp", 1280, 720, 0,
+	run_framebuffer_length_case("zero-width", 0, 720, DRM_FORMAT_RGB565,
 				    0, 0, 0);
+	run_framebuffer_length_case("zero-height", 1280, 0, DRM_FORMAT_RGB565,
+				    0, 0, 0);
+	run_framebuffer_length_case("width-overflow", UINT32_MAX, UINT32_MAX,
+				    DRM_FORMAT_RGB565, 0, 0, 0);
+	run_framebuffer_length_case("height-overflow", 65536, 65536,
+				    DRM_FORMAT_XRGB8888, 0, 0, 0);
 	run_invalid_cases();
 
 	printf("xdisp-lz4 tests: %d failures\n", failures);
