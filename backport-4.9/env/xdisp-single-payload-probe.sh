@@ -26,8 +26,8 @@ if [[ ! -f "$module_path" || ! -x "$stage_binary" ]]; then
 fi
 mkdir -p "$evidence_dir"
 
-scp -o BatchMode=yes "$module_path" "$stage_binary" "$phone_host:/home/phablet/"
-ssh -o BatchMode=yes "$phone_host" "printf '%s\\n' '$phone_password' | sudo -S sh -c '
+scp "$module_path" "$stage_binary" "$phone_host:/home/phablet/"
+ssh "$phone_host" "printf '%s\\n' '$phone_password' | sudo -S sh -c '
 echo XDISP_SINGLE_PAYLOAD_${payload_length}_START > /dev/kmsg
 printf host > /sys/bus/platform/devices/a600000.ssusb/mode
 for i in \\$(seq 1 15); do
@@ -47,5 +47,5 @@ result=\\$?
 echo XDISP_SINGLE_PAYLOAD_${payload_length}_END > /dev/kmsg
 exit \\$result
 '" >"$evidence_dir/phone-stdout.log" 2>"$evidence_dir/phone-stderr.log" || true
-ssh -o BatchMode=yes "$phone_host" "printf '%s\\n' '$phone_password' | sudo -S dmesg" >"$evidence_dir/phone-kernel-full.log"
+ssh "$phone_host" "printf '%s\\n' '$phone_password' | sudo -S dmesg" >"$evidence_dir/phone-kernel-full.log"
 printf '%s\n' "$evidence_dir"
