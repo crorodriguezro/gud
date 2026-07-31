@@ -26,8 +26,8 @@ if [[ ! -f "$module_path" || ! -x "$stage_binary" ]]; then
 fi
 mkdir -p "$evidence_dir"
 
-scp "$module_path" "$stage_binary" "$phone_host:/home/phablet/"
-ssh "$phone_host" "printf '%s\\n' '$phone_password' | sudo -S sh -c '
+scp -o BatchMode=yes "$module_path" "$stage_binary" "$phone_host:/tmp/"
+ssh -o BatchMode=yes "$phone_host" "printf '%s\\n' '$phone_password' | sudo -S sh -c '
 echo XDISP_SINGLE_PAYLOAD_${payload_length}_START > /dev/kmsg
 printf host > /sys/bus/platform/devices/a600000.ssusb/mode
 for i in \\$(seq 1 15); do
@@ -41,11 +41,11 @@ for i in \\$(seq 1 15); do
 done
 test \\"\\${found:-}\\" = 1 || exit 2
 rmmod gud 2>/dev/null || true
-insmod /home/phablet/gud.ko bulk_timeout_ms=3000 bulk_trace_limit=1 xdisp_payload_timing=1 xdisp_probe_payload_length=$payload_length xdisp_probe_zero_packet=$zero_packet
-timeout 10s /home/phablet/gud-kms-stage atomic-commit /dev/dri/card1
+insmod /tmp/gud.ko bulk_timeout_ms=3000 bulk_trace_limit=1 xdisp_payload_timing=1 xdisp_probe_payload_length=$payload_length xdisp_probe_zero_packet=$zero_packet
+timeout 10s /tmp/gud-kms-stage atomic-commit /dev/dri/card1
 result=\\$?
 echo XDISP_SINGLE_PAYLOAD_${payload_length}_END > /dev/kmsg
 exit \\$result
 '" >"$evidence_dir/phone-stdout.log" 2>"$evidence_dir/phone-stderr.log" || true
-ssh "$phone_host" "printf '%s\\n' '$phone_password' | sudo -S dmesg" >"$evidence_dir/phone-kernel-full.log"
+ssh -o BatchMode=yes "$phone_host" "printf '%s\\n' '$phone_password' | sudo -S dmesg" >"$evidence_dir/phone-kernel-full.log"
 printf '%s\n' "$evidence_dir"
