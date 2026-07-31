@@ -407,3 +407,16 @@ u32 gud_xdisp_next_row_hint_target(const struct gud_xdisp_chunk *chunk,
 		return absolute_max_rows;
 	return (u32)rows;
 }
+u32 gud_xdisp_raw_rows(u32 remaining_rows, size_t bytes_per_line,
+			       u32 max_rows)
+{
+	u32 rows = remaining_rows;
+
+	if (!bytes_per_line)
+		return 0;
+	if (rows > GUD_XDISP_PAYLOAD_LIMIT / bytes_per_line)
+		rows = GUD_XDISP_PAYLOAD_LIMIT / bytes_per_line;
+	if (rows > max_rows)
+		rows = max_rows;
+	return rows;
+}

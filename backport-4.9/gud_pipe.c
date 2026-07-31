@@ -10,6 +10,7 @@
 #endif
 
 #include "gud_internal.h"
+#include "gud_frame_layout.h"
 #include "gud_protocol.h"
 
 #define GUD_USB_TIMEOUT_MS 3000
@@ -194,14 +195,7 @@ static int gud_status_to_errno(u8 status)
 
 static unsigned int gud_bytes_per_pixel(u32 pixel_format)
 {
-	switch (pixel_format) {
-	case DRM_FORMAT_RGB565:
-		return 2;
-	case DRM_FORMAT_XRGB8888:
-		return 4;
-	default:
-		return 0;
-	}
+	return gud_format_bytes_per_pixel(pixel_format);
 }
 
 static u8 gud_to_protocol_format(u32 pixel_format)
@@ -295,7 +289,6 @@ static int gud_pipe_state_check(struct gud_device *gud,
 	request.connector = 0;
 
 	mutex_lock(&gud->lock);
-	gud->current_format = pixel_format;
 	ret = gud_usb_set(gud, GUD_REQ_SET_STATE_CHECK, &request, sizeof(request));
 	mutex_unlock(&gud->lock);
 	if (ret)
@@ -430,35 +423,25 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 	bool bounded_policy;
 	int ret;
 
-	bpp = gud_bytes_per_pixel(plane_state->fb->pixel_format);
-	if (!bpp)
-		return -EINVAL;
+	bpp = gud_format_bytes_per_pixel(plane_state->fb->pixel_format);
 	if (!gud->max_buffer_size)
 		return -EINVAL;
-
-	/*
-	 * Format-aware framebuffer sizing.  The framebuffer length is
-	 * derived from the actual pixel format (bpp), not a fixed *4
-	 * assumption that would reject valid 16-bpp RGB565 framebuffers.
-	 */
-	if ((size_t)plane_state->fb->width > (size_t)-1 / bpp)
-		return -EINVAL;
-	bytes_per_line = (size_t)plane_state->fb->width * bpp;
-	if (!bytes_per_line || bytes_per_line > GUD_XDISP_PAYLOAD_LIMIT)
+	ret = gud_format_frame_layout(plane_state->fb->width,
+				  plane_state->fb->height,
+				  plane_state->fb->pixel_format,
+				  &bytes_per_line, &length);
+	if (ret)
+		return ret;
+	if (bytes_per_line > GUD_XDISP_PAYLOAD_LIMIT)
 		return -E2BIG;
-	if ((size_t)plane_state->fb->height > (size_t)-1 / bytes_per_line)
-		return -EOVERFLOW;
-	length = bytes_per_line * (size_t)plane_state->fb->height;
-	if (!length || length > U32_MAX || length > obj->base.size)
-		return -EINVAL;
 
 	ret = gud_gem_vmap(obj, &vaddr, &map_size);
 	if (ret)
 		return ret;
 	framebuffer_offset = plane_state->fb->offsets[0];
-	if (framebuffer_offset > map_size ||
-	    length > map_size - framebuffer_offset)
-		return -EINVAL;
+	ret = gud_validate_framebuffer_range(framebuffer_offset, length, map_size);
+	if (ret)
+		return ret;
 	vaddr = (u8 *)vaddr + framebuffer_offset;
 
 	max_rows = min_t(size_t, gud->xdisp_max_source_length, length) /
@@ -550,10 +533,8 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 			if (ret)
 				break;
 		} else {
-			chunk.rows = min_t(u32, remaining_rows,
-					   GUD_XDISP_PAYLOAD_LIMIT /
-					   bytes_per_line);
-			chunk.rows = min_t(u32, chunk.rows, max_rows);
+			chunk.rows = gud_xdisp_raw_rows(remaining_rows,
+							 bytes_per_line, max_rows);
 			chunk.source_length =
 				(size_t)chunk.rows * bytes_per_line;
 			chunk.payload_length = chunk.source_length;
@@ -759,36 +740,38 @@ static int gud_pipe_transfer(struct gud_device *gud,
 	dma_addr_t bulk_dma;
 	struct urb *bulk_urb;
 	size_t map_size;
+	size_t framebuffer_offset;
 	size_t bytes_per_line;
 	size_t chunk_size;
 	size_t max_chunk_size;
 	size_t length;
 	size_t offset;
-	u32 bpp;
 	u32 rows_per_chunk;
 	int actual;
 	int ret;
 
-	bpp = gud_bytes_per_pixel(plane_state->fb->pixel_format);
-	if (!bpp)
-		return -EINVAL;
-	length = (size_t)plane_state->fb->width * bpp * plane_state->fb->height;
-	if (!length || length > U32_MAX || length > obj->base.size)
-		return -EINVAL;
+	ret = gud_format_frame_layout(plane_state->fb->width,
+				  plane_state->fb->height,
+				  plane_state->fb->pixel_format,
+				  &bytes_per_line, &length);
+	if (ret)
+		return ret;
 	if (!gud->max_buffer_size)
 		return -EINVAL;
 
 	ret = gud_gem_vmap(obj, &vaddr, &map_size);
 	if (ret)
 		return ret;
-	if (length > map_size)
-		return -EINVAL;
+	framebuffer_offset = plane_state->fb->offsets[0];
+	ret = gud_validate_framebuffer_range(framebuffer_offset, length, map_size);
+	if (ret)
+		return ret;
+	vaddr = (u8 *)vaddr + framebuffer_offset;
 	/*
 	 * vmap() memory is not necessarily DMA-addressable on this 4.9 USB host.
 	 * The host sends one bulk URB per SET_BUFFER, so each DMA-coherent
 	 * bounce buffer contains complete rows for exactly one buffer rectangle.
 	 */
-	bytes_per_line = (size_t)plane_state->fb->width * bpp;
 	max_chunk_size = min_t(size_t, gud->max_buffer_size,
 				   GUD_BULK_CHUNK_SIZE);
 	rows_per_chunk = max_chunk_size / bytes_per_line;

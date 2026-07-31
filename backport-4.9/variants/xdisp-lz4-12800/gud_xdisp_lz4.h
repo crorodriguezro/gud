@@ -49,6 +49,9 @@ struct gud_xdisp_bounded_frame {
 
 size_t gud_xdisp_lz4_compress_bound(size_t source_length);
 
+u32 gud_xdisp_raw_rows(u32 remaining_rows, size_t bytes_per_line,
+			       u32 max_rows);
+
 /*
  * Modern upstream LZ4 bounded-output compressor, embedded privately in
  * gud.ko.  It consumes no more than *source_length bytes and returns the
