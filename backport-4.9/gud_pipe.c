@@ -463,12 +463,17 @@ static int gud_xdisp_build_probe_payload(u8 *payload, size_t payload_length,
 	    raw_length <= payload_length)
 		return -EINVAL;
 	for (literals = 4; literals <= raw_length - 4; literals++) {
-		size_t match_length = raw_length - literals;
+		size_t match_length;
 		size_t encoded = 1 + literals + 2 +
-			gud_xdisp_lz4_extension_size(literals, 15) +
-			gud_xdisp_lz4_extension_size(match_length, 19);
+			gud_xdisp_lz4_extension_size(literals, 15);
 		size_t value;
 		size_t at = 0;
+
+		/* LZ4 requires a final literal-only sequence of at least five bytes. */
+		if (raw_length < literals + 4 + 5)
+			continue;
+		match_length = raw_length - literals - 5;
+		encoded += gud_xdisp_lz4_extension_size(match_length, 19) + 1 + 5;
 
 		if (encoded != payload_length)
 			continue;
@@ -488,6 +493,9 @@ static int gud_xdisp_build_probe_payload(u8 *payload, size_t payload_length,
 				payload[at++] = 255;
 			payload[at++] = value;
 		}
+		payload[at++] = 5 << 4;
+		memset(payload + at, 0, 5);
+		at += 5;
 		return at == payload_length ? 0 : -EINVAL;
 	}
 	return -EINVAL;
