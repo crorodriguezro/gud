@@ -25,6 +25,30 @@ Use Wi-Fi SSH for control after disconnecting the laptop USB cable from the
 phone. USB ADB and the Pi cannot occupy the OnePlus 6's only USB-C port at the
 same time.
 
+### Validated Cable And Power Topology
+
+The fixed BENFEI port and the following physical arrangement were validated on
+2026-08-02:
+
+- white cable from the Pi OTG/data port (the port near HDMI) to the BENFEI port;
+- either the short black or long black cable from the Pi energy/power port to
+  the power supply;
+- the hub's upstream/host connection attached to the OnePlus OTG adapter and
+  phone.
+
+Both black power cables passed the high-speed preflight when the hub was also
+connected to the phone: the Pi reported `high-speed` and the phone reported
+`480`. Earlier failed trials were invalid because the hub upstream connection
+to the phone had been left disconnected; those trials showed only root hubs or
+left the Pi UDC `not attached`. Cable comparisons must therefore keep the
+BENFEI port and hub-to-phone connection fixed.
+
+For repeatable trials, disconnect the topology and wait 15 seconds, connect
+the selected black power cable to the Pi energy port, wait for the Pi to boot,
+connect the white data cable to the Pi OTG port and BENFEI, connect the hub
+upstream cable to the phone OTG adapter, then force the phone controller
+through `device` and back to `host` before running the dynamic VID/PID poll.
+
 ## Working Host-Mode Control
 
 On this kernel, the controller mode attribute is writable and forces host
@@ -268,6 +292,25 @@ Only root hubs (`1d6b:0002` and `1d6b:0003`) means no peripheral has
 enumerated at that instant. First repeat the bounded poll above; if it still
 fails, recheck the OTG-capable adapter, Pi gadget/data port, cable, and external
 Pi power before debugging `gud.ko`.
+
+## Enumeration Acceptance Gate
+
+Do not call enumeration working merely because `1d50:614d` is visible or the
+Pi UDC is `configured`. A usable attach requires all of these checks from the
+same fresh connection attempt:
+
+- the phone controller reports `host`;
+- the phone dynamically finds `1d50:614d` under `/sys/bus/usb/devices/*`;
+- the Pi service is active and its UDC reports `configured` with
+  `3f980000.usb` bound;
+- phone dmesg contains `GUD probe complete for 1d50:614d`;
+- `/dev/dri/card1` exists on the phone.
+
+Treat `can't set config #1, error -32`, a Pi `Disable` event, a missing
+`/dev/dri/card1`, or a missing fresh probe as an unusable enumeration even if
+the VID/PID remains visible. Reset the phone controller through `device` and
+back to `host`, then rerun the complete gate. Do not send diagnostic or KMS
+payloads until every acceptance check passes.
 
 ## Canonical Ordered KMS Test
 

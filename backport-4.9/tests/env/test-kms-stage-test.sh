@@ -58,10 +58,17 @@ fi
 test -e "$tmp/ssh-called"
 test -e "$tmp/scp-called"
 grep -qF 'idVendor' "$tmp/calls.log"
+grep -qF 'idProduct' "$tmp/calls.log"
 grep -qF 'GUD probe complete for 1d50:614d' "$tmp/calls.log"
+grep -qF 'printf host > /sys/bus/platform/devices/a600000.ssusb/mode' "$tmp/calls.log"
+if grep -qF '/sys/bus/usb/devices/1-1.' "$repo_root/backport-4.9/env/kms-stage-test.sh"; then
+	printf 'enumeration gate must not hardcode a USB topology path\n' >&2
+	exit 1
+fi
 
 for text in \
 	'dmesg -w' \
+	'fresh GUD probe/card1 did not complete' \
 	'timeout --signal=TERM --kill-after=2s 20s' \
 	'drm-kms-stage-$stage-stdout.txt' \
 	'drm-kms-stage-$stage-stderr.txt' \

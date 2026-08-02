@@ -44,6 +44,9 @@ struct gud_device {
 	/* Serialized by lock; bounded diagnostics for SET_BUFFER/bulk pairs. */
 	u32 bulk_trace_count;
 	u64 bulk_trace_sequence;
+	/* Serialized by lock; machine-readable XDISP timing identifiers. */
+	u64 xdisp_frame_sequence;
+	u64 xdisp_payload_sequence;
 	bool disconnected;
 	struct mutex lock;
 	struct drm_device *drm;

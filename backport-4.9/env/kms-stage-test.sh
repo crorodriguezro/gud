@@ -40,19 +40,30 @@ remote_stage=/home/phablet/gud-kms-stage
 
 "$ssh_bin" -o BatchMode=yes "$phone_host" \
 	"printf '%s\\n' '$phone_password' | sudo -S dmesg -C; \
-	 found_pi=0; \
-	 for path in /sys/bus/usb/devices/*; do \
-	   test -r \"\$path/idVendor\" || continue; \
-	   test \"\$(cat \"\$path/idVendor\")\" = 1d50 || continue; \
-	   test \"\$(cat \"\$path/idProduct\")\" = 614d || continue; \
-	   found_pi=1; \
+	 printf '%s\\n' '$phone_password' | sudo -S sh -c 'printf host > /sys/bus/platform/devices/a600000.ssusb/mode'; \
+	 i=0; found_pi=0; \
+	 while [ \"\$i\" -lt 15 ]; do \
+	   for path in /sys/bus/usb/devices/*/idVendor; do \
+	     test -r \"\$path\" || continue; \
+	     test \"\$(cat \"\$path\")\" = 1d50 || continue; \
+	     test \"\$(cat \"\${path%/*}/idProduct\")\" = 614d || continue; \
+	     printf 'FOUND: %s\\n' \"\${path%/*}\"; found_pi=1; break; \
+	   done; \
+	   test \$found_pi = 1 && break; \
+	   i=\$((i + 1)); sleep 2; \
 	 done; \
 	 test \$found_pi = 1 || { echo 'Pi GUD 1d50:614d is not enumerated' >&2; exit 2; }; \
 	 printf '%s\\n' '$phone_password' | sudo -S rmmod gud 2>/dev/null || true; \
 	 printf '%s\\n' '$phone_password' | sudo -S insmod $remote_module; \
-	 sleep 1; \
-	 printf '%s\\n' '$phone_password' | sudo -S dmesg | grep -qF 'GUD probe complete for 1d50:614d'; \
-	 test -e /dev/dri/card1"
+	 i=0; probed=0; \
+	 while [ "\$i" -lt 10 ]; do \
+	   if printf '%s\\n' '$phone_password' | sudo -S dmesg | grep -qF 'GUD probe complete for 1d50:614d' && \
+	      test -e /dev/dri/card1; then \
+	     probed=1; break; \
+	   fi; \
+	 i=\$((i + 1)); sleep 1; \
+	 done; \
+	 test \$probed = 1 || { echo 'fresh GUD probe/card1 did not complete' >&2; exit 2; }"
 
 "$ssh_bin" -o BatchMode=yes -o ServerAliveInterval=2 -o ServerAliveCountMax=3 \
 	"$phone_host" "printf '%s\\n' '$phone_password' | sudo -S dmesg -w" \
