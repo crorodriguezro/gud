@@ -1,5 +1,9 @@
 # Linux 4.9 GUD Backport Backlog
 
+For the cross-repository product goal, epic hierarchy, priority order, and
+GitHub-ready story tickets, see `PROJECT-ROADMAP.md`. This backlog retains
+host-driver implementation detail and historical acceptance evidence.
+
 ## P0 — Establish the exact target build
 
 - [ ] Identify the exact OnePlus 6 Ubuntu Touch kernel repository and commit.

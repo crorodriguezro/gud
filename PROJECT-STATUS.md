@@ -1,5 +1,9 @@
 # Project Status
 
+The product-level goal, scope boundaries, prioritized epics, and GitHub-ready
+ticket hierarchy are maintained in `PROJECT-ROADMAP.md`. This file remains the
+cross-repository status board and detailed evidence journal.
+
 ## Objective
 
 Backport the host-side Generic USB Display (GUD) DRM driver to the OnePlus 6 Ubuntu Touch / Halium 9 Linux 4.9 kernel as a standalone `gud.ko` module. The phone is the USB host; the Raspberry Pi Zero 2 W is the GUD USB gadget and HDMI endpoint.
