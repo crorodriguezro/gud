@@ -217,7 +217,7 @@ User stories:
 
 | Ticket | P | State | Depends on | Deliverable and acceptance |
 | --- | --- | --- | --- | --- |
-| `E1-T01` Gracefully drain the one-shot trailing status | P0 | planned | E0-T04 | After payload completion, answer the host's already-pending control status before diagnostic detach; host logs no post-success `-71`, no second SET_BUFFER is accepted, and both guards remain Idle. |
+| `E1-T01` Gracefully drain the one-shot trailing status | P0 | verified | E0-T04 | After payload completion, answer the host's already-pending control status before diagnostic detach; host logs no post-success `-71`, no second SET_BUFFER is accepted, and both guards remain Idle. Verified by commit `cea9942` and `../gud-gadget/evidence/functionfs-status-on-set-e1-t01-hs-20260817T185502Z/`. |
 | `E1-T02` Guarded sequential STATUS_ON_SET diagnostic | P0 | planned | E1-T01 | A separately guarded two-transaction build completes two exact 12,800-byte payloads in order, returning Idle between them, with no warm-up, retry, overlap, or teardown race. |
 | `E1-T03` Select the production receive architecture | P0 | planned | E1-T02 | Record a decision between native AIO STATUS_ON_SET and the qualified blocking path using safety, control responsiveness, lifecycle, and measured overhead; retain rollback. |
 | `E1-T04` Implement long-lived multi-frame receive | P0 | planned | E1-T03 | Production candidate handles sustained sequential payloads, refuses overlap, keeps EP0 nonblocking, and exposes exact Idle/InFlight/Poisoned telemetry. |
@@ -426,7 +426,7 @@ offline preparation in parallel, but must not bypass its dependency gate.
 
 ### Immediate focus
 
-The current focus is **E1 production-safe transport**, starting with E1-T01.
+The current focus is **E1 production-safe transport**, starting with E1-T02.
 The only parallel implementation work that should proceed is offline E2-T01
 in `mir-android2-platform-gud`; it must not trigger a phone/Pi transfer until
 the E1 hardware gate is safe and scheduled.
