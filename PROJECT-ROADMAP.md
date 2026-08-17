@@ -108,16 +108,18 @@ baseline exists, but it must record the decision explicitly.
 | USB probe and DRM/KMS registration | verified | `1d50:614d` probes and creates a GUD DRM card with a connector, CRTC, plane, and mode. |
 | Direct KMS first pixels | verified | State check/commit and framebuffer transfer have produced complete physical output. |
 | Safe actual payload envelope | verified | Repeated adaptive tests qualify actual bulk payloads at or below 12,800 bytes. |
-| Native FunctionFS STATUS_ON_SET transaction | verified for one diagnostic transaction | Exact AIO was accepted before GET_STATUS=OK; one 12,800-byte XRGB8888 transaction completed through DWC2, FunctionFS, userspace, and framebuffer processing with both guards returning to Idle. |
-| Production sequential native-AIO transport | planned | The one-shot diagnostic intentionally detaches and has not proven a multi-frame lifecycle. |
+| Native FunctionFS STATUS_ON_SET transaction | verified for two guarded diagnostic transactions | Two ordered, uncompressed 12,800-byte XRGB8888 transactions each accepted exact AIO before GET_STATUS=OK, completed through DWC2, FunctionFS, userspace, and framebuffer processing, and returned both guards to Idle before the next transaction. |
+| Production sequential native-AIO transport | planned | The bounded two-transaction diagnostic intentionally detaches and has not proven a long-lived multi-frame lifecycle. |
 | Independent Lomiri external output | feasibility proven, rolled back | The POC exposed `DisplayPort-2` and an extended desktop, but the implementation is not stable or deployable. |
 | Nonblocking Mir presentation | in progress | A newest-frame worker exists at source/component-test level; the synthetic render target and hardware resource lifecycle remain unresolved. |
 | Dynamic DRM card discovery/re-add | planned | Current experiments can scan by driver, but complete remove/re-add and Mir output recreation are not verified. |
 | Pixel-format default | undecided | RGB565 and XRGB8888 support exists on experimental branches; the full hardware benchmark is incomplete. |
 | Persistent phone SSH | verified on current system image | The lower-root `ssh.service` boot link survives reboot and key-only SSH starts without manual activation. |
 
-The successful STATUS_ON_SET hardware evidence is retained at
-`../gud-gadget/evidence/functionfs-status-on-set-hs-20260817T165632Z/`.
+The one-transaction STATUS_ON_SET foundation evidence is retained at
+`../gud-gadget/evidence/functionfs-status-on-set-hs-20260817T165632Z/`. The
+guarded sequential gate is retained at
+`../gud-gadget/evidence/functionfs-status-on-set-e1-t02-hs-corrected-20260817T192939Z/`.
 
 ## 4. Priority and lifecycle model
 
@@ -218,7 +220,7 @@ User stories:
 | Ticket | P | State | Depends on | Deliverable and acceptance |
 | --- | --- | --- | --- | --- |
 | `E1-T01` Gracefully drain the one-shot trailing status | P0 | verified | E0-T04 | After payload completion, answer the host's already-pending control status before diagnostic detach; host logs no post-success `-71`, no second SET_BUFFER is accepted, and both guards remain Idle. Verified by commit `cea9942` and `../gud-gadget/evidence/functionfs-status-on-set-e1-t01-hs-20260817T185502Z/`. |
-| `E1-T02` Guarded sequential STATUS_ON_SET diagnostic | P0 | planned | E1-T01 | A separately guarded two-transaction build completes two exact 12,800-byte payloads in order, returning Idle between them, with no warm-up, retry, overlap, or teardown race. |
+| `E1-T02` Guarded sequential STATUS_ON_SET diagnostic | P0 | verified | E1-T01 | A separately guarded two-transaction build completes two exact, uncompressed 12,800-byte payloads in order, returning Idle between them, with no warm-up, retry, overlap, or teardown race. Verified by gadget commit `93a6364`, host-probe commit `fcde453`, evidence commit `df87701`, and `../gud-gadget/evidence/functionfs-status-on-set-e1-t02-hs-corrected-20260817T192939Z/`. |
 | `E1-T03` Select the production receive architecture | P0 | planned | E1-T02 | Record a decision between native AIO STATUS_ON_SET and the qualified blocking path using safety, control responsiveness, lifecycle, and measured overhead; retain rollback. |
 | `E1-T04` Implement long-lived multi-frame receive | P0 | planned | E1-T03 | Production candidate handles sustained sequential payloads, refuses overlap, keeps EP0 nonblocking, and exposes exact Idle/InFlight/Poisoned telemetry. |
 | `E1-T05` Disconnect, suspend, timeout, and failure matrix | P0 | planned | E1-T04 | Ten normal reconnects plus controlled suspend/error cases preserve state invariants; Idle cleans up normally and InFlight/Poisoned never use unsafe software teardown. |
@@ -426,7 +428,7 @@ offline preparation in parallel, but must not bypass its dependency gate.
 
 ### Immediate focus
 
-The current focus is **E1 production-safe transport**, starting with E1-T02.
+The current focus is **E1 production-safe transport**, starting with E1-T03.
 The only parallel implementation work that should proceed is offline E2-T01
 in `mir-android2-platform-gud`; it must not trigger a phone/Pi transfer until
 the E1 hardware gate is safe and scheduled.
