@@ -513,25 +513,23 @@ static int gud_pipe_transfer_xdisp_probe(struct gud_device *gud,
 	int actual = 0;
 	int set_buffer_result;
 	int bulk_result = 0;
-	int ret;
 
 	if (!bpp || xdisp_probe_payload_length > GUD_XDISP_PAYLOAD_LIMIT)
 		return -EINVAL;
-	raw_length = 15360;
+	/* E1-T02 advertises no compression, so its exact 12,800-byte
+	 * payload is an uncompressed 640x5 XRGB8888 rectangle. */
+	raw_length = xdisp_probe_payload_length;
 	if (raw_length % ((size_t)width * bpp))
 		return -EINVAL;
 	height = raw_length / ((size_t)width * bpp);
 	if (!height || height > plane_state->fb->height || width > plane_state->fb->width)
 		return -EINVAL;
-	ret = gud_xdisp_build_probe_payload(gud->xdisp_bulk_buffer,
-					    xdisp_probe_payload_length, raw_length);
-	if (ret)
-		return ret;
+	memset(gud->xdisp_bulk_buffer, 0, raw_length);
 	request.width = cpu_to_le32(width);
 	request.height = cpu_to_le32(height);
 	request.length = cpu_to_le32(raw_length);
-	request.compression = GUD_COMPRESSION_LZ4;
-	request.compressed_length = cpu_to_le32(xdisp_probe_payload_length);
+	request.compression = 0;
+	request.compressed_length = 0;
 
 	dev_info(&gud->intf->dev,
 		 "XDISP_PROBE start payload_bytes=%u raw_bytes=%zu rect=%ux%u format=0x%08x zero_packet=%u\n",
