@@ -4,6 +4,16 @@ For the cross-repository product goal, epic hierarchy, priority order, and
 GitHub-ready story tickets, see `PROJECT-ROADMAP.md`. This backlog retains
 host-driver implementation detail and historical acceptance evidence.
 
+**v1 architecture rule:** Keep GUD as the wire/protocol compatibility
+boundary and FunctionFS as the Pi implementation boundary. The Pi is a
+purpose-built, minimal GUD appliance for the OnePlus 6 → Pi Zero 2 W → HDMI
+path, not a generic GUD framework or full/reference gadget implementation:
+production accepts one `SET_BUFFER` and arms one receive at a time, using
+explicit `Idle`, `InFlight`, and `Poisoned` states. Add queues, overlap,
+speculative buffering, larger transfers, zero-copy, or other genericity only
+if measurements show they are required for the v1 release SLO; otherwise they
+belong after v1.
+
 ## P0 — Establish the exact target build
 
 - [ ] Identify the exact OnePlus 6 Ubuntu Touch kernel repository and commit.
@@ -292,7 +302,7 @@ creates the output is not sufficient.
     promote it without a separately benchmarked frame-local or vertical-band
     predictor. Evidence:
     `backport-4.9/env/local/evidence/xdisp-p2.1-predictive-bounded-1080p-2026-07-27T1037COT/RESULTS.md`.
-  - [ ] Upstream Linux GUD follow-up: evaluate contributing a generic optional
+  - [ ] Post-v1 upstream Linux GUD follow-up: evaluate contributing a generic optional
     bounded-output / complete-row LZ4 planner. Current upstream
     `drivers/gpu/drm/gud/gud_pipe.c` splits damage before compression using the
     advertised `bulk_len`, then calls `LZ4_compress_default()` with the source
@@ -301,7 +311,8 @@ creates the output is not sufficient.
     post-compression adaptive splitting, or recent-ratio policy. Do not port
     the Pi-specific 12,800-byte cap directly: first define a generic device
     capability, transport limit, or quirk, retain the upstream SG bulk path,
-    and validate on compliant and constrained GUD devices.
+    and validate on compliant and constrained GUD devices. This is roadmap E7
+    work, not a v1 performance task.
   - A short 2026-07-26 direct-KMS hardware characterization passed without a
     transport or kernel fault: desktop reached 9.015 synchronous updates/s,
     scrolling 4.671 updates/s, and two incompressible frames 0.165 updates/s.
@@ -362,13 +373,20 @@ creates the output is not sufficient.
   - Implement any 512-byte comparison with the current poison/teardown
     containment; do not redeploy the old artifact or treat it as the
     reliability fallback or normal default.
-- [ ] Add damage tracking / partial framebuffer transfers.
+- [ ] Evaluate damage tracking / partial framebuffer transfers only if the
+  measured baseline shows they are needed for the v1 release SLO.
 - [x] Use RGB565 for the active MVP to reduce USB-transfer bandwidth.
-- [ ] Add LZ4 compression.
+- [ ] Evaluate LZ4 compression only if measurements show it is needed for the
+  v1 release SLO.
 - [ ] Benchmark CPU usage and frame rate on OnePlus 6.
-- [ ] Investigate asynchronous USB transfers if synchronous bulk transfer becomes a bottleneck.
+- [ ] Investigate asynchronous USB transfers only if measurements show the
+  sequential bounded path prevents the v1 release SLO.
 
 ## P2 — Feature parity
+
+Full/reference GUD gadget feature parity, portability, upstreaming, and
+optional transport complexity are post-v1 work owned by roadmap Epic E7; they
+must not displace the measured minimal appliance path.
 
 - [ ] PRIME/dma-buf support.
 - [ ] Rotation.

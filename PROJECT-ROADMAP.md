@@ -86,6 +86,9 @@ baseline exists, but it must record the decision explicitly.
 
 ### Explicitly out of scope for the first usable release
 
+- Implementing the full or reference GUD gadget feature set. For v1, the Pi
+  implements only the GUD behavior required by the OnePlus 6 → Pi Zero 2 W →
+  HDMI product path.
 - USB-C DisplayPort Alt Mode; the transport is USB GUD.
 - Screen mirroring as the final product. It may be used only as a diagnostic
   or performance control.
@@ -221,12 +224,12 @@ User stories:
 | --- | --- | --- | --- | --- |
 | `E1-T01` Gracefully drain the one-shot trailing status | P0 | verified | E0-T04 | After payload completion, answer the host's already-pending control status before diagnostic detach; host logs no post-success `-71`, no second SET_BUFFER is accepted, and both guards remain Idle. Verified by commit `cea9942` and `../gud-gadget/evidence/functionfs-status-on-set-e1-t01-hs-20260817T185502Z/`. |
 | `E1-T02` Guarded sequential STATUS_ON_SET diagnostic | P0 | verified | E1-T01 | A separately guarded two-transaction build completes two exact, uncompressed 12,800-byte payloads in order, returning Idle between them, with no warm-up, retry, overlap, or teardown race. Verified by gadget commit `93a6364`, host-probe commit `fcde453`, evidence commit `df87701`, and `../gud-gadget/evidence/functionfs-status-on-set-e1-t02-hs-corrected-20260817T192939Z/`. |
-| `E1-T03` Select the production receive architecture | P0 | planned | E1-T02 | Record a decision between native AIO STATUS_ON_SET and the qualified blocking path using safety, control responsiveness, lifecycle, and measured overhead; retain rollback. |
-| `E1-T04` Implement long-lived multi-frame receive | P0 | planned | E1-T03 | Production candidate handles sustained sequential payloads, refuses overlap, keeps EP0 nonblocking, and exposes exact Idle/InFlight/Poisoned telemetry. |
+| `E1-T03` Select the production receive architecture | P0 | in progress | E1-T02 | Proposed decision: protocol-gated exact native AIO as the production default, with the qualified blocking receiver retained as an explicit detached/Idle rollback through E1-T06. The production path remains one accepted `SET_BUFFER` and one armed receive at a time, with explicit `Idle`/`InFlight`/`Poisoned` states; queues, overlap, and additional concurrency require measurements showing they are needed for the release SLO. Spec: `docs/superpowers/specs/2026-08-17-e1-t03-production-receive-architecture-design.md`. |
+| `E1-T04` Implement long-lived sequential multi-frame receive | P0 | planned | E1-T03 | Production candidate handles sustained frames one accepted `SET_BUFFER`/one armed receive at a time, refuses overlap, keeps EP0 nonblocking, and exposes exact Idle/InFlight/Poisoned telemetry. |
 | `E1-T05` Disconnect, suspend, timeout, and failure matrix | P0 | planned | E1-T04 | Ten normal reconnects plus controlled suspend/error cases preserve state invariants; Idle cleans up normally and InFlight/Poisoned never use unsafe software teardown. |
 | `E1-T06` Transport soak within the qualified envelope | P0 | planned | E1-T05 | At least 30 minutes and 10,000 accepted payloads across multiple reconnects complete with zero length mismatch, poison, host timeout, DWC2 fault, Oops, or pstore record. |
 | `E1-T07` Explain or safely raise the >12,800-byte boundary | P2 | planned | E1-T06, release SLO need | Kernel/host matrix identifies the cause or qualifies a larger limit. This is not a v1 blocker while 12,800 bytes meets the product SLO. |
-| `E1-T08` Upstream or replace vendored FunctionFS extensions | P2 | planned | E1-T04 | Production no longer depends on an unexplained local endpoint/AIO extension, or the extension has an upstream-quality design and test suite. |
+| `E1-T08` Post-v1 upstream or replace vendored FunctionFS extensions | P2 | planned | v1, E1-T04 | Production no longer depends on an unexplained local endpoint/AIO extension, or the extension has an upstream-quality design and test suite. |
 
 Epic acceptance: E1-T01 through E1-T06 are verified, the chosen production
 path has a reproducible package and rollback, and no unsafe recovery is needed
@@ -347,13 +350,15 @@ User stories:
 | `E5-T01` Freeze benchmark semantics and accounting | P1 | in progress | E2 stable interfaces | Final reports account for received, submitted, presented, dropped, cancelled, failed, and in-flight frames with non-overlapping timing fields. |
 | `E5-T02` Establish full-pipeline baseline | P1 | planned | E2-T06, E4-T03 | Measure FPS, p50/p95 latency, drops, phone/Pi CPU, USB throughput, memory, FDs, and fences for controlled desktop, scroll, video, and noise workloads. |
 | `E5-T03` Decide RGB565 versus XRGB8888 | P1 | planned | E5-T02 | Apples-to-apples hardware data records conversion path, payload count, latency, CPU, throughput, and objective image-quality metrics; decision and rollback are documented. |
-| `E5-T04` Add damage-aware updates | P1 | planned | E5-T02 | Changed-region updates reduce bytes/work without stale pixels, rectangle gaps, or payload-cap violations. |
-| `E5-T05` Select the compression planner | P1 | planned | E5-T02..T04 | Compare bounded, ratio-cache, backoff, and raw policies across all workloads; retain the 12,800-byte final submission guard. |
-| `E5-T06` Set and verify the release SLO | P1 | planned | E5-T03..T05 | Record final FPS/latency/drop/responsiveness targets and pass them in a repeated 30-minute mixed workload. |
+| `E5-T04` Evaluate damage-aware updates | P1 | planned | E5-T02, release-SLO need | Add changed-region updates only if the measured simple path misses the SLO; otherwise record that they are unnecessary. Any adopted path must have no stale pixels, rectangle gaps, or payload-cap violations. |
+| `E5-T05` Evaluate the compression planner | P1 | planned | E5-T02, release-SLO need | Compare bounded, ratio-cache, backoff, and raw policies only if measurements show compression is needed; otherwise retain the simplest policy. Any adopted path retains the 12,800-byte final submission guard. |
+| `E5-T06` Set and verify the release SLO | P1 | planned | E5-T03, any required E5-T04/T05 | Record final FPS/latency/drop/responsiveness targets and pass them in a repeated 30-minute mixed workload. |
 
 Optimization stops when the release SLO is met. Raising the transport cap,
-zero-copy, and speculative planners remain P2 unless measurements show they
-are necessary.
+zero-copy, speculative planners, and other transport complexity remain P2
+unless measurements show they are necessary. The selected simplest
+implementation becomes the v1 default; further optimization requires a new
+measured release-SLO need.
 
 ### E6 — Productize installation, operation, and recovery
 
@@ -388,8 +393,9 @@ Priority: P2/P3
 State: planned
 Owners: component-specific
 
-Outcome: convert proven local behavior into maintainable generic work without
-delaying the OnePlus/Pi product.
+Outcome: own generic GUD feature parity, portability, upstreaming, and other
+optional complexity after v1, converting proven local behavior into
+maintainable generic work without delaying the OnePlus/Pi product.
 
 User stories:
 
@@ -401,9 +407,9 @@ User stories:
 | Ticket | P | State | Depends on | Deliverable and acceptance |
 | --- | --- | --- | --- | --- |
 | `E7-T01` Generalize the Linux 4.9 host compatibility layer | P2 | planned | v1 | Separate target ABI data from reusable 4.9 DRM/USB compatibility code and validate a second kernel only when available. |
-| `E7-T02` Propose generic bounded GUD compression planning | P2 | planned | E5 decision | Upstream-facing design uses a capability/quirk model rather than hard-coding the Pi's 12,800-byte observation. |
-| `E7-T03` Upstream FunctionFS/AIO improvements | P2 | planned | E1 decision | Produce minimal kernel/userspace reproducer, documented semantics, and upstream-quality tests for any required AIO change. |
-| `E7-T04` Optional feature parity | P3 | planned | v1 | Evaluate rotation, backlight, connector properties, multiple connectors, PRIME/dma-buf, and deeper suspend/resume individually. |
+| `E7-T02` Propose generic bounded GUD compression planning | P2 | planned | v1, E5 decision | Upstream-facing design uses a capability/quirk model rather than hard-coding the Pi's 12,800-byte observation. |
+| `E7-T03` Upstream FunctionFS/AIO improvements | P2 | planned | v1, E1 decision | Produce minimal kernel/userspace reproducer, documented semantics, and upstream-quality tests for any required AIO change. |
+| `E7-T04` Generic GUD feature parity and optional complexity | P3 | planned | v1 | Evaluate the full/reference GUD gadget feature set, rotation, backlight, connector properties, multiple connectors, PRIME/dma-buf, deeper suspend/resume, larger transfers, zero-copy, and receive concurrency individually. |
 
 ## 7. Prioritized execution queue
 
@@ -428,7 +434,8 @@ offline preparation in parallel, but must not bypass its dependency gate.
 
 ### Immediate focus
 
-The current focus is **E1 production-safe transport**, starting with E1-T03.
+The current focus is **E1 production-safe transport**, completing the E1-T03
+decision before starting E1-T04.
 The only parallel implementation work that should proceed is offline E2-T01
 in `mir-android2-platform-gud`; it must not trigger a phone/Pi transfer until
 the E1 hardware gate is safe and scheduled.
@@ -471,6 +478,14 @@ Every ticket body should contain:
 
 ## 9. Decision rules that protect the horizon
 
+- **v1 architecture rule:** GUD remains the wire/protocol compatibility
+  boundary, and FunctionFS remains the Pi implementation boundary. The Pi is
+  a purpose-built, minimal GUD appliance for the OnePlus 6 → Pi Zero 2 W →
+  HDMI path, not a generic GUD framework: it accepts one `SET_BUFFER` and
+  arms one receive at a time, using explicit `Idle`, `InFlight`, and
+  `Poisoned` states. Generic GUD parity, transport flexibility, extra
+  connectors, larger transfers, zero-copy, and additional concurrency are
+  post-v1 unless measurements show they are necessary to meet the release SLO.
 - The product is a usable independent external desktop, not a transport
   research program.
 - The verified 12,800-byte envelope is a valid product constraint until data
