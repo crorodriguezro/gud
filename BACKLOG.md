@@ -8,11 +8,11 @@ host-driver implementation detail and historical acceptance evidence.
 boundary and FunctionFS as the Pi implementation boundary. The Pi is a
 purpose-built, minimal GUD appliance for the OnePlus 6 → Pi Zero 2 W → HDMI
 path, not a generic GUD framework or full/reference gadget implementation:
-production accepts one `SET_BUFFER` and arms one receive at a time, using
-explicit `Idle`, `InFlight`, and `Poisoned` states. Add queues, overlap,
-speculative buffering, larger transfers, zero-copy, or other genericity only
-if measurements show they are required for the v1 release SLO; otherwise they
-belong after v1.
+production accepts one `SET_BUFFER` and owns one transaction at a time, using
+explicit `Idle`, `Arming`, `InFlight`, `Processing`, and `Poisoned` states. Add
+queues, overlap, speculative buffering, larger transfers, zero-copy, or other
+genericity only if measurements show they are required for the v1 release SLO;
+otherwise they belong after v1.
 
 ## P0 — Establish the exact target build
 

@@ -224,9 +224,9 @@ User stories:
 | --- | --- | --- | --- | --- |
 | `E1-T01` Gracefully drain the one-shot trailing status | P0 | verified | E0-T04 | After payload completion, answer the host's already-pending control status before diagnostic detach; host logs no post-success `-71`, no second SET_BUFFER is accepted, and both guards remain Idle. Verified by commit `cea9942` and `../gud-gadget/evidence/functionfs-status-on-set-e1-t01-hs-20260817T185502Z/`. |
 | `E1-T02` Guarded sequential STATUS_ON_SET diagnostic | P0 | verified | E1-T01 | A separately guarded two-transaction build completes two exact, uncompressed 12,800-byte payloads in order, returning Idle between them, with no warm-up, retry, overlap, or teardown race. Verified by gadget commit `93a6364`, host-probe commit `fcde453`, evidence commit `df87701`, and `../gud-gadget/evidence/functionfs-status-on-set-e1-t02-hs-corrected-20260817T192939Z/`. |
-| `E1-T03` Select the production receive architecture | P0 | in progress | E1-T02 | Proposed decision: protocol-gated exact native AIO as the production default, with the qualified blocking receiver retained as an explicit detached/Idle rollback through E1-T06. The production path remains one accepted `SET_BUFFER` and one armed receive at a time, with explicit `Idle`/`InFlight`/`Poisoned` states; queues, overlap, and additional concurrency require measurements showing they are needed for the release SLO. Spec: `docs/superpowers/specs/2026-08-17-e1-t03-production-receive-architecture-design.md`. |
-| `E1-T04` Implement long-lived sequential multi-frame receive | P0 | planned | E1-T03 | Production candidate handles sustained frames one accepted `SET_BUFFER`/one armed receive at a time, refuses overlap, keeps EP0 nonblocking, and exposes exact Idle/InFlight/Poisoned telemetry. |
-| `E1-T05` Disconnect, suspend, timeout, and failure matrix | P0 | planned | E1-T04 | Ten normal reconnects plus controlled suspend/error cases preserve state invariants; Idle cleans up normally and InFlight/Poisoned never use unsafe software teardown. |
+| `E1-T03` Select the production receive architecture | P0 | verified | E1-T02 | Protocol-gated exact native AIO is the production default, with the qualified blocking receiver retained as a separate detached/Idle rollback through E1-T06. The accepted design serializes one transaction through `Idle -> Arming -> InFlight -> Processing -> Idle`, uses depth one, and forbids overlap, speculative prearming, chunked ownership, automatic fallback, and an `auto` mode. Spec: `docs/superpowers/specs/2026-08-17-e1-t03-production-receive-architecture-design.md`. |
+| `E1-T04` Implement long-lived sequential multi-frame receive | P0 | planned | E1-T03 | Production candidate implements the accepted aggregate lifecycle, keeps admission closed through processing, exposes exact ownership/correlation telemetry, documents the vendored FunctionFS/AIO primitive, and handles sustained frames at effective queue depth one while keeping EP0 responsive during receive waits. |
+| `E1-T05` Disconnect, suspend, timeout, and failure matrix | P0 | planned | E1-T04 | Ten normal reconnects plus controlled suspend/error cases preserve state invariants; only proven Idle cleans up normally, and accepted-I/O, Processing, or Poisoned ownership never uses unsafe software teardown. |
 | `E1-T06` Transport soak within the qualified envelope | P0 | planned | E1-T05 | At least 30 minutes and 10,000 accepted payloads across multiple reconnects complete with zero length mismatch, poison, host timeout, DWC2 fault, Oops, or pstore record. |
 | `E1-T07` Explain or safely raise the >12,800-byte boundary | P2 | planned | E1-T06, release SLO need | Kernel/host matrix identifies the cause or qualifies a larger limit. This is not a v1 blocker while 12,800 bytes meets the product SLO. |
 | `E1-T08` Post-v1 upstream or replace vendored FunctionFS extensions | P2 | planned | v1, E1-T04 | Production no longer depends on an unexplained local endpoint/AIO extension, or the extension has an upstream-quality design and test suite. |
@@ -434,8 +434,8 @@ offline preparation in parallel, but must not bypass its dependency gate.
 
 ### Immediate focus
 
-The current focus is **E1 production-safe transport**, completing the E1-T03
-decision before starting E1-T04.
+The current focus is **E1 production-safe transport**, starting E1-T04 from the
+verified E1-T03 architecture decision.
 The only parallel implementation work that should proceed is offline E2-T01
 in `mir-android2-platform-gud`; it must not trigger a phone/Pi transfer until
 the E1 hardware gate is safe and scheduled.
@@ -482,10 +482,11 @@ Every ticket body should contain:
   boundary, and FunctionFS remains the Pi implementation boundary. The Pi is
   a purpose-built, minimal GUD appliance for the OnePlus 6 → Pi Zero 2 W →
   HDMI path, not a generic GUD framework: it accepts one `SET_BUFFER` and
-  arms one receive at a time, using explicit `Idle`, `InFlight`, and
-  `Poisoned` states. Generic GUD parity, transport flexibility, extra
-  connectors, larger transfers, zero-copy, and additional concurrency are
-  post-v1 unless measurements show they are necessary to meet the release SLO.
+  owns one transaction at a time, using explicit `Idle`, `Arming`, `InFlight`,
+  `Processing`, and `Poisoned` states. Generic GUD parity, transport
+  flexibility, extra connectors, larger transfers, zero-copy, and additional
+  concurrency are post-v1 unless measurements show they are necessary to meet
+  the release SLO.
 - The product is a usable independent external desktop, not a transport
   research program.
 - The verified 12,800-byte envelope is a valid product constraint until data
