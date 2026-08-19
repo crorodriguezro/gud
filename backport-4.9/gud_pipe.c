@@ -16,6 +16,7 @@
 #define GUD_USB_TIMEOUT_MS 3000
 #define GUD_BULK_EAGAIN_RETRIES 100
 #define GUD_BULK_CHUNK_SIZE (64 * 1024)
+#define XDISP_PROBE_PRE_BULK_PAUSE_MAX_MS 30000
 
 static unsigned int gud_bulk_timeout_ms = GUD_USB_TIMEOUT_MS;
 module_param_named(bulk_timeout_ms, gud_bulk_timeout_ms, uint, 0644);
@@ -73,6 +74,12 @@ static bool xdisp_probe_zero_packet;
 module_param_named(xdisp_probe_zero_packet, xdisp_probe_zero_packet, bool, 0644);
 MODULE_PARM_DESC(xdisp_probe_zero_packet,
 	"Test-only add URB_ZERO_PACKET to an aligned single-payload probe");
+
+static unsigned int xdisp_probe_pre_bulk_pause_ms;
+module_param_named(xdisp_probe_pre_bulk_pause_ms,
+			   xdisp_probe_pre_bulk_pause_ms, uint, 0644);
+MODULE_PARM_DESC(xdisp_probe_pre_bulk_pause_ms,
+	"Test-only pause after successful SET_BUFFER before bulk submit (max 30000 ms)");
 #endif
 
 struct gud_bulk_context {
@@ -516,6 +523,8 @@ static int gud_pipe_transfer_xdisp_probe(struct gud_device *gud,
 
 	if (!bpp || xdisp_probe_payload_length > GUD_XDISP_PAYLOAD_LIMIT)
 		return -EINVAL;
+	if (xdisp_probe_pre_bulk_pause_ms > XDISP_PROBE_PRE_BULK_PAUSE_MAX_MS)
+		return -EINVAL;
 	/* E1-T02 advertises no compression, so its exact 12,800-byte
 	 * payload is an uncompressed 640x5 XRGB8888 rectangle. */
 	raw_length = xdisp_probe_payload_length;
@@ -538,6 +547,12 @@ static int gud_pipe_transfer_xdisp_probe(struct gud_device *gud,
 	set_buffer_result = gud_usb_set(gud, GUD_REQ_SET_BUFFER, &request,
 					sizeof(request));
 	if (!set_buffer_result) {
+		if (xdisp_probe_pre_bulk_pause_ms) {
+			dev_info(&gud->intf->dev,
+				 "XDISP_PROBE pre-bulk pause ready pause_ms=%u; disconnect now\n",
+				 xdisp_probe_pre_bulk_pause_ms);
+			msleep(xdisp_probe_pre_bulk_pause_ms);
+		}
 		bulk_result = gud_usb_bulk_write(gud, gud->xdisp_bulk_urb,
 			gud->xdisp_bulk_buffer, gud->xdisp_bulk_dma,
 			xdisp_probe_payload_length, &actual, 1, 0, &timing);

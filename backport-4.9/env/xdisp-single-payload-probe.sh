@@ -10,12 +10,22 @@ module_path=${MODULE_PATH:-$repo_dir/variants/xdisp-lz4-12800/gud.ko}
 stage_binary=${STAGE_BINARY:-$repo_dir/tests/gud-kms-stage}
 payload_length=${PAYLOAD_LENGTH:?PAYLOAD_LENGTH is required}
 zero_packet=${ZERO_PACKET:-0}
+pre_bulk_pause_ms=${PRE_BULK_PAUSE_MS:-0}
+stage_timeout_seconds=10
 evidence_dir=${EVIDENCE_DIR:-$script_dir/local/evidence/single-payload-$(date -u +%Y%m%d-%H%M%S)}
 
 case "$payload_length" in *[!0-9]*|'') exit 2 ;; esac
 if (( payload_length < 1 || payload_length > 12800 )); then
 	printf 'PAYLOAD_LENGTH must be in 1..12800\n' >&2
 	exit 2
+fi
+case "$pre_bulk_pause_ms" in *[!0-9]*|'') exit 2 ;; esac
+if (( pre_bulk_pause_ms > 30000 )); then
+	printf 'PRE_BULK_PAUSE_MS must be in 0..30000\n' >&2
+	exit 2
+fi
+if (( pre_bulk_pause_ms > 0 )); then
+	stage_timeout_seconds=$((10 + (pre_bulk_pause_ms + 999) / 1000))
 fi
 if [[ ! -f "$module_path" || ! -x "$stage_binary" ]]; then
 	printf 'module or atomic stage binary is missing\n' >&2
@@ -39,8 +49,8 @@ for i in \$(seq 1 15); do
 done
 test "\${found:-}" = 1 || exit 2
 rmmod gud 2>/dev/null || true
-insmod /tmp/gud.ko bulk_timeout_ms=3000 bulk_trace_limit=1 xdisp_payload_timing=1 xdisp_probe_payload_length=$payload_length xdisp_probe_zero_packet=$zero_packet
-timeout 10s /tmp/gud-kms-stage atomic-commit /dev/dri/card1
+insmod /tmp/gud.ko bulk_timeout_ms=3000 bulk_trace_limit=1 xdisp_payload_timing=1 xdisp_probe_payload_length=$payload_length xdisp_probe_zero_packet=$zero_packet xdisp_probe_pre_bulk_pause_ms=$pre_bulk_pause_ms
+timeout "${stage_timeout_seconds}s" /tmp/gud-kms-stage atomic-commit /dev/dri/card1
 result=\$?
 echo XDISP_SINGLE_PAYLOAD_${payload_length}_END > /dev/kmsg
 exit \$result
