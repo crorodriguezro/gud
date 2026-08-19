@@ -20,8 +20,8 @@ if (( payload_length < 1 || payload_length > 12800 )); then
 	exit 2
 fi
 case "$pre_bulk_pause_ms" in *[!0-9]*|'') exit 2 ;; esac
-if (( pre_bulk_pause_ms > 30000 )); then
-	printf 'PRE_BULK_PAUSE_MS must be in 0..30000\n' >&2
+if (( pre_bulk_pause_ms > 90000 )); then
+	printf 'PRE_BULK_PAUSE_MS must be in 0..90000\n' >&2
 	exit 2
 fi
 if (( pre_bulk_pause_ms > 0 )); then

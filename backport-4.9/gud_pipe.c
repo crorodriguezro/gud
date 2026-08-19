@@ -16,7 +16,7 @@
 #define GUD_USB_TIMEOUT_MS 3000
 #define GUD_BULK_EAGAIN_RETRIES 100
 #define GUD_BULK_CHUNK_SIZE (64 * 1024)
-#define XDISP_PROBE_PRE_BULK_PAUSE_MAX_MS 30000
+#define XDISP_PROBE_PRE_BULK_PAUSE_MAX_MS 90000
 
 static unsigned int gud_bulk_timeout_ms = GUD_USB_TIMEOUT_MS;
 module_param_named(bulk_timeout_ms, gud_bulk_timeout_ms, uint, 0644);
@@ -79,7 +79,7 @@ static unsigned int xdisp_probe_pre_bulk_pause_ms;
 module_param_named(xdisp_probe_pre_bulk_pause_ms,
 			   xdisp_probe_pre_bulk_pause_ms, uint, 0644);
 MODULE_PARM_DESC(xdisp_probe_pre_bulk_pause_ms,
-	"Test-only pause after successful SET_BUFFER before bulk submit (max 30000 ms)");
+	"Test-only pause after successful SET_BUFFER before bulk submit (max 90000 ms)");
 #endif
 
 struct gud_bulk_context {
