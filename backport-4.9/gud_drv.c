@@ -208,6 +208,10 @@ static int gud_probe(struct usb_interface *intf,
 		goto err_free_xdisp;
 
 	usb_set_intfdata(intf, gud);
+#ifdef GUD_XDISP_PM_TEST
+	dev_warn(&intf->dev,
+		 "GUD_PM_TEST enabled: runtime suspend is accepted only while no transfer holds the driver lock\n");
+#endif
 	dev_info(&intf->dev, "GUD probe complete for %04x:%04x\n",
 		le16_to_cpu(gud->usb->descriptor.idVendor),
 		le16_to_cpu(gud->usb->descriptor.idProduct));
@@ -222,6 +226,51 @@ err_put_usb:
 	kfree(gud);
 	return ret;
 }
+
+#ifdef GUD_XDISP_PM_TEST
+static int gud_suspend(struct usb_interface *intf, pm_message_t message)
+{
+	struct gud_device *gud = usb_get_intfdata(intf);
+
+	if (!gud)
+		return 0;
+	if (!mutex_trylock(&gud->lock)) {
+		dev_warn(&intf->dev,
+			 "GUD_PM_TEST suspend result=-EBUSY active_transfer=1 event=%d\n",
+			 message.event);
+		return -EBUSY;
+	}
+	if (gud->disconnected) {
+		mutex_unlock(&gud->lock);
+		return -ENODEV;
+	}
+	gud->pm_suspended = true;
+	mutex_unlock(&gud->lock);
+	dev_info(&intf->dev,
+		 "GUD_PM_TEST suspend result=0 active_transfer=0 event=%d\n",
+		 message.event);
+	return 0;
+}
+
+static int gud_resume(struct usb_interface *intf)
+{
+	struct gud_device *gud = usb_get_intfdata(intf);
+
+	if (!gud)
+		return 0;
+	mutex_lock(&gud->lock);
+	gud->pm_suspended = false;
+	mutex_unlock(&gud->lock);
+	dev_info(&intf->dev, "GUD_PM_TEST resume result=0\n");
+	return 0;
+}
+
+static int gud_reset_resume(struct usb_interface *intf)
+{
+	dev_warn(&intf->dev, "GUD_PM_TEST reset_resume observed\n");
+	return gud_resume(intf);
+}
+#endif
 
 static void gud_disconnect(struct usb_interface *intf)
 {
@@ -252,19 +301,34 @@ MODULE_DEVICE_TABLE(usb, gud_id_table);
 
 static struct usb_driver gud_usb_driver = {
 #ifdef GUD_XDISP_LZ4_12800
+	#ifdef GUD_XDISP_PM_TEST
+	.name = "gud_xdisp_lz4_12800_pmtest",
+	#else
 	.name = "gud_xdisp_lz4_12800",
+	#endif
 #else
 	.name = "gud",
 #endif
 	.probe = gud_probe,
 	.disconnect = gud_disconnect,
 	.id_table = gud_id_table,
+#ifdef GUD_XDISP_PM_TEST
+	.suspend = gud_suspend,
+	.resume = gud_resume,
+	.reset_resume = gud_reset_resume,
+	.supports_autosuspend = 1,
+#endif
 };
 module_usb_driver(gud_usb_driver);
 
 #ifdef GUD_XDISP_LZ4_12800
+	#ifdef GUD_XDISP_PM_TEST
+MODULE_DESCRIPTION("TEST-ONLY OnePlus 6 GUD XDISP runtime-PM diagnostic");
+MODULE_VERSION("xdisp-p0.1-adaptive-12800-pmtest-v1");
+	#else
 MODULE_DESCRIPTION("OnePlus 6 GUD XDISP adaptive LZ4 12800-byte diagnostic");
 MODULE_VERSION("xdisp-p0.1-adaptive-12800-upstream-lz4-v2");
+	#endif
 #else
 MODULE_DESCRIPTION("OnePlus 6 GUD USB probe backport");
 #endif

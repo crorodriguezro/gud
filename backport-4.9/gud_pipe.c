@@ -287,6 +287,9 @@ static int gud_usb_set(struct gud_device *gud, u8 request,
 
 	if (gud->disconnected)
 		return -ENODEV;
+	ret = gud_pm_submission_allowed(gud);
+	if (ret)
+		return ret;
 
 	ret = usb_control_msg(gud->usb, usb_sndctrlpipe(gud->usb, 0), request,
 			      request_type, 0, ifnum, (void *)data, length,
@@ -697,6 +700,9 @@ static int gud_pipe_transfer_xdisp(struct gud_device *gud,
 			ret = -ENODEV;
 			break;
 		}
+		ret = gud_pm_submission_allowed(gud);
+		if (ret)
+			break;
 
 		if (gud->compression & GUD_COMPRESSION_LZ4) {
 			phase_start_ns = ktime_get_ns();

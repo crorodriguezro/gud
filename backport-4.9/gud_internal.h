@@ -48,6 +48,10 @@ struct gud_device {
 	u64 xdisp_frame_sequence;
 	u64 xdisp_payload_sequence;
 	bool disconnected;
+#ifdef GUD_XDISP_PM_TEST
+	/* Protected by lock; only the PM-test variant may reject I/O while asleep. */
+	bool pm_suspended;
+#endif
 	struct mutex lock;
 	struct drm_device *drm;
 	struct drm_simple_display_pipe pipe;
@@ -88,6 +92,18 @@ void gud_drm_fini(struct gud_device *gud);
 #ifdef GUD_XDISP_LZ4_12800
 int gud_xdisp_buffers_init(struct gud_device *gud);
 void gud_xdisp_buffers_fini(struct gud_device *gud);
+#endif
+
+#ifdef GUD_XDISP_PM_TEST
+static inline int gud_pm_submission_allowed(const struct gud_device *gud)
+{
+	return gud->pm_suspended ? -EHOSTUNREACH : 0;
+}
+#else
+static inline int gud_pm_submission_allowed(const struct gud_device *gud)
+{
+	return 0;
+}
 #endif
 
 #endif

@@ -7,7 +7,7 @@ ifneq (,$(wildcard $(MANIFEST)))
 include $(MANIFEST)
 endif
 
-.PHONY: modules clean xdisp-lz4-12800 xdisp-lz4-12800-clean
+.PHONY: modules clean xdisp-lz4-12800 xdisp-lz4-12800-clean xdisp-lz4-12800-pmtest xdisp-lz4-12800-pmtest-clean
 
 modules:
 	@test -f "$(MANIFEST)" || { echo "Missing $(MANIFEST); copy env/target-manifest.env.example first"; exit 2; }
@@ -24,5 +24,13 @@ xdisp-lz4-12800:
 
 xdisp-lz4-12800-clean:
 	$(MAKE) -C variants/xdisp-lz4-12800 \
+		MANIFEST="$(abspath $(MANIFEST))" clean
+
+xdisp-lz4-12800-pmtest:
+	$(MAKE) -C variants/xdisp-lz4-12800-pmtest \
+		MANIFEST="$(abspath $(MANIFEST))" modules
+
+xdisp-lz4-12800-pmtest-clean:
+	$(MAKE) -C variants/xdisp-lz4-12800-pmtest \
 		MANIFEST="$(abspath $(MANIFEST))" clean
 endif

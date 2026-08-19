@@ -1,0 +1,3 @@
+obj-m += gud.o
+gud-y := variant_drv.o variant_gem_4_9.o variant_pipe.o variant_connector.o variant_lz4.o variant_lz4_upstream.o
+ccflags-y += -Wno-missing-attributes -Wno-unused-function
