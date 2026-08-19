@@ -37,3 +37,13 @@ deploy it as the production artifact.
 If the PM-test driver's suspend callback is not reached, or the USB device
 cannot enter runtime suspend, retain the PM sysfs state and relevant phone/Pi
 logs. Do not modify `a600000.ssusb` for this test.
+
+## Target Result
+
+On the OnePlus 6 target runtime-PM path, the test variant produced real Pi
+FunctionFS Suspend and Resume from proven Idle. It then re-enumerated the USB
+device instead of calling the persistent driver resume path: topology `1-1.2`
+and bus `1` remained, but device number changed `5 -> 6`; Pi observed
+`Suspend -> Resume -> Suspend -> Disable -> Enable` and a new activation.
+The PM-test `resume` and `reset_resume` markers were absent while a fresh probe
+marker was present. This is deferred P2 and does not qualify F6 for v1.
