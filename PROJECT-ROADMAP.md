@@ -261,11 +261,32 @@ User stories:
 | Ticket | P | State | Depends on | Deliverable and acceptance |
 | --- | --- | --- | --- | --- |
 | `E2-T01` Reconcile the source/render capture gate | P0 | verified | clean packaged-phone baseline | Prove the selected xdispd-driven Lomiri source/render/capture gate can repeatedly create and release a bounded capture source with real content, while the older Android2 synthetic/offscreen output remains dormant unless separately required. Focused source-only cycles and resource snapshots must show bounded FDs/fences. Canonical clean evidence: `fresh-extension-20260820T035520Z-fast`. Earlier Lomiri greeter restart evidence was investigated and classified as unrelated device/session contamination; the clean rerun passed without restart. |
-| `E2-T02` Complete newest-frame worker integration | P0 | in progress | E2-T01, stable E1 interface | Worker owns its GUD fd/KMS buffers, retains one pending frame, drops superseded frames, and joins before KMS teardown. Current work re-qualifies `mirgud` from source and rechecks the hardware teardown path after the stale-binary feedback. |
+| `E2-T02` Complete newest-frame worker integration | P0 | verified | E2-T01, stable E1 interface | **Verified for v1 by project-owner decision.** The real wrapper-free managed Lomiri -> Mir Virtual -> mirgud -> GUD path presented frames with `max_pending_observed=1` and `max_in_flight_observed=1`; focused tests passed for newest-frame replacement, nonblocking source submission, ownership retention, and worker join semantics. The current source includes the presenter/KMS lifetime guard that closes the early Mir-era ownership hole. Graceful shutdown while GUD transport is stalled or failing is deferred to E2-T03/E2-T05. |
 | `E2-T03` Prove compositor nonblocking behavior | P0 | planned | E2-T02 | Instrumented commit latency remains bounded while GUD is healthy, slow, absent, and failing; phone input and internal display stay responsive. |
 | `E2-T04` Eliminate unbounded fence/FD retention | P0 | planned | E2-T01 | A 30-minute render/present soak reaches a stable plateau with accounting for every buffer, fence, and descriptor; no binder `-12` or KGSL `-24` occurs. |
 | `E2-T05` Contain worker and KMS errors | P0 | planned | E2-T02 | Inject open, allocation, modeset, submit, disconnect, and shutdown failures; no exception crosses the compositor boundary and recovery remains possible. |
 | `E2-T06` Hardware alpha qualification | P0 | planned | E2-T03..T05 | Real Lomiri content presents for 30 minutes with bounded resources, newest-frame coalescing, no phone freeze, and retained phone/Pi evidence. |
+
+#### E2-T02 closure decision
+
+E2-T02 is accepted for v1 as **verified by project-owner decision**. The
+production managed path demonstrated real Lomiri presentation through
+`LatestFramePresenter` and GUD with one pending frame and one in-flight frame
+maximum. Focused tests verify newest-frame replacement, source-submit
+nonblocking behavior, ownership retention, and worker join semantics. The
+early Mir-era presenter/KMS ownership hole is fixed by Mir commit `e7250c8`.
+
+Supporting bounded-presentation evidence is retained at
+`../gud-gadget/evidence/xdisp-e2-t02-final-20260820T103740Z/`. The current
+artifact, timeout-classification, recovery, and recovered-presentation evidence
+is retained at
+`../gud-gadget/evidence/xdisp-e2-t02-current-modeset-timeout-20260820T173402Z/`.
+The latter also records that, after the GUD transport degraded before
+`Deactivate`, xdispd used bounded forced containment. This decision does not
+assert that graceful shutdown under stalled/failing transport passed, that
+`KMS_TEARDOWN_COMPLETE` was observed in that degraded shutdown, or that final
+hardware accounting after containment was proven. Those failure-mode questions
+are deferred to E2-T03/E2-T05.
 
 Epic acceptance: slow, absent, and failed GUD output cannot block the phone UI;
 the full hardware alpha passes without resource growth or manual rollback.
