@@ -160,7 +160,7 @@ defined in `docs/superpowers/CROSS-REPOSITORY-WORKFLOW.md`.
 | Milestone | Outcome | Required epics | State |
 | --- | --- | --- | --- |
 | M0 — Technical foundation | Build, probe, direct KMS, first pixels, and safe payload envelope | E0 | verified |
-| M1 — Production-safe transport | Sequential protocol-native receives and lifecycle are safe within the qualified envelope | E1 | in progress |
+| M1 — Production-safe transport | Sequential protocol-native receives and lifecycle are safe within the qualified envelope | E1 | verified |
 | M2 — Responsive external-output alpha | Lomiri external output presents through a bounded worker without freezing or leaking resources | E2 | planned/in progress |
 | M3 — Reconnectable and correct beta | Dynamic discovery, reconnect, mode, geometry, and window placement pass repeated gates | E3, E4 | planned |
 | M4 — Usable v1 | Performance SLO, soak, installer, rollback, diagnostics, and operator docs pass | E5, E6 | planned |
@@ -227,11 +227,13 @@ User stories:
 | `E1-T03` Select the production receive architecture | P0 | verified | E1-T02 | Protocol-gated exact native AIO is the production default, with the qualified blocking receiver retained as a separate detached/Idle rollback through E1-T06. The accepted design serializes one transaction through `Idle -> Arming -> InFlight -> Processing -> Idle`, uses depth one, and forbids overlap, speculative prearming, chunked ownership, automatic fallback, and an `auto` mode. Spec: `docs/superpowers/specs/2026-08-17-e1-t03-production-receive-architecture-design.md`. |
 | `E1-T04` Implement long-lived sequential multi-frame receive | P0 | verified | E1-T03 | Clean-source production `status-on-set-aio` passed the unchanged 100-frame OnePlus 6/Pi Zero 2 W gate at 12,800 bytes with one exact AIO receive per transaction, ordered sequence IDs 1-100, aggregate `Processing -> Idle` before readmission, final Idle ownership, and zero poison, timeout, host failure, DWC2 anomaly, or kernel fault. Canonical evidence: `../gud-gadget/evidence/functionfs-status-on-set-e1-t04-clean-source-passing-rerun-20260818T030651Z/`. The earlier failed clean rerun is retained as the host RGB565/XRGB8888 stage-format diagnosis. |
 | `E1-T05` Disconnect, suspend, timeout, and failure matrix | P0 | verified for v1 | E1-T04 | N1 and F1-F5 passed; F7 is satisfied by F2's accepted-InFlight FunctionFS Suspend containment. F6 is deferred P2: the isolated PM-test variant delivered real Idle Suspend/Resume, then this OnePlus 6 target runtime-PM path re-enumerated the GUD device (`devnum 5 -> 6`), producing Pi Disable -> Enable and a new activation rather than same-activation persistence. No PM behavior is enabled in production. Final evidence: `/tmp/opencode/e1-t05-f6-final-pm-diagnostic-20260819T051300Z`; matrix: `../gud-gadget/docs/e1-t05-lifecycle-matrix-runbook.md`. |
-| `E1-T06` Transport soak within the qualified envelope | P0 | planned | E1-T05 | At least 30 minutes and 10,000 accepted payloads across N1-qualified reconnects complete with zero length mismatch, poison, host timeout, DWC2 fault, Oops, or pstore record. Same-activation USB runtime resume is out of scope while F6 is deferred P2. |
+| `E1-T06` Transport soak within the qualified envelope | P0 | verified | E1-T05 | E1-T06 is accepted for v1 by project-owner decision. The retained soak evidence does not independently reconstruct every originally specified reconnect/count criterion, but no further E1-T06 qualification is required for the v1 critical path. Evidence: `../gud-gadget/evidence/functionfs-status-on-set-e1-t06-soak-20260820T012100Z/`. |
 | `E1-T07` Explain or safely raise the >12,800-byte boundary | P2 | planned | E1-T06, release SLO need | Kernel/host matrix identifies the cause or qualifies a larger limit. This is not a v1 blocker while 12,800 bytes meets the product SLO. |
 | `E1-T08` Post-v1 upstream or replace vendored FunctionFS extensions | P2 | planned | v1, E1-T04 | Production no longer depends on an unexplained local endpoint/AIO extension, or the extension has an upstream-quality design and test suite. |
 
-Epic acceptance: E1-T01 through E1-T06 are verified, the chosen production
+Epic acceptance: E1-T01 through E1-T06 are verified. The retained T06 evidence
+is preserved with its historical caveat, but the project-owner decision accepts
+it for v1, and the chosen production
 path has a reproducible package and rollback, and no unsafe recovery is needed
 in the passing matrix.
 
@@ -258,7 +260,7 @@ User stories:
 
 | Ticket | P | State | Depends on | Deliverable and acceptance |
 | --- | --- | --- | --- | --- |
-| `E2-T01` Finish the synthetic offscreen render target | P0 | in progress | clean packaged-phone baseline | Replace the rejected synthetic Android window surface with a phone-compatible offscreen gralloc/EGL or equivalent target; focused tests and a render-only hardware gate show bounded FDs/fences. |
+| `E2-T01` Reconcile the source/render capture gate | P0 | in progress | clean packaged-phone baseline | Prove the selected xdispd-driven Lomiri source/render/capture path can repeatedly create and release a bounded capture source with real content, while the older Android2 synthetic output remains dormant unless separately required. Focused tests and a render-only hardware gate must show bounded FDs/fences. |
 | `E2-T02` Complete newest-frame worker integration | P0 | in progress | E2-T01, stable E1 interface | Worker owns its GUD fd/KMS buffers, retains one pending frame, drops superseded frames, and joins before KMS teardown. |
 | `E2-T03` Prove compositor nonblocking behavior | P0 | planned | E2-T02 | Instrumented commit latency remains bounded while GUD is healthy, slow, absent, and failing; phone input and internal display stay responsive. |
 | `E2-T04` Eliminate unbounded fence/FD retention | P0 | planned | E2-T01 | A 30-minute render/present soak reaches a stable plateau with accounting for every buffer, fence, and descriptor; no binder `-12` or KGSL `-24` occurs. |
