@@ -98,20 +98,32 @@ static int get_prop_value(int fd, uint32_t object_id, uint32_t object_type,
 
 #if GUD_KMS_COLOR_BARS
 static void paint_test_pattern(void *pixels, uint32_t pitch,
-			       uint32_t width, uint32_t height)
+			       uint32_t width, uint32_t height, bool xrgb8888)
 {
 	static const uint16_t bars[] = {
 		0xffff, 0xffe0, 0x07ff, 0x07e0,
 		0xf81f, 0xf800, 0x001f, 0x0000,
 	};
+	static const uint32_t xrgb_bars[] = {
+		0xffffffff, 0xffffff00, 0xff00ffff, 0xff00ff00,
+		0xffff00ff, 0xffff0000, 0xff0000ff, 0xff000000,
+	};
 	uint32_t y;
 
 	for (y = 0; y < height; y++) {
-		uint16_t *line = (uint16_t *)((uint8_t *)pixels + y * pitch);
 		uint32_t x;
 
-		for (x = 0; x < width; x++)
-			line[x] = bars[(x * 8) / width];
+		if (xrgb8888) {
+			uint32_t *line = (uint32_t *)((uint8_t *)pixels + y * pitch);
+
+			for (x = 0; x < width; x++)
+				line[x] = xrgb_bars[(x * 8) / width];
+		} else {
+			uint16_t *line = (uint16_t *)((uint8_t *)pixels + y * pitch);
+
+			for (x = 0; x < width; x++)
+				line[x] = bars[(x * 8) / width];
+		}
 	}
 }
 #endif
@@ -136,17 +148,23 @@ int main(int argc, char **argv)
 	uint32_t connector_id = 0;
 	uint32_t crtc_id = 0;
 	uint32_t plane_id = 0;
+	bool xrgb8888 = false;
 	int connector_index;
 	uint32_t crtc_index = 0;
 	int fd = -1;
 	int rc = 1;
 	int i;
 
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s <card-path>\n", argv[0]);
+	if (argc == 4 && !strcmp(argv[1], "--format") &&
+	    !strcmp(argv[2], "xrgb8888")) {
+		xrgb8888 = true;
+		card = argv[3];
+	} else if (argc == 2) {
+		card = argv[1];
+	} else {
+		fprintf(stderr, "usage: %s [--format xrgb8888] <card-path>\n", argv[0]);
 		return 1;
 	}
-	card = argv[1];
 
 	fd = open(card, O_RDWR | O_CLOEXEC);
 	if (fd < 0) {
@@ -291,7 +309,7 @@ int main(int argc, char **argv)
 
 	create.width = 1280;
 	create.height = 720;
-	create.bpp = 16;
+	create.bpp = xrgb8888 ? 32 : 16;
 	if (drmIoctl(fd, DRM_IOCTL_MODE_CREATE_DUMB, &create) < 0) {
 		rc = fail("DRM_IOCTL_MODE_CREATE_DUMB");
 		goto out;
@@ -308,7 +326,8 @@ int main(int argc, char **argv)
 		goto out;
 	}
 #if GUD_KMS_COLOR_BARS
-	paint_test_pattern(pixels, create.pitch, create.width, create.height);
+	paint_test_pattern(pixels, create.pitch, create.width, create.height,
+			   xrgb8888);
 #else
 	memset(pixels, 0x5a, create.size);
 #endif
@@ -318,7 +337,8 @@ int main(int argc, char **argv)
 		uint32_t pitches[4] = { create.pitch, 0, 0, 0 };
 		uint32_t offsets[4] = { 0, 0, 0, 0 };
 
-		if (drmModeAddFB2(fd, create.width, create.height, DRM_FORMAT_RGB565,
+		if (drmModeAddFB2(fd, create.width, create.height,
+				  xrgb8888 ? DRM_FORMAT_XRGB8888 : DRM_FORMAT_RGB565,
 				  handles, pitches, offsets, &fb_id, 0) != 0) {
 			rc = fail("drmModeAddFB2");
 			goto out;
