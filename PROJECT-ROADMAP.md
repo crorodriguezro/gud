@@ -260,7 +260,7 @@ User stories:
 
 | Ticket | P | State | Depends on | Deliverable and acceptance |
 | --- | --- | --- | --- | --- |
-| `E2-T01` Reconcile the source/render capture gate | P0 | in progress | clean packaged-phone baseline | Prove the selected xdispd-driven Lomiri source/render/capture path can repeatedly create and release a bounded capture source with real content, while the older Android2 synthetic output remains dormant unless separately required. Focused tests and a render-only hardware gate must show bounded FDs/fences. |
+| `E2-T01` Reconcile the source/render capture gate | P0 | in progress | clean packaged-phone baseline | Prove the selected xdispd-driven Lomiri source/render/capture gate can repeatedly create and release a bounded capture source with real content, while the older Android2 synthetic/offscreen output remains dormant unless separately required. Focused source-only cycles and resource snapshots must show bounded FDs/fences. |
 | `E2-T02` Complete newest-frame worker integration | P0 | in progress | E2-T01, stable E1 interface | Worker owns its GUD fd/KMS buffers, retains one pending frame, drops superseded frames, and joins before KMS teardown. |
 | `E2-T03` Prove compositor nonblocking behavior | P0 | planned | E2-T02 | Instrumented commit latency remains bounded while GUD is healthy, slow, absent, and failing; phone input and internal display stay responsive. |
 | `E2-T04` Eliminate unbounded fence/FD retention | P0 | planned | E2-T01 | A 30-minute render/present soak reaches a stable plateau with accounting for every buffer, fence, and descriptor; no binder `-12` or KGSL `-24` occurs. |
