@@ -262,7 +262,7 @@ User stories:
 | --- | --- | --- | --- | --- |
 | `E2-T01` Reconcile the source/render capture gate | P0 | verified | clean packaged-phone baseline | Prove the selected xdispd-driven Lomiri source/render/capture gate can repeatedly create and release a bounded capture source with real content, while the older Android2 synthetic/offscreen output remains dormant unless separately required. Focused source-only cycles and resource snapshots must show bounded FDs/fences. Canonical clean evidence: `fresh-extension-20260820T035520Z-fast`. Earlier Lomiri greeter restart evidence was investigated and classified as unrelated device/session contamination; the clean rerun passed without restart. |
 | `E2-T02` Complete newest-frame worker integration | P0 | verified | E2-T01, stable E1 interface | **Verified for v1 by project-owner decision.** The real wrapper-free managed Lomiri -> Mir Virtual -> mirgud -> GUD path presented frames with `max_pending_observed=1` and `max_in_flight_observed=1`; focused tests passed for newest-frame replacement, nonblocking source submission, ownership retention, and worker join semantics. The current source includes the presenter/KMS lifetime guard that closes the early Mir-era ownership hole. Graceful shutdown while GUD transport is stalled or failing is deferred to E2-T03/E2-T05. |
-| `E2-T03` Prove compositor nonblocking behavior | P0 | planned | E2-T02 | Instrumented commit latency remains bounded while GUD is healthy, slow, absent, and failing; phone input and internal display stay responsive. |
+| `E2-T03` Prove compositor nonblocking behavior | P0 | verified | E2-T02 | **Verified for v1 by project-owner decision.** Managed presentation naturally observed a 3.143 s worker-side GUD stall while producer enqueue remained p95 10 us / max 177 us, with `max_pending_observed=1` and `max_in_flight_observed=1`; healthy presentation, bounded absence, and real USB-detach containment preserved phone/compositor responsiveness. The synthetic slow injector is waived for v1. Failed/stalled teardown remains E2-T05; long-duration FD/fence stability remains E2-T04. Canonical evidence: `../gud-gadget/evidence/xdisp-e2-t03-20260820T190445Z/`. |
 | `E2-T04` Eliminate unbounded fence/FD retention | P0 | planned | E2-T01 | A 30-minute render/present soak reaches a stable plateau with accounting for every buffer, fence, and descriptor; no binder `-12` or KGSL `-24` occurs. |
 | `E2-T05` Contain worker and KMS errors | P0 | planned | E2-T02 | Inject open, allocation, modeset, submit, disconnect, and shutdown failures; no exception crosses the compositor boundary and recovery remains possible. |
 | `E2-T06` Hardware alpha qualification | P0 | planned | E2-T03..T05 | Real Lomiri content presents for 30 minutes with bounded resources, newest-frame coalescing, no phone freeze, and retained phone/Pi evidence. |
@@ -287,6 +287,24 @@ assert that graceful shutdown under stalled/failing transport passed, that
 `KMS_TEARDOWN_COMPLETE` was observed in that degraded shutdown, or that final
 hardware accounting after containment was proven. Those failure-mode questions
 are deferred to E2-T03/E2-T05.
+
+#### E2-T03 closure decision
+
+E2-T03 is accepted for v1 as **verified by project-owner decision**. Production
+managed presentation naturally reached a 3.143 s worker-side GUD presentation
+stall while producer enqueue remained microsecond-scale (p95 10 us, max 177
+us), with one pending and one in-flight frame maximum. The phone remained
+responsive and compositor/LightDM continuity was preserved. The absent-device
+path remained bounded without a managed child, and a real USB data detach was
+contained without destabilizing the phone. A separate synthetic slow-GUD
+injector is waived for v1 because the natural stall already demonstrates
+producer/worker decoupling.
+
+This closure does not claim graceful teardown under failed or stalled transport,
+which remains E2-T05, or long-duration FD/fence stability, which remains
+E2-T04. Canonical closure evidence is retained at
+`../gud-gadget/evidence/xdisp-e2-t03-20260820T190445Z/`; its original partial
+matrix classification remains an accurate record of the pre-acceptance state.
 
 Epic acceptance: slow, absent, and failed GUD output cannot block the phone UI;
 the full hardware alpha passes without resource growth or manual rollback.
