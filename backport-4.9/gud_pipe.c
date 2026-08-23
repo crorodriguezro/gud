@@ -74,7 +74,7 @@ static unsigned int xdisp_probe_payload_length;
 module_param_named(xdisp_probe_payload_length, xdisp_probe_payload_length,
 			   uint, 0644);
 MODULE_PARM_DESC(xdisp_probe_payload_length,
-	"Test-only single-payload raw bulk length (1..524288; zero disables)");
+	"Test-only single-payload raw bulk length (1..4194304; zero disables)");
 
 static bool xdisp_probe_zero_packet;
 module_param_named(xdisp_probe_zero_packet, xdisp_probe_zero_packet, bool, 0644);
