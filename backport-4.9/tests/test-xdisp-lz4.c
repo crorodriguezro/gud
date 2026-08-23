@@ -669,7 +669,8 @@ static void run_raw_row_limit_case(const char *name, u32 width, u32 height,
 		struct gud_xdisp_chunk chunk;
 		u32 remaining = height - rows_done;
 
-		chunk.rows = gud_xdisp_raw_rows(remaining, bytes_per_line, height);
+		chunk.rows = gud_xdisp_raw_rows(remaining, bytes_per_line, height,
+						GUD_XDISP_DEFAULT_PAYLOAD_LIMIT);
 		chunk.source_length = (size_t)chunk.rows * bytes_per_line;
 		chunk.payload_length = chunk.source_length;
 		chunk.compressed = false;
@@ -678,7 +679,8 @@ static void run_raw_row_limit_case(const char *name, u32 width, u32 height,
 			return;
 		}
 		if (chunk.rows != gud_xdisp_raw_rows(remaining, bytes_per_line,
-						   height)) {
+						      height,
+						      GUD_XDISP_DEFAULT_PAYLOAD_LIMIT)) {
 			fail(name, "raw chunk did not use the cap-safe row count");
 			return;
 		}

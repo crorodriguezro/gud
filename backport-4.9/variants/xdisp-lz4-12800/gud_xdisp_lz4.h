@@ -19,10 +19,16 @@ typedef uint64_t u64;
  * diagnostic must never rely on a shorter FunctionFS read to split a larger
  * host request: every submitted bulk URB is bounded here instead.
  */
-#define GUD_XDISP_PAYLOAD_LIMIT 12800U
+#define GUD_XDISP_DEFAULT_PAYLOAD_LIMIT 12800U
+#define GUD_XDISP_MAX_PAYLOAD_LIMIT (4U * 1024U * 1024U)
+#define GUD_XDISP_PAYLOAD_LIMIT GUD_XDISP_DEFAULT_PAYLOAD_LIMIT
 #define GUD_XDISP_TARGET_PAYLOAD_PERCENT 95U
 #define GUD_XDISP_DISCOVERY_TARGET_PAYLOAD \
-	(GUD_XDISP_PAYLOAD_LIMIT * GUD_XDISP_TARGET_PAYLOAD_PERCENT / 100U)
+	(GUD_XDISP_DEFAULT_PAYLOAD_LIMIT * GUD_XDISP_TARGET_PAYLOAD_PERCENT / 100U)
+
+#ifdef __KERNEL__
+extern unsigned int gud_xdisp_payload_limit;
+#endif
 
 struct gud_xdisp_chunk {
 	u32 rows;
@@ -50,7 +56,7 @@ struct gud_xdisp_bounded_frame {
 size_t gud_xdisp_lz4_compress_bound(size_t source_length);
 
 u32 gud_xdisp_raw_rows(u32 remaining_rows, size_t bytes_per_line,
-			       u32 max_rows);
+			       u32 max_rows, size_t payload_limit);
 
 /*
  * Modern upstream LZ4 bounded-output compressor, embedded privately in

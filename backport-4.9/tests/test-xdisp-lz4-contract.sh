@@ -17,7 +17,9 @@ require() {
 }
 
 require "$variant/gud_xdisp_lz4.h" \
-	'#define GUD_XDISP_PAYLOAD_LIMIT 12800U'
+	'#define GUD_XDISP_DEFAULT_PAYLOAD_LIMIT 12800U'
+require "$variant/gud_xdisp_lz4.h" \
+	'#define GUD_XDISP_MAX_PAYLOAD_LIMIT (4U * 1024U * 1024U)'
 require "$variant/gud_xdisp_lz4.c" \
 	'gud_xdisp_plan_chunk_bounded_frame('
 require "$pipe" 'struct gud_xdisp_bounded_frame bounded_frame'
@@ -35,7 +37,7 @@ require "$pipe" 'xdisp_probe_payload_length'
 require "$pipe" 'XDISP_PROBE complete'
 require "$pipe" 'URB_ZERO_PACKET'
 require "$pipe" 'raw_backoff_rectangles=%u'
-require "$pipe" 'chunk.payload_length > GUD_XDISP_PAYLOAD_LIMIT'
+require "$pipe" 'chunk.payload_length > gud_xdisp_payload_limit'
 require "$pipe" 'request.length = cpu_to_le32(chunk.source_length);'
 require "$pipe" 'request.compression = GUD_COMPRESSION_LZ4;'
 require "$pipe" 'request.compressed_length ='
@@ -46,6 +48,7 @@ require "$pipe" 'compress_attempts=%llu'
 require "$pipe" 'compress_rejected=%llu'
 require "$pipe" 'compress_source_bytes=%llu'
 require "$driver" 'XDISP diagnostic variant'
+require "$driver" 'module_param_named(xdisp_payload_limit, gud_xdisp_payload_limit, uint, 0444);'
 require "$variant/Kbuild" 'obj-m += gud.o'
 require "$variant/Kbuild" 'gud_xdisp_lz4.o'
 

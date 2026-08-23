@@ -6,6 +6,13 @@
 #include "gud_internal.h"
 #include "gud_protocol.h"
 
+#ifdef GUD_XDISP_LZ4_12800
+unsigned int gud_xdisp_payload_limit = GUD_XDISP_DEFAULT_PAYLOAD_LIMIT;
+module_param_named(xdisp_payload_limit, gud_xdisp_payload_limit, uint, 0444);
+MODULE_PARM_DESC(xdisp_payload_limit,
+	"Diagnostic XDISP actual bulk payload cap in bytes (default: 12800; max: 4194304)");
+#endif
+
 static const struct file_operations gud_drm_fops = {
 	.owner = THIS_MODULE,
 	.open = drm_open,
@@ -158,7 +165,7 @@ int gud_get_display_descriptor(struct gud_device *gud)
 #ifdef GUD_XDISP_LZ4_12800
 	dev_info(&gud->intf->dev,
 		 "XDISP diagnostic variant: compression=0x%02x actual bulk payload cap=%u\n",
-		 gud->compression, GUD_XDISP_PAYLOAD_LIMIT);
+		 gud->compression, gud_xdisp_payload_limit);
 #endif
 	return 0;
 }

@@ -25,6 +25,52 @@ Use Wi-Fi SSH for control after disconnecting the laptop USB cable from the
 phone. USB ADB and the Pi cannot occupy the OnePlus 6's only USB-C port at the
 same time.
 
+### Project SSH Access
+
+The project devices are reachable on the local network at:
+
+| Device | SSH target | Login password | `sudo` password |
+| --- | --- | --- | --- |
+| OnePlus 6 | `phablet@192.168.1.120` | `1026` | `1026` |
+| Raspberry Pi | `cristian@192.168.1.110` | `cristian` | `cristian` |
+
+The workstation's default SSH configuration currently rejects the systemd
+proxy snippet because of its local file permissions. Bypass it with
+`-F /dev/null`. The phone accepts both the workstation's authorized key and
+password authentication; password authentication should be forced for an
+agent that does not have the workstation key:
+
+```bash
+ssh -F /dev/null \
+  -o PreferredAuthentications=password \
+  -o PubkeyAuthentication=no \
+  -o KbdInteractiveAuthentication=no \
+  phablet@192.168.1.120
+
+ssh -F /dev/null \
+  -o PreferredAuthentications=password \
+  -o PubkeyAuthentication=no \
+  -o KbdInteractiveAuthentication=no \
+  cristian@192.168.1.110
+```
+
+For non-interactive privileged commands, feed the device password to remote
+`sudo`, not to the SSH client:
+
+```bash
+printf '1026\n' | ssh -F /dev/null phablet@192.168.1.120 \
+  'sudo -S <command>'
+printf 'cristian\n' | ssh -F /dev/null cristian@192.168.1.110 \
+  'sudo -S <command>'
+```
+
+These credentials are specific to this lab setup and are intentionally stored
+in this runbook so authorized troubleshooting agents can connect without
+guesswork. Do not remove or redact them from this document unless the lab
+credentials are deliberately rotated and this section is updated at the same
+time. Do not reuse them outside this isolated network or copy them into other
+commits, scripts, or shell history.
+
 ### Validated Cable And Power Topology
 
 The fixed BENFEI port and the following physical arrangement were validated on
@@ -176,9 +222,9 @@ enumerated `214b:7250` at `1-1` and the adapter `343c:0000` at `1-1.1`.
 ## Recovery After A Pi Power Cycle
 
 A Pi power cycle can introduce a second, independent failure. On the project
-Pi, `gud-userspace.service` is not enabled at boot. If it is inactive, the GUD
-configfs gadget does not exist and the phone cannot read `1d50:614d`, even
-though the hub is now working.
+Pi, `gud-userspace.service` is enabled at boot, but verify that it is active
+after the Pi returns. If it is inactive, the GUD configfs gadget does not exist
+and the phone cannot read `1d50:614d`, even though the hub is now working.
 
 When the hub enumerates but the Pi does not, inspect both sides before
 changing cables again:
