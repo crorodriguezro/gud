@@ -116,13 +116,61 @@ baseline exists, but it must record the decision explicitly.
 | Independent Lomiri external output | feasibility proven, rolled back | The POC exposed `DisplayPort-2` and an extended desktop, but the implementation is not stable or deployable. |
 | Nonblocking Mir presentation | in progress | A newest-frame worker exists at source/component-test level; the synthetic render target and hardware resource lifecycle remain unresolved. |
 | Dynamic DRM card discovery/re-add | planned | Current experiments can scan by driver, but complete remove/re-add and Mir output recreation are not verified. |
-| Pixel-format default | undecided | RGB565 and XRGB8888 support exists on experimental branches; the full hardware benchmark is incomplete. |
+| Pixel-format capability/default | E2 v1 candidate selected; release default undecided | The deployed Mir 1.8.3 Android2 screencast accepts true packed RGB565 and RGB888, rejects XRGB8888, and supplies ABGR8888 under `auto`. Direct Mir RGB565 + LZ4 achieved 22.62 presented fps at 1280x720 against the >=20 target; RGB565 RAW achieved 18.16 fps and remains the fallback. E2-T04 is the next gate; the final release default remains open in E5-T03. |
 | Persistent phone SSH | verified on current system image | The lower-root `ssh.service` boot link survives reboot and key-only SSH starts without manual activation. |
 
 The one-transaction STATUS_ON_SET foundation evidence is retained at
 `../gud-gadget/evidence/functionfs-status-on-set-hs-20260817T165632Z/`. The
 guarded sequential gate is retained at
 `../gud-gadget/evidence/functionfs-status-on-set-e1-t02-hs-corrected-20260817T192939Z/`.
+
+### Pixel-format capability audit — VERIFIED
+
+Deployed Mir 1.8.3 Android2 screencast on the OnePlus 6:
+
+- XRGB8888: not advertised; request rejected.
+- RGB888: true packed 24-bpp buffer supported.
+- RGB565: true packed 16-bpp buffer supported.
+- RGB565 can be consumed directly by `mirgud`.
+
+Decision: **Direct Mir RGB565 + LZ4 is the selected E2 v1 transport candidate
+for sustained qualification.** At 1280x720 it achieved 22.62 presented fps,
+exceeding the >=20 fps target, while preserving E1 transport safety. RGB565
+RAW achieved 18.16 fps and remains the simpler fallback. The deployed Mir
+1.8.3 screencast path supplies true packed RGB565 directly, so no
+XRGB8888-to-RGB565 conversion is required in mirgud. Do not treat this as the
+final production default before T04 and T05.
+
+Canonical evidence:
+`../gud-gadget/evidence/xdisp-mir-format-capability-20260824T003458Z/`.
+
+This verifies deployed source capability and records the selected E2 v1
+candidate. E2-T04 is now unpaused and is the next gate. This does not close
+E5-T03 or select the final release default before sustained qualification and
+full-pipeline image-quality comparison.
+
+### E2 v1 transport selection — VERIFIED FOR NEXT GATE
+
+The four measured paths are recorded in the canonical evidence bundles under
+`../gud-gadget/evidence/`:
+
+- `xdisp-mir-format-capability-20260824T003458Z/`
+- `xdisp-e1-fullframe-managed-scaling-20260823T223143Z/`
+- `xdisp-e2-bandwidth-damage-20260823T232018Z/`
+- `xdisp-e2-direct-mir-rgb565-20260824T010040Z/`
+
+The selected architecture is:
+
+```text
+Lomiri -> unmodified Mir 1.8.3 -> direct packed RGB565 screencast
+  -> mirgud (no XRGB8888 conversion) -> GUD RGB565 -> LZ4 -> USB
+  -> Pi Zero 2 W FunctionFS GUD gadget -> RGB565 framebuffer/VC4 -> HDMI
+```
+
+This is a selected E2 v1 transport candidate pending E2-T04 and E2-T05; it is
+not yet the final production default. Preserve one logical accepted/inflight
+GUD payload, no payload pipelining, explicit retry only for explicit
+pre-bulk SET_BUFFER BUSY, and Poisoned containment for ambiguous accepted I/O.
 
 ## 4. Priority and lifecycle model
 
@@ -263,7 +311,7 @@ User stories:
 | `E2-T01` Reconcile the source/render capture gate | P0 | verified | clean packaged-phone baseline | Prove the selected xdispd-driven Lomiri source/render/capture gate can repeatedly create and release a bounded capture source with real content, while the older Android2 synthetic/offscreen output remains dormant unless separately required. Focused source-only cycles and resource snapshots must show bounded FDs/fences. Canonical clean evidence: `fresh-extension-20260820T035520Z-fast`. Earlier Lomiri greeter restart evidence was investigated and classified as unrelated device/session contamination; the clean rerun passed without restart. |
 | `E2-T02` Complete newest-frame worker integration | P0 | verified | E2-T01, stable E1 interface | **Verified for v1 by project-owner decision.** The real wrapper-free managed Lomiri -> Mir Virtual -> mirgud -> GUD path presented frames with `max_pending_observed=1` and `max_in_flight_observed=1`; focused tests passed for newest-frame replacement, nonblocking source submission, ownership retention, and worker join semantics. The current source includes the presenter/KMS lifetime guard that closes the early Mir-era ownership hole. Graceful shutdown while GUD transport is stalled or failing is deferred to E2-T03/E2-T05. |
 | `E2-T03` Prove compositor nonblocking behavior | P0 | verified | E2-T02 | **Verified for v1 by project-owner decision.** Managed presentation naturally observed a 3.143 s worker-side GUD stall while producer enqueue remained p95 10 us / max 177 us, with `max_pending_observed=1` and `max_in_flight_observed=1`; healthy presentation, bounded absence, and real USB-detach containment preserved phone/compositor responsiveness. The synthetic slow injector is waived for v1. Failed/stalled teardown remains E2-T05; long-duration FD/fence stability remains E2-T04. Canonical evidence: `../gud-gadget/evidence/xdisp-e2-t03-20260820T190445Z/`. |
-| `E2-T04` Eliminate unbounded fence/FD retention | P0 | planned | E2-T01 | A 30-minute render/present soak reaches a stable plateau with accounting for every buffer, fence, and descriptor; no binder `-12` or KGSL `-24` occurs. |
+| `E2-T04` Eliminate unbounded fence/FD retention | P0 | planned (unpaused; next gate) | E2-T01 | A 30-minute direct Mir RGB565 + LZ4 render/present soak reaches a stable plateau with accounting for every buffer, fence, and descriptor; no binder `-12` or KGSL `-24` occurs. |
 | `E2-T05` Contain worker and KMS errors | P0 | planned | E2-T02 | Inject open, allocation, modeset, submit, disconnect, and shutdown failures; no exception crosses the compositor boundary and recovery remains possible. |
 | `E2-T06` Hardware alpha qualification | P0 | planned | E2-T03..T05 | Real Lomiri content presents for 30 minutes with bounded resources, newest-frame coalescing, no phone freeze, and retained phone/Pi evidence. |
 
