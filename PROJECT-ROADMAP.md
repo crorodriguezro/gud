@@ -2,7 +2,7 @@
 
 ## Product scope, epics, and delivery roadmap
 
-Status: local planning baseline
+Status: E2 COMPLETE FOR V1; E3 NEXT
 
 Date: 2026-08-17
 
@@ -116,7 +116,7 @@ baseline exists, but it must record the decision explicitly.
 | Independent Lomiri external output | feasibility proven, rolled back | The POC exposed `DisplayPort-2` and an extended desktop, but the implementation is not stable or deployable. |
 | Nonblocking Mir presentation | in progress | A newest-frame worker exists at source/component-test level; the synthetic render target and hardware resource lifecycle remain unresolved. |
 | Dynamic DRM card discovery/re-add | planned | Current experiments can scan by driver, but complete remove/re-add and Mir output recreation are not verified. |
-| Pixel-format capability/default | E2 v1 candidate selected; T04 blocked; release default undecided | The deployed Mir 1.8.3 Android2 screencast accepts true packed RGB565 and RGB888, rejects XRGB8888, and supplies ABGR8888 under `auto`. Direct Mir RGB565 + LZ4 achieved 22.62 presented fps at 1280x720 against the >=20 target; RGB565 RAW achieved 18.16 fps and remains the fallback. E2-T04 was started but blocked by incorrect physical geometry on the connected 1920x1080 monitor; the final release default remains open in E5-T03. |
+| Pixel-format capability/default | E2 v1 candidate selected; E2 qualified; release default undecided | The deployed Mir 1.8.3 Android2 screencast accepts true packed RGB565 and RGB888, rejects XRGB8888, and supplies ABGR8888 under `auto`. Direct Mir RGB565 + LZ4 achieved 22.62 presented fps at 1280x720 against the >=20 target; RGB565 RAW achieved 18.16 fps and remains the fallback. The final release default remains open in E5-T03. |
 | Persistent phone SSH | verified on current system image | The lower-root `ssh.service` boot link survives reboot and key-only SSH starts without manual activation. |
 
 The one-transaction STATUS_ON_SET foundation evidence is retained at
@@ -145,9 +145,8 @@ Canonical evidence:
 `../gud-gadget/evidence/xdisp-mir-format-capability-20260824T003458Z/`.
 
 This verifies deployed source capability and records the selected E2 v1
-candidate. E2-T04 is now unpaused and is the next gate. This does not close
-E5-T03 or select the final release default before sustained qualification and
-full-pipeline image-quality comparison.
+candidate. E2-T04 and E2-T05 are now qualified for v1; E5-T03 remains
+responsible for the final release-default and image-quality decision.
 
 ### E2 v1 transport selection — VERIFIED FOR NEXT GATE
 
@@ -167,8 +166,8 @@ Lomiri -> unmodified Mir 1.8.3 -> direct packed RGB565 screencast
   -> Pi Zero 2 W FunctionFS GUD gadget -> RGB565 framebuffer/VC4 -> HDMI
 ```
 
-This is a selected E2 v1 transport candidate pending E2-T04 and E2-T05; it is
-not yet the final production default. Preserve one logical accepted/inflight
+This is the selected E2 v1 transport candidate; it is not an installed final
+production default. Preserve one logical accepted/inflight
 GUD payload, no payload pipelining, explicit retry only for explicit
 pre-bulk SET_BUFFER BUSY, and Poisoned containment for ambiguous accepted I/O.
 
@@ -289,7 +288,7 @@ in the passing matrix.
 
 Priority: P0
 
-State: in progress
+State: verified — COMPLETE FOR V1
 Owner: `mir-android2-platform-gud`
 
 Legacy mapping: `XDISP-P0.2`.
@@ -311,8 +310,8 @@ User stories:
 | `E2-T01` Reconcile the source/render capture gate | P0 | verified | clean packaged-phone baseline | Prove the selected xdispd-driven Lomiri source/render/capture gate can repeatedly create and release a bounded capture source with real content, while the older Android2 synthetic/offscreen output remains dormant unless separately required. Focused source-only cycles and resource snapshots must show bounded FDs/fences. Canonical clean evidence: `fresh-extension-20260820T035520Z-fast`. Earlier Lomiri greeter restart evidence was investigated and classified as unrelated device/session contamination; the clean rerun passed without restart. |
 | `E2-T02` Complete newest-frame worker integration | P0 | verified | E2-T01, stable E1 interface | **Verified for v1 by project-owner decision.** The real wrapper-free managed Lomiri -> Mir Virtual -> mirgud -> GUD path presented frames with `max_pending_observed=1` and `max_in_flight_observed=1`; focused tests passed for newest-frame replacement, nonblocking source submission, ownership retention, and worker join semantics. The current source includes the presenter/KMS lifetime guard that closes the early Mir-era ownership hole. Graceful shutdown while GUD transport is stalled or failing is deferred to E2-T03/E2-T05. |
 | `E2-T03` Prove compositor nonblocking behavior | P0 | verified | E2-T02 | **Verified for v1 by project-owner decision.** Managed presentation naturally observed a 3.143 s worker-side GUD stall while producer enqueue remained p95 10 us / max 177 us, with `max_pending_observed=1` and `max_in_flight_observed=1`; healthy presentation, bounded absence, and real USB-detach containment preserved phone/compositor responsiveness. The synthetic slow injector is waived for v1. Failed/stalled teardown remains E2-T05; long-duration FD/fence stability remains E2-T04. Canonical evidence: `../gud-gadget/evidence/xdisp-e2-t03-20260820T190445Z/`. |
-| `E2-T04` Eliminate unbounded fence/FD retention | P0 | blocked | E2-T01 | The first direct Mir RGB565 + LZ4 soak was aborted before 30 minutes after the operator observed an undersized desktop. Safety telemetry remained clean through 13,920 accepted/completed transactions, but the Pi test forced 1280x720 while the connected monitor prefers 1920x1080. Correct full-screen source/output geometry is required before a fresh soak. Evidence: `../gud-gadget/evidence/xdisp-e2-t04-rgb565-lz4-soak-20260824T013813Z/`. |
-| `E2-T05` Contain worker and KMS errors | P0 | planned | E2-T02 | Inject open, allocation, modeset, submit, disconnect, and shutdown failures; no exception crosses the compositor boundary and recovery remains possible. |
+| `E2-T04` Eliminate unbounded fence/FD retention | P0 | verified | E2-T01 | A full 30-minute managed Direct Mir RGB565 + LZ4 soak passed at 24.474 FPS with no observed RSS, FD, thread, or sync-file leak, zero poisoned/ambiguous I/O, and owner-confirmed correct physical HDMI output. Canonical evidence: `../gud-gadget/evidence/xdisp-e2-t04-rgb565-lz4-soak-20260824T033632Z/`. |
+| `E2-T05` Contain worker and KMS errors | P0 | verified | E2-T02 | A 10/10 bounded healthy-shutdown disposition plus B 3/3, C 2/2 real physical detach, D 3/3, E 3/3, and F verified. Canonical evidence: `../gud-gadget/evidence/xdisp-e2-t05-shutdown-containment-20260824T133342Z/` and `../gud-gadget/evidence/xdisp-e2-t05-bce-completion-20260824T135743Z/`. |
 | `E2-T06` Hardware alpha qualification | P0 | planned | E2-T03..T05 | Real Lomiri content presents for 30 minutes with bounded resources, newest-frame coalescing, no phone freeze, and retained phone/Pi evidence. |
 
 #### E2-T02 closure decision
@@ -354,9 +353,9 @@ E2-T04. Canonical closure evidence is retained at
 `../gud-gadget/evidence/xdisp-e2-t03-20260820T190445Z/`; its original partial
 matrix classification remains an accurate record of the pre-acceptance state.
 
-#### E2-T04 blocked-run decision
+#### Historical E2-T04 blocked-run record
 
-E2-T04 is **blocked**, not passed. The direct Mir RGB565 + LZ4 session was
+The original E2-T04 attempt was **blocked**, not passed. The direct Mir RGB565 + LZ4 session was
 activated with the declared one-admission/one-in-flight safety model and
 reached 13,920 accepted and completed transactions with zero poisoned,
 timed-out, processing-failed, or ambiguous-accepted I/O in the captured
@@ -373,11 +372,37 @@ diagnostic configuration was removed and the known-safe production state was
 restored. A fresh T04 run requires a documented full-screen geometry/source
 configuration that does not introduce this scaling regression.
 
-Canonical blocked-run evidence is retained at
+That historical blocked-run evidence is retained at
 `../gud-gadget/evidence/xdisp-e2-t04-rgb565-lz4-soak-20260824T013813Z/`.
 
-Epic acceptance: slow, absent, and failed GUD output cannot block the phone UI;
-the full hardware alpha passes without resource growth or manual rollback.
+The subsequent owner disposition and completed soak supersede the blocked
+attempt for the roadmap acceptance. The canonical passing soak is
+`../gud-gadget/evidence/xdisp-e2-t04-rgb565-lz4-soak-20260824T033632Z/`.
+
+Epic acceptance: slow, absent, failed, and physically disappearing GUD output
+cannot block the phone UI; the full hardware alpha passes without resource
+growth or manual rollback.
+
+#### E2 v1 closure
+
+**E2 COMPLETE FOR V1.** Direct Mir RGB565 + LZ4 is the selected transport
+candidate at 1280x720. It exceeded the >=20 FPS qualification target at
+22.62 FPS, and the completed T04 soak measured 24.474 FPS over 30 minutes.
+T01, T02, and T03 are passed; T04 is verified by project-owner disposition;
+T05 is PASS. The bounded asynchronous presenter retains at most one pending
+and one in-flight frame, and E1's one-logical-payload ownership rules remain
+unchanged.
+
+The known v1 caveat is explicit: deployed Mir 1.8.3 may stall in
+`mir_connection_release` after presenter/KMS cleanup. xdispd applies its
+existing bounded containment, force-terminates and reaps the managed child,
+and leaves the phone/compositor healthy. This is bounded containment at the
+known Mir disconnect boundary, not graceful shutdown. Reconnect/reappearance
+is outside E2 and belongs to **E3 — Discover and recover the live GUD output
+dynamically**, which remains next and has not started.
+
+Detailed closure, evidence references, and the unpushed-change audit are in
+`docs/e2-v1-closure.md`.
 
 ### E3 — Discover and recover the live GUD output dynamically
 

@@ -4,6 +4,29 @@ The product-level goal, scope boundaries, prioritized epics, and GitHub-ready
 ticket hierarchy are maintained in `PROJECT-ROADMAP.md`. This file remains the
 cross-repository status board and detailed evidence journal.
 
+## E2 v1 closure status
+
+**E2 — Bounded/asynchronous Lomiri presentation: COMPLETE FOR V1.**
+
+The selected E2 v1 transport candidate is direct Mir RGB565 + LZ4 at
+1280x720. Qualification measured 22.62 presented FPS, exceeding the >=20 FPS
+target; the completed 30-minute T04 soak measured 24.474 FPS. T01, T02, and
+T03 passed, T04 is verified by project-owner decision, and T05 is PASS:
+T05-A 10/10 bounded, T05-B 3/3, T05-C 2/2 real physical USB detach, T05-D
+3/3, T05-E 3/3, and T05-F verified.
+
+The presentation worker remains bounded at one pending and one in-flight frame.
+E1 ownership rules remain unchanged: one logical accepted/in-flight GUD
+payload, no pipelining, no retry of ambiguous accepted I/O, and Poisoned
+containment for ambiguous ownership. The known v1 caveat is that deployed Mir
+1.8.3 may stall in `mir_connection_release` after presenter/KMS cleanup;
+xdispd's existing bounded containment force-terminates and reaps the managed
+child while the phone/compositor remains healthy. This is not graceful
+shutdown and is accepted for v1.
+
+Canonical closure details are in `docs/e2-v1-closure.md`. E3 — hotplug/
+reconnect is next and has not started.
+
 ## Objective
 
 Backport the host-side Generic USB Display (GUD) DRM driver to the OnePlus 6 Ubuntu Touch / Halium 9 Linux 4.9 kernel as a standalone `gud.ko` module. The phone is the USB host; the Raspberry Pi Zero 2 W is the GUD USB gadget and HDMI endpoint.
@@ -44,7 +67,7 @@ Use these states consistently:
 | ID | Priority | Owner | State | Required acceptance evidence |
 | --- | --- | --- | --- | --- |
 | `XDISP-P0.1` | Make the Pi FunctionFS first bulk transfer reliable after a gadget rebind or phone reconnect. See `docs/superpowers/specs/2026-07-25-xdisp-p0-1-functionfs-rebind-design.md` and its implementation plan. | `gud-gadget` | verified | Ten fresh adaptive-module rebind/reconnect cycles cover the complete 1,843,200-byte RGB565 frame with contiguous complete-row rectangles, every actual payload at or below 12,800 bytes, matching Pi completion/`Idle` evidence, and no host `-110`, short read, DWC2 stop timeout, or Pi Oops. |
-| `XDISP-P0.2` | Move GUD presentation off Mir's compositor commit path; retain only the newest pending frame on overload. See `docs/superpowers/specs/2026-07-27-xdisp-p0-2-async-gud-presentation-design.md` and its implementation plan. | `mir-android2-platform-gud` | in progress | Phone input and internal display remain responsive while the Pi is slow, absent, or returns an I/O error, with retained worker/component and hardware evidence. |
+| `XDISP-P0.2` | Move GUD presentation off Mir's compositor commit path; retain only the newest pending frame on overload. See `docs/superpowers/specs/2026-07-27-xdisp-p0-2-async-gud-presentation-design.md` and its implementation plan. | `mir-android2-platform-gud` | verified | E2 is complete for v1: one pending/in-flight frame bounds, performance exceeds target, T04 resource soak passes, and T05 absence/stall/failure/disappearance containment passes. |
 | `XDISP-P0.3` | Discover the live GUD DRM card and handle remove/re-add; do not hard-code `card1` or use a symlink. | `mir-android2-platform-gud`, `gud` | planned | Reconnect succeeds when the card number changes, with no manual node changes or compositor restart. |
 | `XDISP-P1.1` | Validate external-output geometry and Lomiri placement, including the intermittent narrow/cropped image. | `mir-android2-platform-gud`, `gud-gadget` | planned | A 1280x720 extended desktop fills the selected output correctly across repeated enable/disable cycles. |
 | `XDISP-P2.1` | Improve usable performance with damage-aware updates, mode matching, measurement, and optional compression. See `docs/superpowers/specs/2026-07-26-xdisp-p2-1-dynamic-mode-matching-design.md` and `docs/superpowers/plans/2026-07-26-xdisp-p2-1-dynamic-mode-matching.md`. | all three | in progress | Recorded end-to-end FPS, latency, CPU use, and frame-drop behavior at the chosen mode. |
