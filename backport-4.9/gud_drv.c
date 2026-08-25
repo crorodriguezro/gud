@@ -5,6 +5,7 @@
 
 #include "gud_internal.h"
 #include "gud_protocol.h"
+#include "gud_reconnect.h"
 
 #ifdef GUD_XDISP_LZ4_12800
 unsigned int gud_xdisp_payload_limit = GUD_XDISP_DEFAULT_PAYLOAD_LIMIT;
@@ -222,6 +223,7 @@ static int gud_probe(struct usb_interface *intf,
 	dev_info(&intf->dev, "GUD probe complete for %04x:%04x\n",
 		le16_to_cpu(gud->usb->descriptor.idVendor),
 		le16_to_cpu(gud->usb->descriptor.idProduct));
+	gud_reconnect_cancel(gud->usb);
 	return 0;
 
 err_free_xdisp:
@@ -290,6 +292,7 @@ static void gud_disconnect(struct usb_interface *intf)
 	mutex_lock(&gud->lock);
 	gud->disconnected = true;
 	mutex_unlock(&gud->lock);
+	gud_reconnect_arm(gud->usb);
 
 	dev_info(&intf->dev, "GUD disconnected\n");
 	if (gud->drm)
@@ -326,7 +329,30 @@ static struct usb_driver gud_usb_driver = {
 	.supports_autosuspend = 1,
 #endif
 };
-module_usb_driver(gud_usb_driver);
+
+static int __init gud_init(void)
+{
+	int ret;
+
+	ret = gud_reconnect_init();
+	if (ret)
+		return ret;
+
+	ret = usb_register(&gud_usb_driver);
+	if (ret)
+		gud_reconnect_exit();
+
+	return ret;
+}
+
+static void __exit gud_exit(void)
+{
+	gud_reconnect_exit();
+	usb_deregister(&gud_usb_driver);
+}
+
+module_init(gud_init);
+module_exit(gud_exit);
 
 #ifdef GUD_XDISP_LZ4_12800
 	#ifdef GUD_XDISP_PM_TEST

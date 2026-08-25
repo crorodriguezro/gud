@@ -1,5 +1,5 @@
 obj-m += gud.o
-gud-y := variant_drv.o variant_gem_4_9.o \
+gud-y := variant_drv.o variant_reconnect.o variant_gem_4_9.o \
 	variant_pipe.o variant_connector.o gud_xdisp_lz4.o \
 	gud_xdisp_lz4_upstream.o
 
