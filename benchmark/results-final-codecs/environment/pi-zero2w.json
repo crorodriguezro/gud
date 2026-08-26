@@ -1,0 +1,33 @@
+{
+  "role": "receiver / decoder (real hardware, SSH-driven, native gcc)",
+  "hostname": "raspberrypi",
+  "ssh_target": "cristian@192.168.1.110",
+  "kernel": "6.12.47+rpt-rpi-v8-ffs-xfercompltrace #2 SMP PREEMPT Sun Aug 16 23:57:59 -05 2026 aarch64",
+  "os": "Debian GNU/Linux 13 (trixie)",
+  "cpu": "Broadcom BCM2710A1, 4x ARM Cortex-A53 (ARMv8-A)",
+  "cpu_cores": 4,
+  "cpu_governor": "ondemand",
+  "cpu_max_freq_observed_hz": 1000104000,
+  "temperature_c_at_start": 44.5,
+  "temperature_c_range_during_run": "40.2 - 47.2 (see per-test evidence)",
+  "throttled_status": "0x0 at every checkpoint (no under-voltage, no frequency capping)",
+  "compiler": "gcc (Debian 14.2.0-19) 14.2.0 (native, used directly -- unlike the OnePlus 6)",
+  "gpu_mem_split": {
+    "original_value_mb": 64,
+    "bench_value_mb": 128,
+    "changed_because": "bcm2835-codec-decode's video_decode MMAL/VCHIQ component failed to initialize at 64 MB (\"Not enough GPU mem?\", verified via dmesg), which is required by PROJECT SPEC section 8A/9 (real repeated hardware JPEG decode test). This is a durable Raspberry Pi Foundation-recommended system setting for any V4L2 video codec use, not a GUD/gadget protocol change, and was NOT reverted at the end of this benchmark because the hardware-JPEG-decode candidate this project recommends depends on it; reverting it would silently disable that candidate. Documented explicitly per the task's restore-state requirement -- this is the one intentional, permanent, low-risk system setting left changed, and it does not touch GUD/gadget wire protocol or codec defaults.",
+    "change_method": "appended `gpu_mem=128` to /boot/firmware/config.txt, one reboot performed",
+    "label": "MEASURED, intentionally-retained system prerequisite"
+  },
+  "bcm2835_codec_decode_device": "/dev/video10 (Video Memory-to-Memory Multiplanar, card=bcm2835-codec-decode)",
+  "bcm2835_codec_decode_formats": {
+    "output(compressed)": ["MPG4", "H264", "MJPG", "H263"],
+    "capture(decoded)": ["YU12", "YV12", "NV12", "NV21", "NC12", "RGBP (RGB565)", "AB24", "BGR4"]
+  },
+  "gud_gadget_service": "gud-userspace.service (systemd, active/enabled at boot)",
+  "gud_gadget_max_buffer_size_bytes": 1843200,
+  "gud_gadget_current_transfer_format": "rgb565",
+  "gud_gadget_current_compression": "lz4",
+  "gud_gadget_binary": "/home/cristian/gud-drm-e3-b01-functionfs-epoch",
+  "label": "MEASURED"
+}

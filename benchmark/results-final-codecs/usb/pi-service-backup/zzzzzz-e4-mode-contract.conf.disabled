@@ -1,0 +1,4 @@
+cristian
+[Service]
+ExecStart=
+ExecStart=/home/cristian/gud-drm-e4-mode-contract-86c884e /dev/dri/card0

@@ -18,3 +18,21 @@ results/quality/
 
 # Local scratch space for scp/tar staging; never committed.
 .scratch/
+
+# Final-codecs benchmark: real RGBA8888 originals reacquired for
+# quality-sensitive JPEG comparisons (PROJECT SPEC section 10) are large
+# raw pixel dumps, same policy as capture/raw/ above. The small
+# *.meta.json sidecars (capture parameters, content description) and the
+# *.frame0.rgba single-frame extracts' PNG previews ARE committed as the
+# evidence trail; the bulky multi-frame *.rgba/*.frame0.rgba payloads are
+# not.
+capture/rgba/*.rgba
+capture/rgba/*.frame0.rgba
+
+# Final-codecs benchmark: raw decoded RGB565 frame dumps used transiently
+# to compute quality.json (~1.8 MiB each, reproducible by re-running
+# scripts/quality_eval.py against the committed JPEG artifacts and a
+# fresh Pi hardware-decode pass) are not committed; the JSON timing
+# results, PNG visual-comparison previews, and quality.json itself ARE
+# committed.
+results-final-codecs/quality/hw-decode-interop/*.rgb565
