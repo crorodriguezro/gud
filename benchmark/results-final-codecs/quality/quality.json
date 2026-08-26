@@ -1,0 +1,586 @@
+{
+  "idle-desktop": {
+    "raw-rgb565": {
+      "exact_match_vs_ideal_rgb565": true,
+      "label": "MEASURED (bit-exact by construction: same truncating conversion)"
+    },
+    "rgb565-lz4-current": {
+      "exact_match_vs_ideal_rgb565": true,
+      "label": "MEASURED"
+    },
+    "r4g4b4-lz4-fused": {
+      "vs_original_rgba_source": {
+        "mae": 1.2519339554398148,
+        "rmse": 1.974780867912475,
+        "max_channel_error": 15.0,
+        "psnr_db": 42.22042538802586,
+        "ssim": 0.9945930292280535
+      },
+      "vs_ideal_rgb565": {
+        "mae": 0.23624855324074073,
+        "rmse": 1.453356089749209,
+        "max_channel_error": 13.0,
+        "psnr_db": 44.88336291437307,
+        "ssim": 0.9973796923602309
+      },
+      "label": "MEASURED"
+    },
+    "rgb332-lz4-fused": {
+      "vs_original_rgba_source": {
+        "mae": 16.619008246527777,
+        "rmse": 17.10426931049185,
+        "max_channel_error": 63.0,
+        "psnr_db": 23.468713089060742,
+        "ssim": 0.1428704403705485
+      },
+      "vs_ideal_rgb565": {
+        "mae": 15.625903139467592,
+        "rmse": 16.082943974219816,
+        "max_channel_error": 58.0,
+        "psnr_db": 24.003492627479847,
+        "ssim": 0.14703440463279568
+      },
+      "label": "MEASURED"
+    },
+    "jpeg-q95-444-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 17.478567708333333,
+        "rmse": 20.273476225164615,
+        "max_channel_error": 238.0,
+        "psnr_db": 21.99223916667154,
+        "ssim": 0.13152343917724071
+      },
+      "vs_ideal_rgb565": {
+        "mae": 16.536465928819446,
+        "rmse": 19.563268227949045,
+        "max_channel_error": 239.0,
+        "psnr_db": 22.301975418872974,
+        "ssim": 0.13454872140602145
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q95-444-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.14432942708333332,
+        "rmse": 0.5837907432843077,
+        "max_channel_error": 11.0,
+        "psnr_db": 52.80565951994264,
+        "ssim": 0.998821800748443
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 1.1352079716435186,
+        "rmse": 1.4740351373786351,
+        "max_channel_error": 14.0,
+        "psnr_db": 44.76064688546718,
+        "ssim": 0.9953159633930803
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    },
+    "jpeg-q90-444-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 17.46822410300926,
+        "rmse": 20.26622472805454,
+        "max_channel_error": 238.0,
+        "psnr_db": 21.9953465257689,
+        "ssim": 0.1320802114033417
+      },
+      "vs_ideal_rgb565": {
+        "mae": 16.526947699652776,
+        "rmse": 19.556575441834205,
+        "max_channel_error": 239.0,
+        "psnr_db": 22.304947455398608,
+        "ssim": 0.1351322778559841
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q90-444-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.2745279947916667,
+        "rmse": 1.0818624830779866,
+        "max_channel_error": 19.0,
+        "psnr_db": 47.44736239762967,
+        "ssim": 0.9965940627119485
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 1.242517361111111,
+        "rmse": 1.7885609791554236,
+        "max_channel_error": 21.0,
+        "psnr_db": 43.080728577416544,
+        "ssim": 0.9926361998082994
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    },
+    "jpeg-q85-420-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 17.444107711226852,
+        "rmse": 20.25103988063592,
+        "max_channel_error": 246.0,
+        "psnr_db": 22.001857030182162,
+        "ssim": 0.1328355295625763
+      },
+      "vs_ideal_rgb565": {
+        "mae": 16.504869068287036,
+        "rmse": 19.542629037100227,
+        "max_channel_error": 247.0,
+        "psnr_db": 22.3111438442571,
+        "ssim": 0.13590922476589187
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q85-420-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.4022605613425926,
+        "rmse": 1.5601097458132493,
+        "max_channel_error": 50.0,
+        "psnr_db": 44.267700611786324,
+        "ssim": 0.9939668921750239
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 1.3480396412037037,
+        "rmse": 2.1300387904549045,
+        "max_channel_error": 53.0,
+        "psnr_db": 41.563053358429066,
+        "ssim": 0.9898635866169575
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    }
+  },
+  "app-switching": {
+    "raw-rgb565": {
+      "exact_match_vs_ideal_rgb565": true,
+      "label": "MEASURED (bit-exact by construction: same truncating conversion)"
+    },
+    "rgb565-lz4-current": {
+      "exact_match_vs_ideal_rgb565": true,
+      "label": "MEASURED"
+    },
+    "r4g4b4-lz4-fused": {
+      "vs_original_rgba_source": {
+        "mae": 1.2280967881944445,
+        "rmse": 2.0425614535838736,
+        "max_channel_error": 15.0,
+        "psnr_db": 41.92730097239051,
+        "ssim": 0.9956378068632334
+      },
+      "vs_ideal_rgb565": {
+        "mae": 0.19900824652777777,
+        "rmse": 1.326302262296277,
+        "max_channel_error": 13.0,
+        "psnr_db": 45.67795340048637,
+        "ssim": 0.9983866883084894
+      },
+      "label": "MEASURED"
+    },
+    "rgb332-lz4-fused": {
+      "vs_original_rgba_source": {
+        "mae": 16.468603153935184,
+        "rmse": 16.848250961881387,
+        "max_channel_error": 63.0,
+        "psnr_db": 23.599707150857864,
+        "ssim": 0.09385572729707552
+      },
+      "vs_ideal_rgb565": {
+        "mae": 15.510390625,
+        "rmse": 15.84410612135384,
+        "max_channel_error": 58.0,
+        "psnr_db": 24.133448757103878,
+        "ssim": 0.09728706619971082
+      },
+      "label": "MEASURED"
+    },
+    "jpeg-q95-444-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 16.941828703703703,
+        "rmse": 18.41606598992138,
+        "max_channel_error": 237.0,
+        "psnr_db": 22.826866358934176,
+        "ssim": 0.08820671317098949
+      },
+      "vs_ideal_rgb565": {
+        "mae": 15.941003327546296,
+        "rmse": 17.562765995744982,
+        "max_channel_error": 238.0,
+        "psnr_db": 23.23894531111585,
+        "ssim": 0.09134273615095216
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q95-444-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.07809678819444445,
+        "rmse": 0.4276106162390854,
+        "max_channel_error": 14.0,
+        "psnr_db": 55.50983403169454,
+        "ssim": 0.999213342079963
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 1.076476779513889,
+        "rmse": 1.2960517244068475,
+        "max_channel_error": 19.0,
+        "psnr_db": 45.87835692403368,
+        "ssim": 0.9962144686879105
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    },
+    "jpeg-q90-444-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 16.93701171875,
+        "rmse": 18.416749131759815,
+        "max_channel_error": 237.0,
+        "psnr_db": 22.826544162838285,
+        "ssim": 0.08839636636025333
+      },
+      "vs_ideal_rgb565": {
+        "mae": 15.9372265625,
+        "rmse": 17.564146303983335,
+        "max_channel_error": 238.0,
+        "psnr_db": 23.238262688918446,
+        "ssim": 0.09153516345022923
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q90-444-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.13892867476851853,
+        "rmse": 0.7587901173115196,
+        "max_channel_error": 24.0,
+        "psnr_db": 50.52837029099456,
+        "ssim": 0.9978886908931025
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 1.1200083188657408,
+        "rmse": 1.4487336573951213,
+        "max_channel_error": 26.0,
+        "psnr_db": 44.91103261085987,
+        "ssim": 0.99499298454862
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    },
+    "jpeg-q85-420-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 16.926975549768517,
+        "rmse": 18.410750212297966,
+        "max_channel_error": 246.0,
+        "psnr_db": 22.82937389354399,
+        "ssim": 0.08819082263081618
+      },
+      "vs_ideal_rgb565": {
+        "mae": 15.93499855324074,
+        "rmse": 17.559529021639662,
+        "max_channel_error": 247.0,
+        "psnr_db": 23.240546345439245,
+        "ssim": 0.09134216427130487
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q85-420-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.21943684895833335,
+        "rmse": 1.1742774755989633,
+        "max_channel_error": 38.0,
+        "psnr_db": 46.73538899782557,
+        "ssim": 0.9956479988509798
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 1.1879300491898148,
+        "rmse": 1.7225585959030376,
+        "max_channel_error": 37.0,
+        "psnr_db": 43.40732352603191,
+        "ssim": 0.9923257587815617
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    }
+  },
+  "mixed-web-content": {
+    "raw-rgb565": {
+      "exact_match_vs_ideal_rgb565": true,
+      "label": "MEASURED (bit-exact by construction: same truncating conversion)"
+    },
+    "rgb565-lz4-current": {
+      "exact_match_vs_ideal_rgb565": true,
+      "label": "MEASURED"
+    },
+    "r4g4b4-lz4-fused": {
+      "vs_original_rgba_source": {
+        "mae": 9.144939597800926,
+        "rmse": 9.662194603571782,
+        "max_channel_error": 15.0,
+        "psnr_db": 28.429288003822098,
+        "ssim": 0.9775374525315409
+      },
+      "vs_ideal_rgb565": {
+        "mae": 6.981901765046296,
+        "rmse": 7.488020573707615,
+        "max_channel_error": 13.0,
+        "psnr_db": 30.64346302913311,
+        "ssim": 0.9841924935874241
+      },
+      "label": "MEASURED"
+    },
+    "rgb332-lz4-fused": {
+      "vs_original_rgba_source": {
+        "mae": 31.688048683449075,
+        "rmse": 36.250563328756684,
+        "max_channel_error": 63.0,
+        "psnr_db": 16.944508411962524,
+        "ssim": 0.5705700412086967
+      },
+      "vs_ideal_rgb565": {
+        "mae": 29.561372974537036,
+        "rmse": 34.376467014150826,
+        "max_channel_error": 58.0,
+        "psnr_db": 17.405578794061995,
+        "ssim": 0.5815840963292688
+      },
+      "label": "MEASURED"
+    },
+    "jpeg-q95-444-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 11.962107566550927,
+        "rmse": 14.737955531924886,
+        "max_channel_error": 237.0,
+        "psnr_db": 24.762058772392123,
+        "ssim": 0.8819710323893216
+      },
+      "vs_ideal_rgb565": {
+        "mae": 9.859597800925926,
+        "rmse": 13.306417331028666,
+        "max_channel_error": 239.0,
+        "psnr_db": 25.649580805434383,
+        "ssim": 0.8887738561877593
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q95-444-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.17890552662037038,
+        "rmse": 0.7377961583637422,
+        "max_channel_error": 23.0,
+        "psnr_db": 50.772075817368474,
+        "ssim": 0.9986394912544289
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 2.261034794560185,
+        "rmse": 2.4765867616231865,
+        "max_channel_error": 24.0,
+        "psnr_db": 40.25373266645526,
+        "ssim": 0.9963949718244564
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    },
+    "jpeg-q90-444-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 11.963957971643518,
+        "rmse": 14.75204536734668,
+        "max_channel_error": 236.0,
+        "psnr_db": 24.75375882250588,
+        "ssim": 0.881353387454847
+      },
+      "vs_ideal_rgb565": {
+        "mae": 9.861744791666666,
+        "rmse": 13.32633735732032,
+        "max_channel_error": 239.0,
+        "psnr_db": 25.636587543246804,
+        "ssim": 0.8881445641623046
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q90-444-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.32910517939814815,
+        "rmse": 1.275825520242424,
+        "max_channel_error": 37.0,
+        "psnr_db": 46.01497790745201,
+        "ssim": 0.9962544795984568
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 2.349082392939815,
+        "rmse": 2.6949833232966807,
+        "max_channel_error": 40.0,
+        "psnr_db": 39.51968196681494,
+        "ssim": 0.9935053573764212
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    },
+    "jpeg-q85-420-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 11.960267650462963,
+        "rmse": 14.77280198642399,
+        "max_channel_error": 246.0,
+        "psnr_db": 24.741546076400425,
+        "ssim": 0.8795356935862463
+      },
+      "vs_ideal_rgb565": {
+        "mae": 9.859906322337963,
+        "rmse": 13.348820663008823,
+        "max_channel_error": 247.0,
+        "psnr_db": 25.62194563874488,
+        "ssim": 0.8860279415747484
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q85-420-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.48383716724537035,
+        "rmse": 1.9478599404990404,
+        "max_channel_error": 89.0,
+        "psnr_db": 42.339649088168194,
+        "ssim": 0.9927467221675118
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 2.4602329282407407,
+        "rmse": 3.0627979588613994,
+        "max_channel_error": 86.0,
+        "psnr_db": 38.40843662877136,
+        "ssim": 0.9902280554926448
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    }
+  },
+  "app-launch-close": {
+    "raw-rgb565": {
+      "exact_match_vs_ideal_rgb565": true,
+      "label": "MEASURED (bit-exact by construction: same truncating conversion)"
+    },
+    "rgb565-lz4-current": {
+      "exact_match_vs_ideal_rgb565": true,
+      "label": "MEASURED"
+    },
+    "r4g4b4-lz4-fused": {
+      "vs_original_rgba_source": {
+        "mae": 7.072486255787037,
+        "rmse": 7.516334979362664,
+        "max_channel_error": 15.0,
+        "psnr_db": 30.610681068755103,
+        "ssim": 0.236805684468817
+      },
+      "vs_ideal_rgb565": {
+        "mae": 6.907874348958333,
+        "rmse": 7.4495711788948835,
+        "max_channel_error": 13.0,
+        "psnr_db": 30.688178126866813,
+        "ssim": 0.23771331897918255
+      },
+      "label": "MEASURED"
+    },
+    "rgb332-lz4-fused": {
+      "vs_original_rgba_source": {
+        "mae": 8.844807581018518,
+        "rmse": 9.52866290025346,
+        "max_channel_error": 63.0,
+        "psnr_db": 28.550164348866375,
+        "ssim": 0.14015914001583477
+      },
+      "vs_ideal_rgb565": {
+        "mae": 8.694905598958334,
+        "rmse": 9.28765583199485,
+        "max_channel_error": 58.0,
+        "psnr_db": 28.77268133676228,
+        "ssim": 0.14107168901990366
+      },
+      "label": "MEASURED"
+    },
+    "jpeg-q95-444-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 9.013247974537038,
+        "rmse": 10.519021536789207,
+        "max_channel_error": 237.0,
+        "psnr_db": 27.69129672284992,
+        "ssim": 0.13847906039254823
+      },
+      "vs_ideal_rgb565": {
+        "mae": 8.858379991319444,
+        "rmse": 10.335774573720789,
+        "max_channel_error": 238.0,
+        "psnr_db": 27.843943035397235,
+        "ssim": 0.1392523484867732
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q95-444-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.05247757523148148,
+        "rmse": 0.3864821982748149,
+        "max_channel_error": 19.0,
+        "psnr_db": 56.388213714436546,
+        "ssim": 0.9993411606572226
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 0.21947699652777777,
+        "rmse": 0.8382787286170703,
+        "max_channel_error": 22.0,
+        "psnr_db": 49.66303468778166,
+        "ssim": 0.9978468538927401
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    },
+    "jpeg-q90-444-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 9.010579427083334,
+        "rmse": 10.517614847366598,
+        "max_channel_error": 230.0,
+        "psnr_db": 27.692458348584655,
+        "ssim": 0.1386614151004417
+      },
+      "vs_ideal_rgb565": {
+        "mae": 8.85606300636574,
+        "rmse": 10.335018571276699,
+        "max_channel_error": 231.0,
+        "psnr_db": 27.84457838148699,
+        "ssim": 0.13944146324535442
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q90-444-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.10097837094907407,
+        "rmse": 0.6742427057619149,
+        "max_channel_error": 32.0,
+        "psnr_db": 51.55447847323979,
+        "ssim": 0.9983181249162932
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 0.25200954861111113,
+        "rmse": 1.0082637430072365,
+        "max_channel_error": 31.0,
+        "psnr_db": 48.05932060239506,
+        "ssim": 0.9966632901658755
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    },
+    "jpeg-q85-420-hwdecode": {
+      "vs_original_rgba_source": {
+        "mae": 9.01479636863426,
+        "rmse": 10.52999262674617,
+        "max_channel_error": 246.0,
+        "psnr_db": 27.682242266953367,
+        "ssim": 0.1383400075791356
+      },
+      "vs_ideal_rgb565": {
+        "mae": 8.860853587962962,
+        "rmse": 10.34913393507005,
+        "max_channel_error": 247.0,
+        "psnr_db": 27.832723459115385,
+        "ssim": 0.13916527536192455
+      },
+      "label": "MEASURED (real Pi bcm2835-codec hardware decode output)"
+    },
+    "jpeg-q85-420-swdecode-libjpeg-turbo": {
+      "vs_original_rgba_source_full_precision": {
+        "mae": 0.16477683738425927,
+        "rmse": 1.1297727015024683,
+        "max_channel_error": 65.0,
+        "psnr_db": 47.070982073749114,
+        "ssim": 0.9966008235556777
+      },
+      "vs_original_rgba_source_after_rgb565_quant": {
+        "mae": 0.3087778501157407,
+        "rmse": 1.3542461248055784,
+        "max_channel_error": 65.0,
+        "psnr_db": 45.49685157825466,
+        "ssim": 0.9946305559380755
+      },
+      "label": "MEASURED (software libjpeg-turbo/Pillow decode of the identical JPEG bytes, workstation)"
+    }
+  }
+}
