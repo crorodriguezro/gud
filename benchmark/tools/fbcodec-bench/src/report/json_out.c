@@ -90,6 +90,24 @@ bool json_write_results(const char *path, const bench_result *results,
 			fprintf(f, "\"quality\":null");
 		}
 
+		if (r->has_conversion_breakdown) {
+			fprintf(f, ",\"conversion_breakdown\":{");
+			json_write_percentiles(f, "encode_conversion_ns",
+						&r->encode_conversion_ns);
+			fprintf(f, ",");
+			json_write_percentiles(f, "encode_codec_ns",
+						&r->encode_codec_ns);
+			fprintf(f, ",");
+			json_write_percentiles(f, "decode_conversion_ns",
+						&r->decode_conversion_ns);
+			fprintf(f, ",");
+			json_write_percentiles(f, "decode_codec_ns",
+						&r->decode_codec_ns);
+			fprintf(f, "}");
+		} else {
+			fprintf(f, ",\"conversion_breakdown\":null");
+		}
+
 		fprintf(f, ",\"usb_models\":[");
 		{
 			size_t u;

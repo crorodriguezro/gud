@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 
 #include "codec.h"
+#include "codecs/qoir_codec.h"
 #include "common.h"
 #include "corpus/capture.h"
 #include "corpus/synthetic.h"
@@ -460,6 +461,24 @@ static bool run_codec_on_sequence(const fbcodec_desc *cd,
 		return false;
 	}
 
+	bool is_qoir = strncmp(cd->name, "qoir", 4) == 0;
+	uint64_t *enc_conv_samples = is_qoir
+					     ? malloc(frame_count *
+						      sizeof(uint64_t))
+					     : NULL;
+	uint64_t *enc_codec_samples = is_qoir
+					      ? malloc(frame_count *
+						       sizeof(uint64_t))
+					      : NULL;
+	uint64_t *dec_conv_samples = is_qoir
+					     ? malloc(frame_count *
+						      sizeof(uint64_t))
+					     : NULL;
+	uint64_t *dec_codec_samples = is_qoir
+					      ? malloc(frame_count *
+						       sizeof(uint64_t))
+					      : NULL;
+
 	if (cd->create) {
 		enc_ctx = cd->create(w, h);
 		dec_ctx = cd->create(w, h);
@@ -474,6 +493,13 @@ static bool run_codec_on_sequence(const fbcodec_desc *cd,
 		n = cd->encode(enc_ctx, src, w, h, encoded, bound);
 		t1 = fbcodec_now_ns();
 		enc_samples[k] = t1 - t0;
+		if (is_qoir) {
+			double conv_ns = 0, codec_ns = 0;
+
+			qoir_last_encode_breakdown_ns(&conv_ns, &codec_ns);
+			enc_conv_samples[k] = (uint64_t)conv_ns;
+			enc_codec_samples[k] = (uint64_t)codec_ns;
+		}
 
 		if (n == (size_t)-1) {
 			ok = false;
@@ -495,6 +521,13 @@ static bool run_codec_on_sequence(const fbcodec_desc *cd,
 			ok = false;
 		t1 = fbcodec_now_ns();
 		dec_samples[k] = t1 - t0;
+		if (is_qoir) {
+			double conv_ns = 0, codec_ns = 0;
+
+			qoir_last_decode_breakdown_ns(&conv_ns, &codec_ns);
+			dec_conv_samples[k] = (uint64_t)conv_ns;
+			dec_codec_samples[k] = (uint64_t)codec_ns;
+		}
 
 		if (!cd->is_lossy &&
 		    memcmp(src, decoded, rgb565_byte_size(w, h)) != 0)
@@ -558,6 +591,22 @@ static bool run_codec_on_sequence(const fbcodec_desc *cd,
 		out->quality = metrics_compute(frames[frame_count - 1].pixels,
 						decoded, w, h);
 	compute_usb_models(out, usb_mib_s, usb_count);
+
+	if (is_qoir && frame_count > 0) {
+		out->has_conversion_breakdown = true;
+		out->encode_conversion_ns =
+			stats_compute(enc_conv_samples, frame_count);
+		out->encode_codec_ns =
+			stats_compute(enc_codec_samples, frame_count);
+		out->decode_conversion_ns =
+			stats_compute(dec_conv_samples, frame_count);
+		out->decode_codec_ns =
+			stats_compute(dec_codec_samples, frame_count);
+	}
+	free(enc_conv_samples);
+	free(enc_codec_samples);
+	free(dec_conv_samples);
+	free(dec_codec_samples);
 
 	if (cd->destroy) {
 		cd->destroy(enc_ctx);

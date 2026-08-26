@@ -61,6 +61,19 @@ typedef struct {
 	bool has_quality;
 	quality_metrics quality;
 
+	/* PROJECT SPEC next-phase Phase 3.D / Phase 7: RGB565<->RGB888
+	 * conversion cost reported separately from the QOIR library's own
+	 * encode/decode cost ("Do not hide RGB565 conversion inside QOIR
+	 * timing"). Only populated for the qoir-* codecs; zeroed/false
+	 * otherwise (encode_ns/decode_ns above remain the authoritative
+	 * *total* codec-path time for every codec, unchanged).
+	 */
+	bool has_conversion_breakdown;
+	percentile_stats encode_conversion_ns;
+	percentile_stats encode_codec_ns;
+	percentile_stats decode_conversion_ns;
+	percentile_stats decode_codec_ns;
+
 	usb_model_point usb_models[RESULT_MAX_USB_POINTS];
 	size_t usb_model_count;
 } bench_result;
