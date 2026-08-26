@@ -1,0 +1,20 @@
+# Real captured pixel data (RGB565LE frame corpora, and the raw RGBA
+# mirscreencast originals if not yet cleaned up) is large (single-digit
+# GiB) and is not committed to the repository, the same policy already
+# applied to backport-4.9/env/local/assets/. The small per-scenario
+# metadata sidecars (*.meta.json, *.index.json, *.stderr.log) and the
+# derived dedup_stats.json ARE committed -- they are the evidence trail
+# (capture parameters, per-frame timestamps, dedup statistics) without the
+# bulky pixel payloads.
+capture/raw/*.rgba
+capture/raw/*.rgb565le
+
+# Broad-benchmark quality-comparison PNGs (original/reconstructed/diff,
+# ~207 MiB across the corpus/resolution sweep) are reproducible by
+# re-running scripts/run_benchmark.sh and are not committed; every other
+# broad-benchmark artifact (results.json/csv, summary.md, environment.json,
+# residual-analysis.json, raw/*.json) is committed and preserved.
+results/quality/
+
+# Local scratch space for scp/tar staging; never committed.
+.scratch/

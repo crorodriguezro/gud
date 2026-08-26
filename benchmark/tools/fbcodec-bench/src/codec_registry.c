@@ -43,9 +43,11 @@ extern const fbcodec_desc fbcodec_qoi;
 extern const fbcodec_desc fbcodec_qoir_lossless;
 extern const fbcodec_desc fbcodec_qoir_lossy3;
 extern const fbcodec_desc fbcodec_qoir_lossy5;
+#ifndef FBCODEC_NO_CHARLS
 extern const fbcodec_desc fbcodec_charls_lossless;
 extern const fbcodec_desc fbcodec_charls_near1;
 extern const fbcodec_desc fbcodec_charls_near3;
+#endif
 
 static const fbcodec_desc *const g_registry[] = {
 	&fbcodec_raw,
@@ -83,9 +85,11 @@ static const fbcodec_desc *const g_registry[] = {
 	&fbcodec_qoir_lossless,
 	&fbcodec_qoir_lossy3,
 	&fbcodec_qoir_lossy5,
+#ifndef FBCODEC_NO_CHARLS
 	&fbcodec_charls_lossless,
 	&fbcodec_charls_near1,
 	&fbcodec_charls_near3,
+#endif
 };
 
 #define G_REGISTRY_COUNT (sizeof(g_registry) / sizeof(g_registry[0]))

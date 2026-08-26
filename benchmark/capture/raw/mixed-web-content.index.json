@@ -1,0 +1,628 @@
+{
+  "scenario": "mixed-web-content",
+  "source_capture": {
+    "scenario": "mixed-web-content",
+    "capture_tool": "mirscreencast",
+    "compositor": "lomiri-system-compositor (Mir 1.8.2, ubports:android2 platform)",
+    "device": "OnePlus 6 (Halium 9 / Ubuntu Touch, 4.9.112-g6b190d86b aarch64)",
+    "colorspace": "RGBA8888",
+    "width": 720,
+    "height": 1280,
+    "frame_bytes": 3686400,
+    "requested_frames": 60,
+    "actual_frames": 60,
+    "cap_interval": 1,
+    "nominal_fps": 60.0,
+    "capture_wall_start_epoch_ns": 1787714785493704326,
+    "capture_wall_end_epoch_ns": 1787714797966335800,
+    "capture_wall_duration_s": 12.472631474,
+    "raw_file": "mixed-web-content.rgba",
+    "label": "MEASURED_LOMIRI_CAPTURE"
+  },
+  "conversion": "RGBA8888 -> RGB565 via rgb888_to_rgb565 (r>>3,g>>2,b>>3), alpha dropped",
+  "frame_count": 60,
+  "rgb565_file": "mixed-web-content.rgb565le",
+  "frames": [
+    {
+      "sequence_number": 0,
+      "timestamp_ns": 1787714785493704448,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 1,
+      "timestamp_ns": 1787714785705104896,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 2,
+      "timestamp_ns": 1787714785916505600,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 3,
+      "timestamp_ns": 1787714786127906048,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 4,
+      "timestamp_ns": 1787714786339306496,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 5,
+      "timestamp_ns": 1787714786550707200,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 6,
+      "timestamp_ns": 1787714786762107648,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 7,
+      "timestamp_ns": 1787714786973508096,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 8,
+      "timestamp_ns": 1787714787184908800,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 9,
+      "timestamp_ns": 1787714787396309248,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 10,
+      "timestamp_ns": 1787714787607709696,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 11,
+      "timestamp_ns": 1787714787819110400,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 12,
+      "timestamp_ns": 1787714788030510848,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 13,
+      "timestamp_ns": 1787714788241911296,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 14,
+      "timestamp_ns": 1787714788453312000,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 15,
+      "timestamp_ns": 1787714788664712448,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 16,
+      "timestamp_ns": 1787714788876112896,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 17,
+      "timestamp_ns": 1787714789087513600,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 18,
+      "timestamp_ns": 1787714789298914048,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 19,
+      "timestamp_ns": 1787714789510314496,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 20,
+      "timestamp_ns": 1787714789721715200,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 21,
+      "timestamp_ns": 1787714789933115648,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 22,
+      "timestamp_ns": 1787714790144516096,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 23,
+      "timestamp_ns": 1787714790355916800,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 24,
+      "timestamp_ns": 1787714790567317248,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 25,
+      "timestamp_ns": 1787714790778717696,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 26,
+      "timestamp_ns": 1787714790990118400,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 27,
+      "timestamp_ns": 1787714791201518848,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 28,
+      "timestamp_ns": 1787714791412919296,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 29,
+      "timestamp_ns": 1787714791624320000,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 30,
+      "timestamp_ns": 1787714791835720448,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 31,
+      "timestamp_ns": 1787714792047120896,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 32,
+      "timestamp_ns": 1787714792258521600,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 33,
+      "timestamp_ns": 1787714792469922048,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 34,
+      "timestamp_ns": 1787714792681322496,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 35,
+      "timestamp_ns": 1787714792892723200,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 36,
+      "timestamp_ns": 1787714793104123648,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 37,
+      "timestamp_ns": 1787714793315524096,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 38,
+      "timestamp_ns": 1787714793526924800,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 39,
+      "timestamp_ns": 1787714793738325248,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 40,
+      "timestamp_ns": 1787714793949725696,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 41,
+      "timestamp_ns": 1787714794161126400,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 42,
+      "timestamp_ns": 1787714794372526848,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 43,
+      "timestamp_ns": 1787714794583927296,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 44,
+      "timestamp_ns": 1787714794795328000,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 45,
+      "timestamp_ns": 1787714795006728448,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 46,
+      "timestamp_ns": 1787714795218128896,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 47,
+      "timestamp_ns": 1787714795429529600,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 48,
+      "timestamp_ns": 1787714795640930048,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 49,
+      "timestamp_ns": 1787714795852330496,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 50,
+      "timestamp_ns": 1787714796063731200,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 51,
+      "timestamp_ns": 1787714796275131648,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 52,
+      "timestamp_ns": 1787714796486532096,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 53,
+      "timestamp_ns": 1787714796697932800,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 54,
+      "timestamp_ns": 1787714796909333248,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 55,
+      "timestamp_ns": 1787714797120733696,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 56,
+      "timestamp_ns": 1787714797332134400,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 57,
+      "timestamp_ns": 1787714797543534848,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 58,
+      "timestamp_ns": 1787714797754935296,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    },
+    {
+      "sequence_number": 59,
+      "timestamp_ns": 1787714797966336000,
+      "timestamp_ns_basis": "ESTIMATED_LINEAR_INTERPOLATION",
+      "width": 720,
+      "height": 1280,
+      "stride": 1440,
+      "pixel_format": "RGB565LE",
+      "frame_size_bytes": 1843200
+    }
+  ],
+  "label": "MEASURED_LOMIRI_CAPTURE (pixels); ESTIMATED (per-frame timestamp interpolation)"
+}

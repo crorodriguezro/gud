@@ -1,0 +1,19 @@
+{
+  "captured_at_utc": "2026-08-26T01:31:52Z",
+  "host_role": "development/algorithm-selection host -- NOT the Raspberry Pi Zero 2 W target",
+  "cpu_model": "Icestorm-M1-Pro",
+  "architecture": "aarch64",
+  "kernel": "7.1.6-400.asahi.fc44.aarch64+16k",
+  "cpu_governor": "performance",
+  "cpu_max_mhz": "2064,0000",
+  "logical_cpus": 8,
+  "compiler": "gcc (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)",
+  "build_flags": "-std=gnu11 -O2 -Wall -Wextra (release/optimized build, see tools/fbcodec-bench/Makefile)",
+  "lz4_provenance": "0774d05537f9762f838f7ab541b7765f1a729cb5 (vendored 1.10.0, see tools/fbcodec-bench/vendor/lz4)",
+  "charls_package_version": "CharLS-2.4.3-2.fc44.aarch64",
+  "charls_link": "/usr/lib64/libcharls.so.2 (no -devel package installed; headers vendored from upstream tag 2.4.3)",
+  "qoi_provenance": "https://github.com/phoboslab/qoi (vendored master snapshot, MIT)",
+  "qoir_provenance": "https://github.com/nigeltao/qoir (vendored main snapshot, Apache-2.0)",
+  "target_hardware_available": false,
+  "target_hardware_note": "No Raspberry Pi Zero 2 W (or equivalent ARM target) was available in this environment. All measurements below are HOST measurements on Apple Silicon (M1 Pro, Asahi Linux) and are marked MEASURED IN THIS PROJECT (host) in summary.md -- they are useful for candidate selection but section 30 of the spec explicitly requires target-hardware confirmation before a final production decision."
+}

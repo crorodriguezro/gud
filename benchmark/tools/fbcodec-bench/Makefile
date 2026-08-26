@@ -13,6 +13,13 @@
 # package (e.g. `make CHARLS_LIB=-lcharls`).
 CHARLS_LIB ?= /usr/lib64/libcharls.so.2
 
+# NO_CHARLS=1 builds without CharLS at all (no vendored-header compile, no
+# link dependency): useful on targets without a CharLS runtime available,
+# such as the Raspberry Pi Zero 2 W next-phase target, where CharLS is not
+# part of the narrowed finalist codec set anyway (PROJECT SPEC next-phase
+# Phase 3 shortlist has no JPEG-LS candidate).
+NO_CHARLS ?= 0
+
 CC ?= gcc
 CSTD ?= -std=gnu11
 OPT ?= -O2
@@ -20,8 +27,16 @@ WARN ?= -Wall -Wextra -Wno-unused-parameter -Wno-stringop-truncation
 DEFS ?=
 INCLUDES := -Isrc -Ivendor -Ivendor/charls
 
+ifeq ($(NO_CHARLS),1)
+DEFS += -DFBCODEC_NO_CHARLS
+endif
+
 CFLAGS := $(CSTD) $(OPT) $(WARN) $(DEFS) $(INCLUDES)
+ifeq ($(NO_CHARLS),1)
+LDLIBS := -lm
+else
 LDLIBS := -lm $(CHARLS_LIB)
+endif
 
 BUILD_DIR := build
 
@@ -33,6 +48,7 @@ SRCS := \
 	src/transforms/predict.c \
 	src/transforms/quant.c \
 	src/transforms/temporal.c \
+	src/transforms/temporal_policy.c \
 	src/transforms/rle.c \
 	src/codecs/raw_codec.c \
 	src/codecs/lz4_codec.c \
@@ -43,7 +59,7 @@ SRCS := \
 	src/codecs/temporal_codecs.c \
 	src/codecs/qoi_codec.c \
 	src/codecs/qoir_codec.c \
-	src/codecs/charls_codec.c \
+	$(if $(filter 1,$(NO_CHARLS)),,src/codecs/charls_codec.c) \
 	src/corpus/synthetic.c \
 	src/corpus/capture.c \
 	src/quality/metrics.c \
@@ -74,15 +90,18 @@ TEST_COMMON_SRCS := \
 	src/transforms/predict.c \
 	src/transforms/quant.c \
 	src/transforms/temporal.c \
+	src/transforms/temporal_policy.c \
 	src/transforms/rle.c \
 	vendor/lz4/lz4.c
 
 TEST_TRANSFORMS_BIN := $(BUILD_DIR)/test_transforms
 TEST_TEMPORAL_BIN := $(BUILD_DIR)/test_temporal
+TEST_TEMPORAL_POLICY_BIN := $(BUILD_DIR)/test_temporal_policy
 
-test: $(TEST_TRANSFORMS_BIN) $(TEST_TEMPORAL_BIN)
+test: $(TEST_TRANSFORMS_BIN) $(TEST_TEMPORAL_BIN) $(TEST_TEMPORAL_POLICY_BIN)
 	$(TEST_TRANSFORMS_BIN)
 	$(TEST_TEMPORAL_BIN)
+	$(TEST_TEMPORAL_POLICY_BIN)
 
 $(TEST_TRANSFORMS_BIN): tests/test_transforms.c $(TEST_COMMON_SRCS)
 	@mkdir -p $(BUILD_DIR)
@@ -91,6 +110,10 @@ $(TEST_TRANSFORMS_BIN): tests/test_transforms.c $(TEST_COMMON_SRCS)
 $(TEST_TEMPORAL_BIN): tests/test_temporal.c $(TEST_COMMON_SRCS)
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) tests/test_temporal.c $(TEST_COMMON_SRCS) -o $@ -lm
+
+$(TEST_TEMPORAL_POLICY_BIN): tests/test_temporal_policy.c $(TEST_COMMON_SRCS)
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) tests/test_temporal_policy.c $(TEST_COMMON_SRCS) -o $@ -lm
 
 clean:
 	rm -rf $(BUILD_DIR)

@@ -24,6 +24,7 @@
 #include "report/stats.h"
 #include "transforms/predict.h"
 #include "transforms/quant.h"
+#include "transforms/temporal_policy.h"
 
 /* ---------------------------------------------------------------------- */
 /* CLI option parsing.                                                    */
@@ -61,6 +62,8 @@ typedef struct {
 		      * CSV/JSON output.
 		      */
 	const char *predictor; /* --mode residual */
+	uint32_t keyframe_interval; /* --mode temporal-policy */
+	bool adaptive;		     /* --mode temporal-policy */
 } cli_options;
 
 static void cli_defaults(cli_options *o)
@@ -149,6 +152,11 @@ static bool parse_args(int argc, char **argv, cli_options *o)
 			o->verify = true;
 		} else if (arg_is(a, "--predictor")) {
 			o->predictor = NEXT();
+		} else if (arg_is(a, "--keyframe-interval")) {
+			o->keyframe_interval =
+				(uint32_t)atoi(safe_str(NEXT()));
+		} else if (arg_is(a, "--adaptive")) {
+			o->adaptive = true;
 		} else if (arg_is(a, "--help") || arg_is(a, "-h")) {
 			return false;
 		} else {
@@ -163,7 +171,7 @@ static bool parse_args(int argc, char **argv, cli_options *o)
 static void print_usage(const char *prog)
 {
 	fprintf(stderr,
-		"usage: %s [--mode frame|sequence|damage-stream]\n"
+		"usage: %s [--mode frame|sequence|damage-stream|temporal-policy]\n"
 		"          [--codec NAME|all] [--input PATH] [--synthetic PATTERN]\n"
 		"          [--synthetic-sequence PATTERN] [--width W] [--height H]\n"
 		"          [--frames N] [--rect WxH|full] [--iterations N]\n"
@@ -171,11 +179,20 @@ static void print_usage(const char *prog)
 		"          [--quality-dir DIR] [--csv PATH] [--json PATH]\n"
 		"          [--corpus-tag NAME] [--seed N] [--tile N]\n"
 		"          [--frame-interval-ns N] [--predictor NAME] [--list]\n"
+		"          [--keyframe-interval N] [--adaptive]\n"
 		"\n"
 		"--verify: round-trip verification (exact match for lossless\n"
 		"  codecs) and quality-metric computation always run regardless\n"
 		"  of this flag; --verify additionally makes any lossless\n"
-		"  round-trip mismatch a fatal (nonzero exit) error.\n",
+		"  round-trip mismatch a fatal (nonzero exit) error.\n"
+		"\n"
+		"--mode temporal-policy: PROJECT SPEC next-phase Phase 4/8.\n"
+		"  --keyframe-interval N: 0 = keyframe only on the first frame\n"
+		"  (no automatic re-keyframing); N>0 = keyframe every N frames.\n"
+		"  --adaptive: TEMPORAL_ADAPTIVE -- encode both the normal and\n"
+		"  XOR-delta candidates every frame and keep whichever is\n"
+		"  smaller (overrides --keyframe-interval's cadence, though a\n"
+		"  fresh/reset reference still forces a keyframe).\n",
 		prog);
 }
 
@@ -675,7 +692,31 @@ static bool run_codec_on_damage_stream(const fbcodec_desc *cd,
 
 static bool codec_selected(const fbcodec_desc *cd, const char *want)
 {
-	return strcmp(want, "all") == 0 || strcmp(want, cd->name) == 0;
+	/* PROJECT SPEC next-phase Phase 3 "narrow the harness to the
+	 * specified full-frame finalists": --codec also accepts a
+	 * comma-separated list of names (e.g. "rgb565-lz4,qoir-lossless"),
+	 * in addition to the original "all" or single-name forms, so a
+	 * single invocation can restrict the sweep to exactly the
+	 * finalist shortlist instead of paying for every candidate.
+	 */
+	const char *p = want;
+	size_t name_len = strlen(cd->name);
+
+	if (strcmp(want, "all") == 0)
+		return true;
+
+	while (*p) {
+		const char *comma = strchr(p, ',');
+		size_t tok_len = comma ? (size_t)(comma - p) : strlen(p);
+
+		if (tok_len == name_len && strncmp(p, cd->name, tok_len) == 0)
+			return true;
+
+		if (!comma)
+			break;
+		p = comma + 1;
+	}
+	return false;
 }
 
 int main(int argc, char **argv)
@@ -947,6 +988,237 @@ int main(int argc, char **argv)
 		fprintf(stderr, "damage-stream: %zu events, %ux%u\n",
 			ds.count, ds.width, ds.height);
 		damage_stream_free(&ds);
+	} else if (strcmp(o.mode, "temporal-policy") == 0) {
+		/* PROJECT SPEC next-phase Phase 4 "Temporal keyframe model"
+		 * and Phase 8 "Temporal XOR analysis": drives the
+		 * KEYFRAME/DELTA (or TEMPORAL_ADAPTIVE) protocol in
+		 * transforms/temporal_policy.c across a real or synthetic
+		 * frame sequence, with fully independent encoder/decoder
+		 * instances (same rule as --mode sequence), verifies every
+		 * frame round-trips exactly, and reports per-frame-type
+		 * byte/timing distributions plus how often adaptive mode
+		 * picks the delta candidate.
+		 */
+		rgb565_buffer *frames = calloc(o.frames, sizeof(rgb565_buffer));
+		char corpus_name[128];
+		size_t got = 0;
+		tpolicy_encoder *enc;
+		tpolicy_decoder *dec;
+		uint8_t *wire;
+		uint16_t *decoded;
+		size_t wire_cap;
+		uint64_t *encode_ns_samples;
+		uint64_t *keyframe_bytes = NULL, *delta_bytes = NULL;
+		size_t keyframe_n = 0, delta_n = 0;
+		size_t adaptive_delta_wins = 0, adaptive_decisions = 0;
+		size_t total_bytes = 0;
+		size_t mismatch_count = 0;
+		FILE *jf = NULL;
+
+		if (!frames) {
+			fprintf(stderr, "OOM\n");
+			return 1;
+		}
+		if (o.input) {
+			got = capture_read_raw_frames(o.input, o.width,
+							o.height, o.frames,
+							frames);
+			snprintf(corpus_name, sizeof(corpus_name), "%s",
+				 o.corpus_tag ? o.corpus_tag : "real-asset");
+		} else {
+			const char *pattern = o.synthetic_sequence
+						      ? o.synthetic_sequence
+						      : "small-changes";
+
+			if (synth_generate_sequence(pattern, o.width,
+						      o.height, o.seed,
+						      o.frames, frames))
+				got = o.frames;
+			snprintf(corpus_name, sizeof(corpus_name), "%s",
+				 o.corpus_tag ? o.corpus_tag : pattern);
+		}
+		if (got == 0) {
+			fprintf(stderr, "failed to obtain frame sequence\n");
+			free(frames);
+			return 1;
+		}
+
+		enc = tpolicy_encoder_create(o.width, o.height);
+		dec = tpolicy_decoder_create(o.width, o.height);
+		wire_cap = tpolicy_bound(o.width, o.height);
+		wire = malloc(wire_cap);
+		decoded = malloc(rgb565_pixel_count(o.width, o.height) *
+				  sizeof(uint16_t));
+		encode_ns_samples = malloc(got * sizeof(uint64_t));
+		keyframe_bytes = malloc(got * sizeof(uint64_t));
+		delta_bytes = malloc(got * sizeof(uint64_t));
+
+		if (o.json_path) {
+			jf = fopen(o.json_path, "w");
+			if (jf)
+				fprintf(jf, "{\"mode\":\"temporal-policy\","
+					     "\"corpus\":\"%s\",\"width\":%u,"
+					     "\"height\":%u,\"keyframe_interval\":%u,"
+					     "\"adaptive\":%s,\"frames\":[\n",
+					corpus_name, o.width, o.height,
+					o.keyframe_interval,
+					o.adaptive ? "true" : "false");
+		}
+
+		for (i = 0; i < got; i++) {
+			tpolicy_frame_record rec;
+			size_t len;
+			enum tpolicy_decode_status st;
+
+			len = tpolicy_encode(
+				enc, frames[i].pixels, o.width, o.height,
+				o.adaptive ? TPOLICY_ADAPTIVE
+					   : TPOLICY_FIXED_INTERVAL,
+				o.keyframe_interval, (uint32_t)i, wire,
+				wire_cap, &rec);
+			if (len == (size_t)-1) {
+				fprintf(stderr,
+					"temporal-policy encode failed at "
+					"frame %zu\n",
+					i);
+				continue;
+			}
+			encode_ns_samples[i] = (uint64_t)rec.encode_ns;
+			total_bytes += rec.compressed_size;
+			if (rec.frame_type == TPOLICY_KEYFRAME)
+				keyframe_bytes[keyframe_n++] =
+					rec.compressed_size;
+			else
+				delta_bytes[delta_n++] = rec.compressed_size;
+			if (o.adaptive && i > 0) {
+				adaptive_decisions++;
+				if (rec.frame_type == TPOLICY_DELTA)
+					adaptive_delta_wins++;
+			}
+
+			st = tpolicy_decode(dec, rec.frame_type,
+					     rec.sequence_number,
+					     rec.base_sequence_number, wire,
+					     len, decoded, o.width, o.height);
+			if (st != TPOLICY_OK) {
+				mismatch_count++;
+				fprintf(stderr,
+					"temporal-policy: decode status %d "
+					"at frame %zu\n",
+					(int)st, i);
+				continue;
+			}
+			if (memcmp(decoded, frames[i].pixels,
+				   rgb565_byte_size(o.width, o.height)) != 0) {
+				fprintf(stderr,
+					"temporal-policy: MISMATCH at frame "
+					"%zu (round-trip not exact)\n",
+					i);
+				mismatch_count++;
+				if (o.verify) {
+					free(encode_ns_samples);
+					free(keyframe_bytes);
+					free(delta_bytes);
+					free(wire);
+					free(decoded);
+					tpolicy_encoder_destroy(enc);
+					tpolicy_decoder_destroy(dec);
+					for (i = 0; i < got; i++)
+						rgb565_buffer_free(&frames[i]);
+					free(frames);
+					if (jf)
+						fclose(jf);
+					free(results);
+					return 1;
+				}
+			}
+
+			if (jf)
+				fprintf(jf,
+					"%s{\"seq\":%zu,\"type\":\"%s\","
+					 "\"base_seq\":%d,\"bytes\":%zu,"
+					 "\"encode_ns\":%.0f,"
+					 "\"normal_candidate_bytes\":%zu,"
+					 "\"delta_candidate_bytes\":%zu}",
+					i ? ",\n" : "",
+					i,
+					rec.frame_type == TPOLICY_KEYFRAME
+						? "KEYFRAME"
+						: "DELTA",
+					rec.base_sequence_number ==
+							TPOLICY_NO_SEQ
+						? -1
+						: (int)rec.base_sequence_number,
+					rec.compressed_size, rec.encode_ns,
+					rec.normal_candidate_bytes ==
+							(size_t)-1
+						? 0
+						: rec.normal_candidate_bytes,
+					rec.delta_candidate_bytes ==
+							(size_t)-1
+						? 0
+						: rec.delta_candidate_bytes);
+		}
+
+		{
+			percentile_stats enc_stats =
+				stats_compute(encode_ns_samples, got);
+			percentile_stats kf_stats =
+				keyframe_n ? stats_compute(keyframe_bytes,
+							     keyframe_n)
+					   : (percentile_stats){ 0 };
+			percentile_stats d_stats =
+				delta_n ? stats_compute(delta_bytes, delta_n)
+					: (percentile_stats){ 0 };
+
+			if (jf) {
+				fprintf(jf,
+					"\n],\"summary\":{"
+					"\"total_frames\":%zu,"
+					"\"keyframe_count\":%zu,"
+					"\"delta_count\":%zu,"
+					"\"total_bytes\":%zu,"
+					"\"mismatch_count\":%zu,"
+					"\"adaptive_decisions\":%zu,"
+					"\"adaptive_delta_wins\":%zu,"
+					"\"encode_ns_mean\":%.0f,"
+					"\"encode_ns_p50\":%.0f,"
+					"\"encode_ns_p95\":%.0f,"
+					"\"encode_ns_p99\":%.0f,"
+					"\"keyframe_bytes_mean\":%.0f,"
+					"\"delta_bytes_mean\":%.0f}}\n",
+					got, keyframe_n, delta_n, total_bytes,
+					mismatch_count, adaptive_decisions,
+					adaptive_delta_wins, enc_stats.mean,
+					enc_stats.median, enc_stats.p95,
+					enc_stats.p99, kf_stats.mean,
+					d_stats.mean);
+				fclose(jf);
+			}
+
+			printf("temporal-policy corpus=%s frames=%zu "
+			       "keyframes=%zu deltas=%zu total_bytes=%zu "
+			       "mismatches=%zu adaptive_delta_wins=%zu/%zu "
+			       "encode_ns_mean=%.0f keyframe_bytes_mean=%.0f "
+			       "delta_bytes_mean=%.0f\n",
+			       corpus_name, got, keyframe_n, delta_n,
+			       total_bytes, mismatch_count,
+			       adaptive_delta_wins, adaptive_decisions,
+			       enc_stats.mean, kf_stats.mean, d_stats.mean);
+		}
+
+		free(encode_ns_samples);
+		free(keyframe_bytes);
+		free(delta_bytes);
+		free(wire);
+		free(decoded);
+		tpolicy_encoder_destroy(enc);
+		tpolicy_decoder_destroy(dec);
+		for (i = 0; i < got; i++)
+			rgb565_buffer_free(&frames[i]);
+		free(frames);
+		free(results);
+		return mismatch_count && o.verify ? 1 : 0;
 	} else if (strcmp(o.mode, "residual") == 0) {
 		/* Residual/entropy analysis for the predictor-comparison
 		 * questions in PROJECT SPEC sections 42-43: for a *single*

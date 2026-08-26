@@ -1,0 +1,19 @@
+{
+  "scenario": "idle-desktop",
+  "capture_tool": "mirscreencast",
+  "compositor": "lomiri-system-compositor (Mir 1.8.2, ubports:android2 platform)",
+  "device": "OnePlus 6 (Halium 9 / Ubuntu Touch, 4.9.112-g6b190d86b aarch64)",
+  "colorspace": "RGBA8888",
+  "width": 720,
+  "height": 1280,
+  "frame_bytes": 3686400,
+  "requested_frames": 180,
+  "actual_frames": 180,
+  "cap_interval": 2,
+  "nominal_fps": 30.0,
+  "capture_wall_start_epoch_ns": 1787714631576760770,
+  "capture_wall_end_epoch_ns": 1787714669078092602,
+  "capture_wall_duration_s": 37.501331832,
+  "raw_file": "idle-desktop.rgba",
+  "label": "MEASURED_LOMIRI_CAPTURE"
+}
