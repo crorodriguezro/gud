@@ -50,10 +50,16 @@ obtained, that gap is stated explicitly.
   MMAL/VCHIQ `video_decode` component fails to initialize
   (`vchiq_mmal_component_init: failed to create component -62 (Not
   enough GPU mem?)`, from `dmesg`). Raising `gpu_mem=128` in
-  `/boot/firmware/config.txt` (one reboot) fixed this and is the Pi's
-  current running configuration. **MEASURED**. This is a durable system
-  prerequisite for using the hardware JPEG decoder at all — a future
-  production rollout needs to ship/require this.
+  `/boot/firmware/config.txt` (one reboot) fixed this and was used for
+  all hardware-JPEG-decode measurements in this benchmark. **MEASURED**.
+  This is a durable system prerequisite for using the hardware JPEG
+  decoder at all — a future production rollout needs to ship/require
+  this. The change was **reverted** after data collection (see
+  "Device state at completion" in `summary-final-codecs.md` and
+  `environment/pi-zero2w.json`'s `gpu_mem_split` block): the Pi is back
+  at `gpu_mem=64`, so a future re-run of the hardware-JPEG-decode
+  benchmark (or a production rollout of that candidate) needs to
+  re-apply this setting.
 - `vc4` DRM primary plane supports `RG16`/`BG16` (RGB565 family) as
   direct scanout formats. **VERIFIED** (from the pre-existing project
   verification note; not independently re-probed this session).

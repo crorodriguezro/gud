@@ -419,9 +419,22 @@ this isolated network.
   `zzzzz-e3-b01-functionfs-epoch.conf`) were restored to their original
   filenames; the service was restarted and reverified to be back on
   `GUD_TRANSFER_FORMAT=rgb565` / `GUD_TEST_COMPRESSION=lz4` /
-  `GUD_TEST_MAX_BUFFER_SIZE=1843200` (its pre-benchmark state). The one
-  intentionally-retained change is `gpu_mem=64` -> `128` in
-  `/boot/firmware/config.txt` (see `environment/pi-zero2w.json` for the
-  explicit justification: required for the hardware JPEG decode
-  candidate this report evaluates; reverting it would silently disable
-  that candidate rather than restore a GUD/gadget protocol default).
+  `GUD_TEST_MAX_BUFFER_SIZE=1843200` (its pre-benchmark state).
+  `gpu_mem` (temporarily raised `64` -> `128` in
+  `/boot/firmware/config.txt` to unblock hardware JPEG decode testing)
+  was **restored to `64`** after all hardware-JPEG-decode data
+  collection was complete: the appended config lines were removed, the
+  Pi was rebooted a second time, `vcgencmd get_mem gpu` was reverified
+  to report `gpu=64M`, a full diff of the restored config file against
+  the pre-benchmark snapshot showed zero differences, and the GUD
+  descriptor log after this second reboot again reported
+  `transfer_format=rgb565 compression=1 max_buffer_size=1843200`. See
+  `environment/pi-zero2w.json`'s `gpu_mem_split` block for the full
+  before/during/after record. **Residual impact of this restoration**:
+  `bcm2835-codec-decode`'s hardware JPEG decoder will again fail to
+  initialize at `gpu_mem=64` (the same condition observed before this
+  benchmark's temporary change); a future re-run of the
+  hardware-JPEG-decode benchmark, or a production rollout of that
+  candidate, needs to re-apply `gpu_mem=128` (or higher) as an explicit,
+  documented prerequisite. Both devices are now verified to match their
+  pre-benchmark configuration exactly.

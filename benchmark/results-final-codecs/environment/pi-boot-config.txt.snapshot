@@ -51,5 +51,3 @@ dtoverlay=dwc2,dr_mode=otg
 n## E1-T05 pinned FunctionFS completion-trace kernel
 kernel=kernel8-ffs-xfercompltrace.img
 initramfs initramfs8-ffs-xfercompltrace followkernel
-# BENCH-TEMP: gpu_mem bump for bcm2835-codec HW JPEG decode testing
-gpu_mem=128
