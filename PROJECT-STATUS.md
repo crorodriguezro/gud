@@ -27,6 +27,31 @@ shutdown and is accepted for v1.
 Canonical closure details are in `docs/e2-v1-closure.md`. E3 — hotplug/
 reconnect is next and has not started.
 
+## Codec transport benchmark closure
+
+The full-frame codec/transport benchmark is now closed and preserved under
+`benchmark/` without reopening the broader codec exploration.
+
+- **Default production transport:** direct Mir RGB565 + LZ4 for the real
+  OnePlus 6 -> Pi Zero 2 W USB2 path at 720p and 1080p.
+- **Optional low-bandwidth mode:** RGB332 + LZ4 is retained only as a
+  deliberately lossy, low-bandwidth option.
+- **Rejected on real hardware:** R4G4B4 + LZ4 was slower than plain RGB565 + LZ4
+  while delivering only a modest bandwidth win.
+- **Deferred:** JPEG remains future work for photographic/video-like content and
+  is not a blocker for the current release default.
+- **Measured real-world caveat:** actual presented throughput on the live UI path
+  was around 22-24 FPS, which reinforces the importance of the bandwidth win
+  but does not change the default recommendation. The real USB2 plateau was
+  roughly 37-38 MiB/s at realistic payload sizes.
+- **Open optimization only:** native Mir RGB565 output remains a future
+  optimization experiment, not a required blocker for the current transport
+  decision.
+
+This closure is the architecture decision for the live benchmark path: preserve
+all evidence, keep the future experiments explicit, and keep the production
+default aligned to the measured lower-entropy UI workload.
+
 ## Objective
 
 Backport the host-side Generic USB Display (GUD) DRM driver to the OnePlus 6 Ubuntu Touch / Halium 9 Linux 4.9 kernel as a standalone `gud.ko` module. The phone is the USB host; the Raspberry Pi Zero 2 W is the GUD USB gadget and HDMI endpoint.

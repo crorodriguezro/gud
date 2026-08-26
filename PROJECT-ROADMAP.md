@@ -2,7 +2,7 @@
 
 ## Product scope, epics, and delivery roadmap
 
-Status: E2 COMPLETE FOR V1; E3 NEXT
+Status: E2 COMPLETE FOR V1; codec benchmark closed; default transport is direct Mir RGB565 + LZ4; E3 NEXT
 
 Date: 2026-08-17
 
@@ -15,6 +15,25 @@ and cross-repository status board. Component backlogs and runbooks retain
 their implementation detail.
 
 No GitHub issues have been created from this roadmap yet.
+
+## Benchmark closure and production default
+
+The full-frame codec benchmark is closed and retained under `benchmark/` for
+historical evidence. The production transport default is now fixed to the
+measured real-hardware winner:
+
+- **Default:** direct Mir RGB565 + LZ4
+- **Optional low-bandwidth mode:** RGB332 + LZ4
+- **Rejected:** R4G4B4 + LZ4
+- **Deferred:** JPEG, for photographic/video tests only
+
+The measured real path was approximately 22-24 presented FPS on live UI, with a
+USB2 plateau around 37-38 MiB/s at realistic payload sizes. That evidence does
+not reopen codec exploration; it keeps the production decision anchored to the
+actual low-entropy desktop workload and keeps future experiments explicitly
+labeled as future work.
+
+Immediate next roadmap item: **E3 — hotplug/reconnect and output recovery**.
 
 ## 1. Final goal
 
