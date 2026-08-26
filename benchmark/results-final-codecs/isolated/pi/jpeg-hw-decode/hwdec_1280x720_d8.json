@@ -1,0 +1,22 @@
+{
+  "device": "/dev/video10",
+  "driver": "bcm2835-codec",
+  "card": "bcm2835-codec-decode",
+  "width": 1280,
+  "pipeline_depth": 8,
+  "height": 720,
+  "jpeg_bytes": 41916,
+  "source_change_event_seen": false,
+  "requested_duration_s": 10.000,
+  "actual_duration_s": 10.038,
+  "submitted_frames": 418,
+  "completed_frames": 411,
+  "decode_errors": 0,
+  "sustained_fps": 40.944,
+  "latency_ns_p50": 197156041,
+  "latency_ns_p95": 197239165,
+  "latency_ns_p99": 197703535,
+  "latency_ns_max": 198716441,
+  "latency_ns_min": 47572791,
+  "label": "MEASURED_PI_HW_JPEG_DECODE"
+}

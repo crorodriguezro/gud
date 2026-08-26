@@ -1,0 +1,19 @@
+{
+  "role": "sender / encoder (real hardware, SSH-driven, no on-device compiler)",
+  "hostname": "ubuntu-phablet",
+  "ssh_target": "phablet@192.168.1.120",
+  "kernel": "4.9.112-g6b190d86b #1 SMP PREEMPT Thu Mar 12 00:01:48 UTC 2026 aarch64",
+  "os_userspace": "Ubuntu 24.04.4 LTS (Ubuntu Touch / Lomiri, Halium-based, glibc 2.39)",
+  "soc": "Qualcomm SDM845 (Kryo 385), CPU parts 0x802 (big) / 0x803 (little)",
+  "cpu_cores": 8,
+  "cpu_governor": "schedutil (verified on all 8 cores at benchmark time)",
+  "cpu_little_max_freq_hz": 1286400000,
+  "thermal_zone_temps_millideg_c_at_start": [28200, 28800, 28200, 27800, 28900],
+  "no_onboard_compiler": true,
+  "no_onboard_compiler_evidence": "gcc/cc/clang all absent from PATH; verified interactively over SSH",
+  "sender_bench_build_method": "cross-built on the aarch64 Fedora Asahi workstation with `musl-gcc -static`, statically linking vendored LZ4 1.10.0 (same source used by gud.ko) and a from-source static libjpeg-turbo 3.0.4 (NEON SIMD build, CC=musl-gcc). Copied to the phone and executed directly over SSH; verified to run standalone (no libc present, no dynamic deps).",
+  "compositor": "lomiri-system-compositor (Mir, ubports:android2 platform)",
+  "gud_gadget_identity_observed": "1d50:614d at /sys/bus/usb/devices/1-1.3 (Generic USB Display)",
+  "usb_controller_mode_path": "/sys/bus/platform/devices/a600000.ssusb/mode",
+  "label": "MEASURED"
+}

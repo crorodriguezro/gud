@@ -1,0 +1,15 @@
+{
+  "compressed_bytes": 46760,
+  "decompressed_bytes": 1843200,
+  "decompress_result": 1843200,
+  "iterations": 200,
+  "mean_ns": 2122005.7,
+  "p50_ns": 2124945,
+  "p90_ns": 2169060,
+  "p95_ns": 2179060,
+  "p99_ns": 2247602,
+  "max_ns": 2269789,
+  "min_ns": 2052237,
+  "mpixels_s": 434.306,
+  "label": "MEASURED_PI_LZ4_DECODE"
+}

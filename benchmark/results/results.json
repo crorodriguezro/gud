@@ -1,0 +1,2152 @@
+{
+  "environment": {
+    "captured_at_utc": "2026-08-26T01:31:52Z",
+    "host_role": "development/algorithm-selection host -- NOT the Raspberry Pi Zero 2 W target",
+    "cpu_model": "Icestorm-M1-Pro",
+    "architecture": "aarch64",
+    "kernel": "7.1.6-400.asahi.fc44.aarch64+16k",
+    "cpu_governor": "performance",
+    "cpu_max_mhz": "2064,0000",
+    "logical_cpus": 8,
+    "compiler": "gcc (GCC) 16.1.1 20260515 (Red Hat 16.1.1-2)",
+    "build_flags": "-std=gnu11 -O2 -Wall -Wextra (release/optimized build, see tools/fbcodec-bench/Makefile)",
+    "lz4_provenance": "0774d05537f9762f838f7ab541b7765f1a729cb5 (vendored 1.10.0, see tools/fbcodec-bench/vendor/lz4)",
+    "charls_package_version": "CharLS-2.4.3-2.fc44.aarch64",
+    "charls_link": "/usr/lib64/libcharls.so.2 (no -devel package installed; headers vendored from upstream tag 2.4.3)",
+    "qoi_provenance": "https://github.com/phoboslab/qoi (vendored master snapshot, MIT)",
+    "qoir_provenance": "https://github.com/nigeltao/qoir (vendored main snapshot, Apache-2.0)",
+    "target_hardware_available": false,
+    "target_hardware_note": "No Raspberry Pi Zero 2 W (or equivalent ARM target) was available in this environment. All measurements below are HOST measurements on Apple Silicon (M1 Pro, Asahi Linux) and are marked MEASURED IN THIS PROJECT (host) in summary.md -- they are useful for candidate selection but section 30 of the spec explicitly requires target-hardware confirmation before a final production decision."
+  },
+  "headline_720p_full": [
+    {
+      "codec": "raw",
+      "label": "Raw RGB565 (no compression)",
+      "bytes": 1843200.0,
+      "ratio": 1.0,
+      "enc_us": 41.72494285714285,
+      "dec_us": 44.595685714285715,
+      "usb_ms": 43.9453125,
+      "total_ms": 44.031633128571436
+    },
+    {
+      "codec": "rgb565-lz4",
+      "label": "RGB565 + LZ4 (baseline)",
+      "bytes": 195671.7857142857,
+      "ratio": 9.419855771600037,
+      "enc_us": 419.54795,
+      "dec_us": 250.32335714285713,
+      "usb_ms": 4.665178921428571,
+      "total_ms": 5.335050228571428
+    },
+    {
+      "codec": "sub-byte-lz4",
+      "label": "PNG byte Sub + LZ4 (B1)",
+      "bytes": 187918.2142857143,
+      "ratio": 9.808522324491467,
+      "enc_us": 954.6437142857143,
+      "dec_us": 3372.3967,
+      "usb_ms": 4.48031935,
+      "total_ms": 8.807359764285716
+    },
+    {
+      "codec": "u16-sub-lz4",
+      "label": "uint16 left-subtract + LZ4 (B2)",
+      "bytes": 186971.92857142858,
+      "ratio": 9.858164346290332,
+      "enc_us": 966.3119714285714,
+      "dec_us": 1054.0342,
+      "usb_ms": 4.457758142857143,
+      "total_ms": 6.478104314285715
+    },
+    {
+      "codec": "u16-xor-lz4",
+      "label": "uint16 left-XOR + LZ4 (B3)",
+      "bytes": 189516.5,
+      "ratio": 9.725802238855191,
+      "enc_us": 909.657592857143,
+      "dec_us": 1051.0554071428571,
+      "usb_ms": 4.518425457142857,
+      "total_ms": 6.479138457142858
+    },
+    {
+      "codec": "paeth-byte-lz4",
+      "label": "PNG-style byte Paeth + LZ4 (B4a)",
+      "bytes": 183324.2857142857,
+      "ratio": 10.054314368761055,
+      "enc_us": 3958.785178571429,
+      "dec_us": 5245.551535714286,
+      "usb_ms": 4.370791571428572,
+      "total_ms": 13.575128285714285
+    },
+    {
+      "codec": "paeth-pixel-lz4",
+      "label": "RGB565-pixel Paeth + LZ4 (B4b)",
+      "bytes": 182602.7857142857,
+      "ratio": 10.094040968706862,
+      "enc_us": 2370.817314285714,
+      "dec_us": 3584.370435714286,
+      "usb_ms": 4.353589664285715,
+      "total_ms": 10.308777414285714
+    },
+    {
+      "codec": "med-lz4",
+      "label": "MED / JPEG-LS style predictor + LZ4 (B5)",
+      "bytes": 182402.92857142858,
+      "ratio": 10.10510091277513,
+      "enc_us": 4037.3901071428572,
+      "dec_us": 6028.769042857143,
+      "usb_ms": 4.348824707142858,
+      "total_ms": 14.414983857142857
+    },
+    {
+      "codec": "channel-sub-lz4",
+      "label": "Channel-aware left-subtract + LZ4",
+      "bytes": 186985.85714285713,
+      "ratio": 9.857430011895476,
+      "enc_us": 1581.9739571428572,
+      "dec_us": 1342.3606214285714,
+      "usb_ms": 4.458090228571428,
+      "total_ms": 7.382424807142857
+    },
+    {
+      "codec": "channel-xor-lz4",
+      "label": "Channel-aware left-XOR + LZ4",
+      "bytes": 189516.5,
+      "ratio": 9.725802238855191,
+      "enc_us": 1430.7700785714287,
+      "dec_us": 1119.1285,
+      "usb_ms": 4.518425457142857,
+      "total_ms": 7.068324035714285
+    },
+    {
+      "codec": "shuffle-lz4",
+      "label": "RGB565 byte shuffle (S1) + LZ4",
+      "bytes": 206942.7857142857,
+      "ratio": 8.906809646144431,
+      "enc_us": 737.4079,
+      "dec_us": 568.9463214285714,
+      "usb_ms": 4.933900478571429,
+      "total_ms": 6.2402547
+    },
+    {
+      "codec": "quant-mild-raw",
+      "label": "Q1 mild quantization, raw 16-bit storage (no LZ4)",
+      "bytes": 1843200.0,
+      "ratio": 1.0,
+      "enc_us": 366.7989357142857,
+      "dec_us": 42.453900000000004,
+      "usb_ms": 43.9453125,
+      "total_ms": 44.35456533571429
+    },
+    {
+      "codec": "quant-mild-lz4",
+      "label": "Q1 mild quantization + LZ4",
+      "bytes": 179487.64285714287,
+      "ratio": 10.269230631476022,
+      "enc_us": 685.5809142857144,
+      "dec_us": 283.05467857142855,
+      "usb_ms": 4.279318892857143,
+      "total_ms": 5.247954485714287
+    },
+    {
+      "codec": "quant-moderate-16bit-lz4",
+      "label": "Q2 moderate (RGB444-equiv) 16-bit storage + LZ4",
+      "bytes": 173963.85714285713,
+      "ratio": 10.595304279131874,
+      "enc_us": 651.2593571428572,
+      "dec_us": 280.1855214285714,
+      "usb_ms": 4.147621571428571,
+      "total_ms": 5.07906645
+    },
+    {
+      "codec": "quant-moderate-packed12-lz4",
+      "label": "Q2 moderate, packed 12 bpp + LZ4",
+      "bytes": 140509.7857142857,
+      "ratio": 13.117947555254158,
+      "enc_us": 963.2261857142857,
+      "dec_us": 1214.0934285714286,
+      "usb_ms": 3.350014357142857,
+      "total_ms": 5.527333971428571
+    },
+    {
+      "codec": "quant-aggressive-raw",
+      "label": "Q3 RGB332, raw 1 byte/pixel (no LZ4)",
+      "bytes": 921600.0,
+      "ratio": 2.0,
+      "enc_us": 679.87965,
+      "dec_us": 1217.3083499999998,
+      "usb_ms": 21.9726562,
+      "total_ms": 23.869844199999996
+    },
+    {
+      "codec": "quant-aggressive-lz4",
+      "label": "Q3 RGB332 + LZ4",
+      "bytes": 94420.35714285714,
+      "ratio": 19.521214023912822,
+      "enc_us": 841.7279357142856,
+      "dec_us": 1347.7023071428573,
+      "usb_ms": 2.251156721428571,
+      "total_ms": 4.440586964285714
+    },
+    {
+      "codec": "quant-mild-u16sub-lz4",
+      "label": "Q1 mild quant + uint16 left-sub + LZ4",
+      "bytes": 174825.7142857143,
+      "ratio": 10.543071467093759,
+      "enc_us": 1353.3170571428573,
+      "dec_us": 1155.9204499999998,
+      "usb_ms": 4.168169828571428,
+      "total_ms": 6.677407335714285
+    },
+    {
+      "codec": "quant-mild-u16xor-lz4",
+      "label": "Q1 mild quant + uint16 left-XOR + LZ4",
+      "bytes": 175772.2142857143,
+      "ratio": 10.486299029059932,
+      "enc_us": 1299.2234142857142,
+      "dec_us": 1152.1433214285714,
+      "usb_ms": 4.190736157142857,
+      "total_ms": 6.642102892857143
+    },
+    {
+      "codec": "quant-moderate-bestpred-lz4",
+      "label": "Q2 moderate quant + best predictor (u16-XOR) + LZ4",
+      "bytes": 170759.07142857142,
+      "ratio": 10.794155675477606,
+      "enc_us": 1278.8388214285715,
+      "dec_us": 1148.8277142857144,
+      "usb_ms": 4.071213514285715,
+      "total_ms": 6.4988800499999995
+    },
+    {
+      "codec": "quant-shuffle-lz4",
+      "label": "Q1 mild quant + byte shuffle (S2) + LZ4",
+      "bytes": 198085.42857142858,
+      "ratio": 9.305076164829316,
+      "enc_us": 1126.1663285714285,
+      "dec_us": 657.5391928571428,
+      "usb_ms": 4.722724628571428,
+      "total_ms": 6.50643015
+    },
+    {
+      "codec": "rle-lz4",
+      "label": "PackBits-style RLE + LZ4",
+      "bytes": 190639.57142857142,
+      "ratio": 9.668506838259484,
+      "enc_us": 2018.083764285714,
+      "dec_us": 754.1999142857144,
+      "usb_ms": 4.545201578571429,
+      "total_ms": 7.317485257142857
+    },
+    {
+      "codec": "qoi",
+      "label": "QOI (RGB565<->RGB888 conversion, C1)",
+      "bytes": 394565.9285714286,
+      "ratio": 4.671462654349092,
+      "enc_us": 1681.3130714285714,
+      "dec_us": 1809.7681642857142,
+      "usb_ms": 9.4071848,
+      "total_ms": 12.898266035714284
+    },
+    {
+      "codec": "qoir-lossless",
+      "label": "QOIR lossless (C2)",
+      "bytes": 298131.28571428574,
+      "ratio": 6.1825111563984985,
+      "enc_us": 1387.820014285714,
+      "dec_us": 2512.105807142857,
+      "usb_ms": 7.10800375,
+      "total_ms": 11.007929571428573
+    },
+    {
+      "codec": "qoir-lossy-l3",
+      "label": "QOIR lossy, lossiness=3 (C2)",
+      "bytes": 221530.2142857143,
+      "ratio": 8.32030974168954,
+      "enc_us": 1418.7758214285714,
+      "dec_us": 3669.480871428572,
+      "usb_ms": 5.281691892857142,
+      "total_ms": 10.369948585714285
+    },
+    {
+      "codec": "qoir-lossy-l5",
+      "label": "QOIR lossy, lossiness=5 (C2)",
+      "bytes": 142936.85714285713,
+      "ratio": 12.895204475902448,
+      "enc_us": 1412.9536142857144,
+      "dec_us": 3580.088557142857,
+      "usb_ms": 3.407880242857143,
+      "total_ms": 8.400922414285715
+    },
+    {
+      "codec": "charls-lossless",
+      "label": "CharLS JPEG-LS lossless (C3)",
+      "bytes": 289944.5,
+      "ratio": 6.3570786822995435,
+      "enc_us": 9655.106578571427,
+      "dec_us": 8185.245421428572,
+      "usb_ms": 6.912815564285715,
+      "total_ms": 24.753167564285715
+    },
+    {
+      "codec": "charls-near1",
+      "label": "CharLS JPEG-LS near-lossless NEAR=1 (C3)",
+      "bytes": 247732.42857142858,
+      "ratio": 7.440285515420728,
+      "enc_us": 12446.219521428571,
+      "dec_us": 8238.523285714286,
+      "usb_ms": 5.906401357142857,
+      "total_ms": 26.591144164285716
+    },
+    {
+      "codec": "charls-near3",
+      "label": "CharLS JPEG-LS near-lossless NEAR=3 (C3)",
+      "bytes": 201891.7142857143,
+      "ratio": 9.129646585651997,
+      "enc_us": 11038.670785714285,
+      "dec_us": 7356.416450000001,
+      "usb_ms": 4.813473578571428,
+      "total_ms": 23.208560814285715
+    }
+  ],
+  "headline_1080p_full": [
+    {
+      "codec": "raw",
+      "label": "Raw RGB565 (no compression)",
+      "bytes": 4147200.0,
+      "ratio": 1.0,
+      "enc_us": 100.08209285714287,
+      "dec_us": 102.57375,
+      "usb_ms": 98.8769531,
+      "total_ms": 99.07960894285713
+    },
+    {
+      "codec": "rgb565-lz4",
+      "label": "RGB565 + LZ4 (baseline)",
+      "bytes": 416573.5714285714,
+      "ratio": 9.955504344113457,
+      "enc_us": 829.8677857142857,
+      "dec_us": 571.2037642857142,
+      "usb_ms": 9.931887885714287,
+      "total_ms": 11.332959435714287
+    },
+    {
+      "codec": "sub-byte-lz4",
+      "label": "PNG byte Sub + LZ4 (B1)",
+      "bytes": 406082.85714285716,
+      "ratio": 10.212694101837062,
+      "enc_us": 2135.478535714286,
+      "dec_us": 7649.966614285714,
+      "usb_ms": 9.68176977857143,
+      "total_ms": 19.46721492857143
+    },
+    {
+      "codec": "u16-sub-lz4",
+      "label": "uint16 left-subtract + LZ4 (B2)",
+      "bytes": 404718.9285714286,
+      "ratio": 10.247111531547908,
+      "enc_us": 2152.4688285714287,
+      "dec_us": 2391.761207142857,
+      "usb_ms": 9.64925117857143,
+      "total_ms": 14.193481214285715
+    },
+    {
+      "codec": "u16-xor-lz4",
+      "label": "uint16 left-XOR + LZ4 (B3)",
+      "bytes": 407940.4285714286,
+      "ratio": 10.166190231556918,
+      "enc_us": 2023.0416500000001,
+      "dec_us": 2388.607457142857,
+      "usb_ms": 9.726057721428573,
+      "total_ms": 14.137706828571428
+    },
+    {
+      "codec": "paeth-byte-lz4",
+      "label": "PNG-style byte Paeth + LZ4 (B4a)",
+      "bytes": 403942.85714285716,
+      "ratio": 10.266798698542933,
+      "enc_us": 8790.768421428573,
+      "dec_us": 11721.897978571427,
+      "usb_ms": 9.630748207142858,
+      "total_ms": 30.14341460714286
+    },
+    {
+      "codec": "paeth-pixel-lz4",
+      "label": "RGB565-pixel Paeth + LZ4 (B4b)",
+      "bytes": 398125.71428571426,
+      "ratio": 10.416810196348605,
+      "enc_us": 5233.653735714286,
+      "dec_us": 7993.460778571429,
+      "usb_ms": 9.492056714285715,
+      "total_ms": 22.719171228571433
+    },
+    {
+      "codec": "med-lz4",
+      "label": "MED / JPEG-LS style predictor + LZ4 (B5)",
+      "bytes": 406631.14285714284,
+      "ratio": 10.198923699892287,
+      "enc_us": 8967.943535714285,
+      "dec_us": 13586.626978571428,
+      "usb_ms": 9.69484192857143,
+      "total_ms": 32.24941244285714
+    },
+    {
+      "codec": "channel-sub-lz4",
+      "label": "Channel-aware left-subtract + LZ4",
+      "bytes": 404753.28571428574,
+      "ratio": 10.246241714088264,
+      "enc_us": 3533.6349499999997,
+      "dec_us": 3038.483378571428,
+      "usb_ms": 9.650070321428572,
+      "total_ms": 16.22218865
+    },
+    {
+      "codec": "channel-xor-lz4",
+      "label": "Channel-aware left-XOR + LZ4",
+      "bytes": 407940.4285714286,
+      "ratio": 10.166190231556918,
+      "enc_us": 3193.704714285714,
+      "dec_us": 2525.0194214285716,
+      "usb_ms": 9.726057721428573,
+      "total_ms": 15.444781857142857
+    },
+    {
+      "codec": "shuffle-lz4",
+      "label": "RGB565 byte shuffle (S1) + LZ4",
+      "bytes": 450377.64285714284,
+      "ratio": 9.208272359370795,
+      "enc_us": 1617.5030714285713,
+      "dec_us": 1289.4394285714286,
+      "usb_ms": 10.737839771428572,
+      "total_ms": 13.644782271428573
+    },
+    {
+      "codec": "quant-mild-raw",
+      "label": "Q1 mild quantization, raw 16-bit storage (no LZ4)",
+      "bytes": 4147200.0,
+      "ratio": 1.0,
+      "enc_us": 830.6215214285714,
+      "dec_us": 104.0549,
+      "usb_ms": 98.8769531,
+      "total_ms": 99.81162952142857
+    },
+    {
+      "codec": "quant-mild-lz4",
+      "label": "Q1 mild quantization + LZ4",
+      "bytes": 387982.28571428574,
+      "ratio": 10.689147810872072,
+      "enc_us": 1459.872342857143,
+      "dec_us": 622.62735,
+      "usb_ms": 9.250218514285715,
+      "total_ms": 11.33271820714286
+    },
+    {
+      "codec": "quant-moderate-16bit-lz4",
+      "label": "Q2 moderate (RGB444-equiv) 16-bit storage + LZ4",
+      "bytes": 378391.64285714284,
+      "ratio": 10.960072925198627,
+      "enc_us": 1412.483685714286,
+      "dec_us": 610.18805,
+      "usb_ms": 9.021559757142857,
+      "total_ms": 11.044231492857142
+    },
+    {
+      "codec": "quant-moderate-packed12-lz4",
+      "label": "Q2 moderate, packed 12 bpp + LZ4",
+      "bytes": 303903.0714285714,
+      "ratio": 13.64645635368232,
+      "enc_us": 2092.009035714286,
+      "dec_us": 2740.2177785714284,
+      "usb_ms": 7.245613857142857,
+      "total_ms": 12.077840671428572
+    },
+    {
+      "codec": "quant-aggressive-raw",
+      "label": "Q3 RGB332, raw 1 byte/pixel (no LZ4)",
+      "bytes": 2073600.0,
+      "ratio": 2.0,
+      "enc_us": 1534.342992857143,
+      "dec_us": 2745.6909857142855,
+      "usb_ms": 49.4384766,
+      "total_ms": 53.71851057857143
+    },
+    {
+      "codec": "quant-aggressive-lz4",
+      "label": "Q3 RGB332 + LZ4",
+      "bytes": 206079.64285714287,
+      "ratio": 20.124258478431535,
+      "enc_us": 1875.5119000000002,
+      "dec_us": 3025.561214285714,
+      "usb_ms": 4.913321557142857,
+      "total_ms": 9.814394671428571
+    },
+    {
+      "codec": "quant-mild-u16sub-lz4",
+      "label": "Q1 mild quant + uint16 left-sub + LZ4",
+      "bytes": 379494.4285714286,
+      "ratio": 10.928223678043834,
+      "enc_us": 3036.6009499999996,
+      "dec_us": 2654.7915714285714,
+      "usb_ms": 9.04785225,
+      "total_ms": 14.739244771428572
+    },
+    {
+      "codec": "quant-mild-u16xor-lz4",
+      "label": "Q1 mild quant + uint16 left-XOR + LZ4",
+      "bytes": 380981.5,
+      "ratio": 10.885567934401013,
+      "enc_us": 2901.0259,
+      "dec_us": 2648.3337428571426,
+      "usb_ms": 9.083306785714287,
+      "total_ms": 14.632666428571428
+    },
+    {
+      "codec": "quant-moderate-bestpred-lz4",
+      "label": "Q2 moderate quant + best predictor (u16-XOR) + LZ4",
+      "bytes": 371073.21428571426,
+      "ratio": 11.17623110572134,
+      "enc_us": 2853.851714285714,
+      "dec_us": 2631.045021428571,
+      "usb_ms": 8.847074835714286,
+      "total_ms": 14.331971571428571
+    },
+    {
+      "codec": "quant-shuffle-lz4",
+      "label": "Q1 mild quant + byte shuffle (S2) + LZ4",
+      "bytes": 430001.9285714286,
+      "ratio": 9.64460790624361,
+      "enc_us": 2520.723985714286,
+      "dec_us": 1523.665092857143,
+      "usb_ms": 10.252044900000001,
+      "total_ms": 14.29643397857143
+    },
+    {
+      "codec": "rle-lz4",
+      "label": "PackBits-style RLE + LZ4",
+      "bytes": 404925.85714285716,
+      "ratio": 10.241874967586659,
+      "enc_us": 4455.529771428571,
+      "dec_us": 1703.6068642857144,
+      "usb_ms": 9.654184742857142,
+      "total_ms": 15.813321378571429
+    },
+    {
+      "codec": "qoi",
+      "label": "QOI (RGB565<->RGB888 conversion, C1)",
+      "bytes": 837698.8571428572,
+      "ratio": 4.950705094841447,
+      "enc_us": 3713.1773785714286,
+      "dec_us": 3948.1863285714285,
+      "usb_ms": 19.972297128571427,
+      "total_ms": 27.633660835714284
+    },
+    {
+      "codec": "qoir-lossless",
+      "label": "QOIR lossless (C2)",
+      "bytes": 654646.8571428572,
+      "ratio": 6.335018574900142,
+      "enc_us": 3111.917785714286,
+      "dec_us": 5574.038307142857,
+      "usb_ms": 15.607997342857143,
+      "total_ms": 24.293953435714286
+    },
+    {
+      "codec": "qoir-lossy-l3",
+      "label": "QOIR lossy, lossiness=3 (C2)",
+      "bytes": 487397.85714285716,
+      "ratio": 8.50885973178263,
+      "enc_us": 3259.0585142857144,
+      "dec_us": 8289.409371428572,
+      "usb_ms": 11.620470442857142,
+      "total_ms": 23.168938328571432
+    },
+    {
+      "codec": "qoir-lossy-l5",
+      "label": "QOIR lossy, lossiness=5 (C2)",
+      "bytes": 319074.64285714284,
+      "ratio": 12.997585652260051,
+      "enc_us": 3309.610792857143,
+      "dec_us": 8149.572364285714,
+      "usb_ms": 7.6073323,
+      "total_ms": 19.066515457142856
+    },
+    {
+      "codec": "charls-lossless",
+      "label": "CharLS JPEG-LS lossless (C3)",
+      "bytes": 707749.8571428572,
+      "ratio": 5.859697403178564,
+      "enc_us": 24513.247014285713,
+      "dec_us": 20270.16530714286,
+      "usb_ms": 16.874071535714286,
+      "total_ms": 61.65748385714286
+    },
+    {
+      "codec": "charls-near1",
+      "label": "CharLS JPEG-LS near-lossless NEAR=1 (C3)",
+      "bytes": 594745.8571428572,
+      "ratio": 6.973062443718457,
+      "enc_us": 30240.906335714284,
+      "dec_us": 19798.68315,
+      "usb_ms": 14.179846207142857,
+      "total_ms": 64.21943569285715
+    },
+    {
+      "codec": "charls-near3",
+      "label": "CharLS JPEG-LS near-lossless NEAR=3 (C3)",
+      "bytes": 499471.64285714284,
+      "ratio": 8.30317408266993,
+      "enc_us": 28004.69517857143,
+      "dec_us": 18495.728342857143,
+      "usb_ms": 11.908331921428571,
+      "total_ms": 58.408755442857135
+    }
+  ],
+  "fps_table": [
+    {
+      "codec": "raw",
+      "fps_720p": 22.710945039899414,
+      "fps_1080p": 10.092894094654097
+    },
+    {
+      "codec": "rgb565-lz4",
+      "fps_720p": 187.4396598263651,
+      "fps_1080p": 88.2382051813082
+    },
+    {
+      "codec": "sub-byte-lz4",
+      "fps_720p": 113.5414047754754,
+      "fps_1080p": 51.3684162664856
+    },
+    {
+      "codec": "u16-sub-lz4",
+      "fps_720p": 154.36614655845682,
+      "fps_1080p": 70.4548788914098
+    },
+    {
+      "codec": "u16-xor-lz4",
+      "fps_720p": 154.34150799749628,
+      "fps_1080p": 70.73282903130104
+    },
+    {
+      "codec": "paeth-byte-lz4",
+      "fps_720p": 73.66412890936321,
+      "fps_1080p": 33.17474191404439
+    },
+    {
+      "codec": "paeth-pixel-lz4",
+      "fps_720p": 97.00471353802035,
+      "fps_1080p": 44.01569009447003
+    },
+    {
+      "codec": "med-lz4",
+      "fps_720p": 69.37225944269676,
+      "fps_1080p": 31.008316873118346
+    },
+    {
+      "codec": "channel-sub-lz4",
+      "fps_720p": 135.45684868099855,
+      "fps_1080p": 61.64396318988684
+    },
+    {
+      "codec": "channel-xor-lz4",
+      "fps_720p": 141.47625306186822,
+      "fps_1080p": 64.74678692451216
+    },
+    {
+      "codec": "shuffle-lz4",
+      "fps_720p": 160.24986928818785,
+      "fps_1080p": 73.28808771789238
+    },
+    {
+      "codec": "quant-mild-raw",
+      "fps_720p": 22.545593501618658,
+      "fps_1080p": 10.018872598260806
+    },
+    {
+      "codec": "quant-mild-lz4",
+      "fps_720p": 190.55043307295233,
+      "fps_1080p": 88.24008342232614
+    },
+    {
+      "codec": "quant-moderate-16bit-lz4",
+      "fps_720p": 196.88657548475274,
+      "fps_1080p": 90.54500538554899
+    },
+    {
+      "codec": "quant-moderate-packed12-lz4",
+      "fps_720p": 180.91904798391334,
+      "fps_1080p": 82.79625698040604
+    },
+    {
+      "codec": "quant-aggressive-raw",
+      "fps_720p": 41.893863722830666,
+      "fps_1080p": 18.615557081340686
+    },
+    {
+      "codec": "quant-aggressive-lz4",
+      "fps_720p": 225.1954545745179,
+      "fps_1080p": 101.89115411378106
+    },
+    {
+      "codec": "quant-mild-u16sub-lz4",
+      "fps_720p": 149.75872366681511,
+      "fps_1080p": 67.84608136357566
+    },
+    {
+      "codec": "quant-mild-u16xor-lz4",
+      "fps_720p": 150.55472884579834,
+      "fps_1080p": 68.34024440326348
+    },
+    {
+      "codec": "quant-moderate-bestpred-lz4",
+      "fps_720p": 153.87266610652398,
+      "fps_1080p": 69.77407086081199
+    },
+    {
+      "codec": "quant-shuffle-lz4",
+      "fps_720p": 153.69411135536436,
+      "fps_1080p": 69.94751289019872
+    },
+    {
+      "codec": "rle-lz4",
+      "fps_720p": 136.65897024170488,
+      "fps_1080p": 63.23782183767518
+    },
+    {
+      "codec": "qoi",
+      "fps_720p": 77.52980107799597,
+      "fps_1080p": 36.187749641465544
+    },
+    {
+      "codec": "qoir-lossless",
+      "fps_720p": 90.8436044681401,
+      "fps_1080p": 41.162505832826305
+    },
+    {
+      "codec": "qoir-lossy-l3",
+      "fps_720p": 96.43249353980472,
+      "fps_1080p": 43.16123534960693
+    },
+    {
+      "codec": "qoir-lossy-l5",
+      "fps_720p": 119.03454771817754,
+      "fps_1080p": 52.44796838980726
+    },
+    {
+      "codec": "charls-lossless",
+      "fps_720p": 40.3988700598794,
+      "fps_1080p": 16.218631339497204
+    },
+    {
+      "codec": "charls-near1",
+      "fps_720p": 37.606505151556796,
+      "fps_1080p": 15.571609890543241
+    },
+    {
+      "codec": "charls-near3",
+      "fps_720p": 43.087548943770074,
+      "fps_1080p": 17.120720899083818
+    }
+  ],
+  "codec_metadata": [
+    {
+      "codec": "raw",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "low",
+      "category": "baseline"
+    },
+    {
+      "codec": "rgb565-lz4",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "low",
+      "category": "baseline"
+    },
+    {
+      "codec": "sub-byte-lz4",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "low",
+      "category": "spatial"
+    },
+    {
+      "codec": "u16-sub-lz4",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "low",
+      "category": "spatial"
+    },
+    {
+      "codec": "u16-xor-lz4",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "low",
+      "category": "spatial"
+    },
+    {
+      "codec": "paeth-byte-lz4",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "medium",
+      "category": "spatial"
+    },
+    {
+      "codec": "paeth-pixel-lz4",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "medium",
+      "category": "spatial"
+    },
+    {
+      "codec": "med-lz4",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "medium",
+      "category": "spatial"
+    },
+    {
+      "codec": "channel-sub-lz4",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "medium",
+      "category": "spatial"
+    },
+    {
+      "codec": "channel-xor-lz4",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "medium",
+      "category": "spatial"
+    },
+    {
+      "codec": "shuffle-lz4",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "low",
+      "category": "spatial"
+    },
+    {
+      "codec": "quant-mild-raw",
+      "lossy": true,
+      "stateful": false,
+      "native565": true,
+      "complexity": "low",
+      "category": "quant"
+    },
+    {
+      "codec": "quant-mild-lz4",
+      "lossy": true,
+      "stateful": false,
+      "native565": true,
+      "complexity": "low",
+      "category": "quant"
+    },
+    {
+      "codec": "quant-moderate-16bit-lz4",
+      "lossy": true,
+      "stateful": false,
+      "native565": true,
+      "complexity": "low",
+      "category": "quant"
+    },
+    {
+      "codec": "quant-moderate-packed12-lz4",
+      "lossy": true,
+      "stateful": false,
+      "native565": false,
+      "complexity": "medium",
+      "category": "quant"
+    },
+    {
+      "codec": "quant-aggressive-raw",
+      "lossy": true,
+      "stateful": false,
+      "native565": false,
+      "complexity": "low",
+      "category": "quant"
+    },
+    {
+      "codec": "quant-aggressive-lz4",
+      "lossy": true,
+      "stateful": false,
+      "native565": false,
+      "complexity": "low",
+      "category": "quant"
+    },
+    {
+      "codec": "quant-mild-u16sub-lz4",
+      "lossy": true,
+      "stateful": false,
+      "native565": true,
+      "complexity": "medium",
+      "category": "combo"
+    },
+    {
+      "codec": "quant-mild-u16xor-lz4",
+      "lossy": true,
+      "stateful": false,
+      "native565": true,
+      "complexity": "medium",
+      "category": "combo"
+    },
+    {
+      "codec": "quant-moderate-bestpred-lz4",
+      "lossy": true,
+      "stateful": false,
+      "native565": true,
+      "complexity": "medium",
+      "category": "combo"
+    },
+    {
+      "codec": "quant-shuffle-lz4",
+      "lossy": true,
+      "stateful": false,
+      "native565": true,
+      "complexity": "medium",
+      "category": "combo"
+    },
+    {
+      "codec": "prev-xor-lz4",
+      "lossy": false,
+      "stateful": true,
+      "native565": true,
+      "complexity": "high",
+      "category": "temporal"
+    },
+    {
+      "codec": "prev-sub-lz4",
+      "lossy": false,
+      "stateful": true,
+      "native565": true,
+      "complexity": "high",
+      "category": "temporal"
+    },
+    {
+      "codec": "prev-quant-xor-lz4",
+      "lossy": true,
+      "stateful": true,
+      "native565": true,
+      "complexity": "high",
+      "category": "temporal"
+    },
+    {
+      "codec": "rle-lz4",
+      "lossy": false,
+      "stateful": false,
+      "native565": true,
+      "complexity": "low",
+      "category": "rle"
+    },
+    {
+      "codec": "qoi",
+      "lossy": false,
+      "stateful": false,
+      "native565": false,
+      "complexity": "medium",
+      "category": "external"
+    },
+    {
+      "codec": "qoir-lossless",
+      "lossy": false,
+      "stateful": false,
+      "native565": false,
+      "complexity": "medium",
+      "category": "external"
+    },
+    {
+      "codec": "qoir-lossy-l3",
+      "lossy": true,
+      "stateful": false,
+      "native565": false,
+      "complexity": "medium",
+      "category": "external"
+    },
+    {
+      "codec": "qoir-lossy-l5",
+      "lossy": true,
+      "stateful": false,
+      "native565": false,
+      "complexity": "medium",
+      "category": "external"
+    },
+    {
+      "codec": "charls-lossless",
+      "lossy": false,
+      "stateful": false,
+      "native565": false,
+      "complexity": "high",
+      "category": "external"
+    },
+    {
+      "codec": "charls-near1",
+      "lossy": true,
+      "stateful": false,
+      "native565": false,
+      "complexity": "high",
+      "category": "external"
+    },
+    {
+      "codec": "charls-near3",
+      "lossy": true,
+      "stateful": false,
+      "native565": false,
+      "complexity": "high",
+      "category": "external"
+    }
+  ],
+  "improvement_vs_lz4_720p_full": [
+    {
+      "codec": "raw",
+      "size_delta_pct": 841.9855771600037,
+      "enc_delta_pct": -90.05478566701545,
+      "dec_delta_pct": -82.18476844378714,
+      "total_latency_delta_pct": 725.3274335218737,
+      "net_latency_gain_ns": -38696582.9,
+      "break_even": "reject (larger output than baseline)"
+    },
+    {
+      "codec": "sub-byte-lz4",
+      "size_delta_pct": -3.9625393105437086,
+      "enc_delta_pct": 127.54102702342232,
+      "dec_delta_pct": 1247.216152136936,
+      "total_latency_delta_pct": 65.08485181861296,
+      "net_latency_gain_ns": -3472309.5357142864,
+      "break_even": "13.8 MiB/s"
+    },
+    {
+      "codec": "u16-sub-lz4",
+      "size_delta_pct": -4.446147977389244,
+      "enc_delta_pct": 130.32217686406793,
+      "dec_delta_pct": 321.0690572508073,
+      "total_latency_delta_pct": 21.425366898942258,
+      "net_latency_gain_ns": -1143054.0857142862,
+      "break_even": "15.2 MiB/s"
+    },
+    {
+      "codec": "u16-xor-lz4",
+      "size_delta_pct": -3.145719599694092,
+      "enc_delta_pct": 116.81850497830888,
+      "dec_delta_pct": 319.8790792594835,
+      "total_latency_delta_pct": 21.444750837477727,
+      "net_latency_gain_ns": -1144088.228571429,
+      "break_even": "12.0 MiB/s"
+    },
+    {
+      "codec": "paeth-byte-lz4",
+      "size_delta_pct": -6.3103119107981485,
+      "enc_delta_pct": 843.5834875540277,
+      "dec_delta_pct": 1995.5102214935139,
+      "total_latency_delta_pct": 154.45174279735525,
+      "net_latency_gain_ns": -8240078.0571428565,
+      "break_even": "3.3 MiB/s"
+    },
+    {
+      "codec": "paeth-pixel-lz4",
+      "size_delta_pct": -6.679041616701436,
+      "enc_delta_pct": 465.0885230843612,
+      "dec_delta_pct": 1331.8961189341674,
+      "total_latency_delta_pct": 93.22737317594301,
+      "net_latency_gain_ns": -4973727.185714287,
+      "break_even": "6.4 MiB/s"
+    },
+    {
+      "codec": "med-lz4",
+      "size_delta_pct": -6.781180584835021,
+      "enc_delta_pct": 862.3191120688009,
+      "dec_delta_pct": 2308.392533428905,
+      "total_latency_delta_pct": 170.19396705854015,
+      "net_latency_gain_ns": -9079933.628571428,
+      "break_even": "3.5 MiB/s"
+    },
+    {
+      "codec": "channel-sub-lz4",
+      "size_delta_pct": -4.439029643298458,
+      "enc_delta_pct": 277.066306042696,
+      "dec_delta_pct": 436.2506466635869,
+      "total_latency_delta_pct": 38.3759194544576,
+      "net_latency_gain_ns": -2047374.5785714276,
+      "break_even": "7.1 MiB/s"
+    },
+    {
+      "codec": "channel-xor-lz4",
+      "size_delta_pct": -3.145719599694092,
+      "enc_delta_pct": 241.02659268658772,
+      "dec_delta_pct": 347.07314282355367,
+      "total_latency_delta_pct": 32.48842527968058,
+      "net_latency_gain_ns": -1733273.8071428565,
+      "break_even": "5.8 MiB/s"
+    },
+    {
+      "codec": "shuffle-lz4",
+      "size_delta_pct": 5.760155946273004,
+      "enc_delta_pct": 75.76248435965425,
+      "dec_delta_pct": 127.28455223771998,
+      "total_latency_delta_pct": 16.96712181978762,
+      "net_latency_gain_ns": -905204.4714285722,
+      "break_even": "reject (larger output than baseline)"
+    },
+    {
+      "codec": "quant-mild-raw",
+      "size_delta_pct": 841.9855771600037,
+      "enc_delta_pct": -12.57282136302044,
+      "dec_delta_pct": -83.04037606216188,
+      "total_latency_delta_pct": 731.3804638272571,
+      "net_latency_gain_ns": -39019515.10714286,
+      "break_even": "reject (larger output than baseline)"
+    },
+    {
+      "codec": "quant-mild-lz4",
+      "size_delta_pct": -8.271066162177544,
+      "enc_delta_pct": 63.40943014635499,
+      "dec_delta_pct": 13.07561619585183,
+      "total_latency_delta_pct": -1.6325196413467504,
+      "net_latency_gain_ns": 87095.74285714328,
+      "break_even": "58.0 MiB/s"
+    },
+    {
+      "codec": "quant-moderate-16bit-lz4",
+      "size_delta_pct": -11.09405144547813,
+      "enc_delta_pct": 55.22882596443557,
+      "dec_delta_pct": 11.929435841127782,
+      "total_latency_delta_pct": -4.798151237649617,
+      "net_latency_gain_ns": 255983.77857142873,
+      "break_even": "89.3 MiB/s"
+    },
+    {
+      "codec": "quant-moderate-packed12-lz4",
+      "size_delta_pct": -28.191085290418904,
+      "enc_delta_pct": 129.586674351355,
+      "dec_delta_pct": 385.0100455781908,
+      "total_latency_delta_pct": 3.60415993512832,
+      "net_latency_gain_ns": -192283.74285714328,
+      "break_even": "96.8 MiB/s"
+    },
+    {
+      "codec": "quant-aggressive-raw",
+      "size_delta_pct": 370.9927885800019,
+      "enc_delta_pct": 62.050523664815906,
+      "dec_delta_pct": 386.29435298971873,
+      "total_latency_delta_pct": 347.41554769563334,
+      "net_latency_gain_ns": -18534793.97142857,
+      "break_even": "reject (larger output than baseline)"
+    },
+    {
+      "codec": "quant-aggressive-lz4",
+      "size_delta_pct": -51.7455432840343,
+      "enc_delta_pct": 100.62735039327106,
+      "dec_delta_pct": 438.38456088367997,
+      "total_latency_delta_pct": -16.76578899848946,
+      "net_latency_gain_ns": 894463.2642857153,
+      "break_even": "228.7 MiB/s"
+    },
+    {
+      "codec": "quant-mild-u16sub-lz4",
+      "size_delta_pct": -10.65359083450603,
+      "enc_delta_pct": 222.56552728784808,
+      "dec_delta_pct": 361.77091230856547,
+      "total_latency_delta_pct": 25.16109595283607,
+      "net_latency_gain_ns": -1342357.1071428573,
+      "break_even": "21.3 MiB/s"
+    },
+    {
+      "codec": "quant-mild-u16xor-lz4",
+      "size_delta_pct": -10.169872654828325,
+      "enc_delta_pct": 209.67221131356126,
+      "dec_delta_pct": 360.2620125340738,
+      "total_latency_delta_pct": 24.499350676885836,
+      "net_latency_gain_ns": -1307052.6642857138,
+      "break_even": "21.6 MiB/s"
+    },
+    {
+      "codec": "quant-moderate-bestpred-lz4",
+      "size_delta_pct": -12.731888859077065,
+      "enc_delta_pct": 204.81350735442075,
+      "dec_delta_pct": 358.93748286145325,
+      "total_latency_delta_pct": 21.814786582435055,
+      "net_latency_gain_ns": -1163829.821428571,
+      "break_even": "27.6 MiB/s"
+    },
+    {
+      "codec": "quant-shuffle-lz4",
+      "size_delta_pct": 1.23351603724167,
+      "enc_delta_pct": 168.4237471715518,
+      "dec_delta_pct": 162.67592459695697,
+      "total_latency_delta_pct": 21.95630540000057,
+      "net_latency_gain_ns": -1171379.9214285715,
+      "break_even": "reject (larger output than baseline)"
+    },
+    {
+      "codec": "rle-lz4",
+      "size_delta_pct": -2.5717628463115187,
+      "enc_delta_pct": 381.0138541460432,
+      "dec_delta_pct": 201.29026827300808,
+      "total_latency_delta_pct": 37.15869473832988,
+      "net_latency_gain_ns": -1982435.0285714278,
+      "break_even": "3.0 MiB/s"
+    },
+    {
+      "codec": "qoi",
+      "size_delta_pct": 101.64681746583656,
+      "enc_delta_pct": 300.7439605958202,
+      "dec_delta_pct": 622.9721528754095,
+      "total_latency_delta_pct": 141.76465980842443,
+      "net_latency_gain_ns": -7563215.8071428565,
+      "break_even": "reject (larger output than baseline)"
+    },
+    {
+      "codec": "qoir-lossless",
+      "size_delta_pct": 52.36294012750946,
+      "enc_delta_pct": 230.78936848236634,
+      "dec_delta_pct": 903.5443099739279,
+      "total_latency_delta_pct": 106.33225742611563,
+      "net_latency_gain_ns": -5672879.342857142,
+      "break_even": "reject (larger output than baseline)"
+    },
+    {
+      "codec": "qoir-lossy-l3",
+      "size_delta_pct": 13.215205491703493,
+      "enc_delta_pct": 238.1677401661887,
+      "dec_delta_pct": 1365.8963163930541,
+      "total_latency_delta_pct": 94.37396353231813,
+      "net_latency_gain_ns": -5034898.357142855,
+      "break_even": "reject (larger output than baseline)"
+    },
+    {
+      "codec": "qoir-lossy-l5",
+      "size_delta_pct": -26.95070644902817,
+      "enc_delta_pct": 236.78000673956686,
+      "dec_delta_pct": 1330.1855799655702,
+      "total_latency_delta_pct": 57.466603956140005,
+      "net_latency_gain_ns": -3065872.185714285,
+      "break_even": "50.6 MiB/s"
+    },
+    {
+      "codec": "charls-lossless",
+      "size_delta_pct": 48.17900237460325,
+      "enc_delta_pct": 2201.3118234927447,
+      "dec_delta_pct": 3169.868826806014,
+      "total_latency_delta_pct": 363.9725307874729,
+      "net_latency_gain_ns": -19418117.335714288,
+      "break_even": "reject (larger output than baseline)"
+    },
+    {
+      "codec": "charls-near1",
+      "size_delta_pct": 26.606106070478813,
+      "enc_delta_pct": 2866.578557094266,
+      "dec_delta_pct": 3191.1524436821287,
+      "total_latency_delta_pct": 398.4235016547548,
+      "net_latency_gain_ns": -21256093.935714286,
+      "break_even": "reject (larger output than baseline)"
+    },
+    {
+      "codec": "charls-near3",
+      "size_delta_pct": 3.1787559707308746,
+      "enc_delta_pct": 2531.0868127741505,
+      "dec_delta_pct": 2838.7654967417857,
+      "total_latency_delta_pct": 335.0204744089222,
+      "net_latency_gain_ns": -17873510.585714288,
+      "break_even": "reject (larger output than baseline)"
+    }
+  ],
+  "size_bucket_recommendation": {
+    "<4 KiB": [
+      [
+        "quant-aggressive-lz4",
+        14.958263772954925,
+        13.117983758034086,
+        56
+      ],
+      [
+        "rgb565-lz4",
+        7.620667658941101,
+        0.0,
+        56
+      ],
+      [
+        "quant-moderate-16bit-lz4",
+        8.192936335581209,
+        -0.43152253274357183,
+        56
+      ],
+      [
+        "quant-mild-lz4",
+        8.091206682469805,
+        -1.8432714679636013,
+        56
+      ],
+      [
+        "quant-moderate-packed12-lz4",
+        10.22977022977023,
+        -6.701891356483171,
+        56
+      ],
+      [
+        "quant-moderate-bestpred-lz4",
+        8.589574595566207,
+        -13.544008708772376,
+        56
+      ],
+      [
+        "u16-xor-lz4",
+        7.812534059945504,
+        -14.49162616592983,
+        56
+      ],
+      [
+        "quant-mild-u16xor-lz4",
+        8.374810141371656,
+        -15.37037322933616,
+        56
+      ],
+      [
+        "u16-sub-lz4",
+        7.685214967299239,
+        -16.756178096051794,
+        56
+      ],
+      [
+        "quant-mild-u16sub-lz4",
+        8.331008833100883,
+        -18.024801625778093,
+        56
+      ],
+      [
+        "shuffle-lz4",
+        7.101951847815317,
+        -20.859445278913807,
+        56
+      ],
+      [
+        "quant-shuffle-lz4",
+        7.469000729394603,
+        -22.597547250022867,
+        56
+      ],
+      [
+        "channel-xor-lz4",
+        7.812534059945504,
+        -32.87520149955965,
+        56
+      ],
+      [
+        "rle-lz4",
+        7.4026644634927194,
+        -37.4793887743141,
+        56
+      ],
+      [
+        "sub-byte-lz4",
+        7.672053944129294,
+        -39.63568352453749,
+        56
+      ],
+      [
+        "channel-sub-lz4",
+        7.682743837084673,
+        -40.118039863494296,
+        56
+      ],
+      [
+        "paeth-pixel-lz4",
+        7.661393758016246,
+        -68.58018919966126,
+        56
+      ],
+      [
+        "qoir-lossy-l5",
+        7.8006311894656655,
+        -71.44171828808311,
+        56
+      ],
+      [
+        "qoir-lossy-l3",
+        5.839511201629327,
+        -103.6621427089449,
+        56
+      ],
+      [
+        "qoir-lossless",
+        4.63768115942029,
+        -108.16119814151608,
+        56
+      ],
+      [
+        "qoi",
+        4.337670196671709,
+        -108.63210746040706,
+        56
+      ],
+      [
+        "paeth-byte-lz4",
+        7.5524180802865875,
+        -120.71526554262455,
+        56
+      ],
+      [
+        "med-lz4",
+        7.4705575820739964,
+        -126.40447216999733,
+        56
+      ],
+      [
+        "quant-aggressive-raw",
+        2.0,
+        -255.80392158339401,
+        56
+      ],
+      [
+        "charls-lossless",
+        3.9235864031966723,
+        -419.5826130308509,
+        56
+      ],
+      [
+        "charls-near3",
+        5.498197438060904,
+        -464.2277610570119,
+        56
+      ],
+      [
+        "charls-near1",
+        4.443893366398016,
+        -528.6006432170946,
+        56
+      ],
+      [
+        "raw",
+        1.0,
+        -545.3093011180049,
+        56
+      ],
+      [
+        "quant-mild-raw",
+        1.0,
+        -550.5243224700862,
+        56
+      ]
+    ],
+    "4-16 KiB": [
+      [
+        "quant-aggressive-lz4",
+        19.04483560278977,
+        17.169215189577038,
+        28
+      ],
+      [
+        "quant-moderate-16bit-lz4",
+        9.929267131293017,
+        2.2539537592725143,
+        28
+      ],
+      [
+        "rgb565-lz4",
+        8.990201458023046,
+        0.0,
+        28
+      ],
+      [
+        "quant-mild-lz4",
+        9.602947333165872,
+        -0.3571736932143116,
+        28
+      ],
+      [
+        "quant-moderate-packed12-lz4",
+        12.686725663716816,
+        -3.456405843675936,
+        28
+      ],
+      [
+        "quant-moderate-bestpred-lz4",
+        10.356043162219512,
+        -15.307586154415754,
+        28
+      ],
+      [
+        "quant-mild-u16xor-lz4",
+        10.012921250218264,
+        -16.629861986106416,
+        28
+      ],
+      [
+        "u16-xor-lz4",
+        9.272212790039616,
+        -17.477174512722122,
+        28
+      ],
+      [
+        "quant-mild-u16sub-lz4",
+        9.961176010769966,
+        -17.52349133736354,
+        28
+      ],
+      [
+        "shuffle-lz4",
+        8.433871382873111,
+        -18.28531163979118,
+        28
+      ],
+      [
+        "u16-sub-lz4",
+        9.16807226507854,
+        -18.42183285845781,
+        28
+      ],
+      [
+        "quant-shuffle-lz4",
+        8.949163122781007,
+        -18.84458180956102,
+        28
+      ],
+      [
+        "channel-xor-lz4",
+        9.272212790039616,
+        -32.43771374885306,
+        28
+      ],
+      [
+        "rle-lz4",
+        9.147962032384143,
+        -35.20893790326002,
+        28
+      ],
+      [
+        "channel-sub-lz4",
+        9.16807226507854,
+        -41.153266982469844,
+        28
+      ],
+      [
+        "qoir-lossy-l5",
+        11.865707930267446,
+        -52.57647397989571,
+        28
+      ],
+      [
+        "sub-byte-lz4",
+        9.20338643020503,
+        -54.04007100449705,
+        28
+      ],
+      [
+        "paeth-pixel-lz4",
+        9.02806313220766,
+        -79.29128672968095,
+        28
+      ],
+      [
+        "qoir-lossy-l3",
+        7.935238358818238,
+        -89.05420019697453,
+        28
+      ],
+      [
+        "qoir-lossless",
+        5.9663415268565485,
+        -99.96268312706614,
+        28
+      ],
+      [
+        "qoi",
+        4.832223813937811,
+        -126.82026584247596,
+        28
+      ],
+      [
+        "paeth-byte-lz4",
+        8.922705877776481,
+        -143.1659488656402,
+        28
+      ],
+      [
+        "med-lz4",
+        8.846652267818575,
+        -155.0917336541121,
+        28
+      ],
+      [
+        "quant-aggressive-raw",
+        2.0,
+        -335.1217773953408,
+        28
+      ],
+      [
+        "charls-near3",
+        7.314285714285714,
+        -427.5178279531183,
+        28
+      ],
+      [
+        "charls-lossless",
+        4.992621291600461,
+        -438.0684493888082,
+        28
+      ],
+      [
+        "charls-near1",
+        5.827346171434378,
+        -492.63354684438286,
+        28
+      ],
+      [
+        "raw",
+        1.0,
+        -701.4651628698576,
+        28
+      ],
+      [
+        "quant-mild-raw",
+        1.0,
+        -706.5188479476451,
+        28
+      ]
+    ],
+    "16-64 KiB": [
+      [
+        "quant-aggressive-lz4",
+        18.82008013456042,
+        14.960332432836863,
+        56
+      ],
+      [
+        "quant-moderate-16bit-lz4",
+        10.204693582471359,
+        3.5457652262477386,
+        56
+      ],
+      [
+        "quant-mild-lz4",
+        9.92962532737859,
+        1.224396489029134,
+        56
+      ],
+      [
+        "rgb565-lz4",
+        9.16642356185186,
+        0.0,
+        56
+      ],
+      [
+        "quant-moderate-packed12-lz4",
+        12.665826116566505,
+        -4.822579500055494,
+        56
+      ],
+      [
+        "quant-moderate-bestpred-lz4",
+        10.569916669866748,
+        -17.45451644706672,
+        56
+      ],
+      [
+        "quant-mild-u16xor-lz4",
+        10.293458587006926,
+        -19.813261453172835,
+        56
+      ],
+      [
+        "shuffle-lz4",
+        8.419836773648855,
+        -21.42512719043487,
+        56
+      ],
+      [
+        "quant-mild-u16sub-lz4",
+        10.198190454313046,
+        -21.56910640071181,
+        56
+      ],
+      [
+        "u16-xor-lz4",
+        9.449452088654528,
+        -21.606842177667566,
+        56
+      ],
+      [
+        "quant-shuffle-lz4",
+        8.911901262068653,
+        -21.622627850119624,
+        56
+      ],
+      [
+        "u16-sub-lz4",
+        9.36559871519177,
+        -23.15943433642955,
+        56
+      ],
+      [
+        "channel-xor-lz4",
+        9.449452088654528,
+        -35.48029875673563,
+        56
+      ],
+      [
+        "rle-lz4",
+        9.349946329334076,
+        -37.77311299997264,
+        56
+      ],
+      [
+        "channel-sub-lz4",
+        9.363623374767824,
+        -43.44496117513986,
+        56
+      ],
+      [
+        "qoir-lossy-l5",
+        12.334032370812498,
+        -56.833288013528346,
+        56
+      ],
+      [
+        "sub-byte-lz4",
+        9.375871160252611,
+        -63.316121025600566,
+        56
+      ],
+      [
+        "qoir-lossy-l3",
+        8.113281848729589,
+        -93.46835182595906,
+        56
+      ],
+      [
+        "paeth-pixel-lz4",
+        9.255252185608608,
+        -93.57172170877654,
+        56
+      ],
+      [
+        "qoir-lossless",
+        6.063683266730406,
+        -105.1979335777921,
+        56
+      ],
+      [
+        "qoi",
+        4.772866308305878,
+        -138.84487694466213,
+        56
+      ],
+      [
+        "paeth-byte-lz4",
+        9.197604790419161,
+        -158.42042311535306,
+        56
+      ],
+      [
+        "med-lz4",
+        9.157396748930395,
+        -176.23755750117854,
+        56
+      ],
+      [
+        "quant-aggressive-raw",
+        2.0,
+        -348.00920521665813,
+        56
+      ],
+      [
+        "charls-near3",
+        7.757357127155282,
+        -424.180384455414,
+        56
+      ],
+      [
+        "charls-lossless",
+        5.364642046916294,
+        -443.774526998,
+        56
+      ],
+      [
+        "charls-near1",
+        6.035257590906699,
+        -534.3477578361696,
+        56
+      ],
+      [
+        "raw",
+        1.0,
+        -726.0964091026839,
+        56
+      ],
+      [
+        "quant-mild-raw",
+        1.0,
+        -731.2687145318893,
+        56
+      ]
+    ],
+    "64-256 KiB": [
+      [
+        "quant-aggressive-lz4",
+        19.416583020832494,
+        14.891453358878076,
+        56
+      ],
+      [
+        "quant-moderate-16bit-lz4",
+        10.661822265139858,
+        4.205732616241395,
+        56
+      ],
+      [
+        "quant-mild-lz4",
+        10.357582836206626,
+        0.8411602943326253,
+        56
+      ],
+      [
+        "rgb565-lz4",
+        9.545335638736029,
+        0.0,
+        56
+      ],
+      [
+        "quant-moderate-packed12-lz4",
+        13.10394436164928,
+        -5.242425216285257,
+        56
+      ],
+      [
+        "shuffle-lz4",
+        8.944223873898311,
+        -19.454078763951223,
+        56
+      ],
+      [
+        "quant-moderate-bestpred-lz4",
+        11.020890116468097,
+        -19.60047418043039,
+        56
+      ],
+      [
+        "u16-xor-lz4",
+        9.879692469032394,
+        -22.11645714751337,
+        56
+      ],
+      [
+        "quant-shuffle-lz4",
+        9.339678223430774,
+        -22.12273031592825,
+        56
+      ],
+      [
+        "quant-mild-u16xor-lz4",
+        10.695116143633294,
+        -22.381091973053238,
+        56
+      ],
+      [
+        "u16-sub-lz4",
+        9.924812935338357,
+        -22.809717949489645,
+        56
+      ],
+      [
+        "quant-mild-u16sub-lz4",
+        10.655103833419997,
+        -23.669839366600836,
+        56
+      ],
+      [
+        "channel-xor-lz4",
+        9.879692469032394,
+        -34.27706932358478,
+        56
+      ],
+      [
+        "rle-lz4",
+        9.770902870381594,
+        -38.33241193221873,
+        56
+      ],
+      [
+        "channel-sub-lz4",
+        9.92070021881838,
+        -41.10429241133704,
+        56
+      ],
+      [
+        "qoir-lossy-l5",
+        12.745036579966408,
+        -61.6646219129508,
+        56
+      ],
+      [
+        "sub-byte-lz4",
+        9.882263188582701,
+        -67.42087119073187,
+        56
+      ],
+      [
+        "qoir-lossy-l3",
+        8.34628611797301,
+        -97.1495838082872,
+        56
+      ],
+      [
+        "paeth-pixel-lz4",
+        9.86361213545236,
+        -98.53086702849492,
+        56
+      ],
+      [
+        "qoir-lossless",
+        6.213295257640478,
+        -108.80143255218584,
+        56
+      ],
+      [
+        "qoi",
+        4.879591928712642,
+        -139.30379638566953,
+        56
+      ],
+      [
+        "paeth-byte-lz4",
+        9.79704468625621,
+        -160.95908189411384,
+        56
+      ],
+      [
+        "med-lz4",
+        9.786880158877926,
+        -179.30700465764932,
+        56
+      ],
+      [
+        "quant-aggressive-raw",
+        2.0,
+        -358.6724475464892,
+        56
+      ],
+      [
+        "charls-near3",
+        8.250832019618146,
+        -408.61260363919064,
+        56
+      ],
+      [
+        "charls-lossless",
+        5.828054298642534,
+        -426.11172413326324,
+        56
+      ],
+      [
+        "charls-near1",
+        6.6642253888604595,
+        -492.6501911204312,
+        56
+      ],
+      [
+        "raw",
+        1.0,
+        -746.2137265548937,
+        56
+      ],
+      [
+        "quant-mild-raw",
+        1.0,
+        -752.3612059901111,
+        56
+      ]
+    ],
+    ">256 KiB": [
+      [
+        "quant-aggressive-lz4",
+        18.686645711423175,
+        13.946560605702219,
+        82
+      ],
+      [
+        "quant-moderate-16bit-lz4",
+        10.44117664398206,
+        2.953339109678187,
+        82
+      ],
+      [
+        "quant-mild-lz4",
+        10.16338828711536,
+        0.18297647672148662,
+        82
+      ],
+      [
+        "rgb565-lz4",
+        9.459856699661245,
+        0.0,
+        82
+      ],
+      [
+        "quant-moderate-packed12-lz4",
+        12.845286253661254,
+        -5.764167814019141,
+        82
+      ],
+      [
+        "shuffle-lz4",
+        8.616883309738542,
+        -21.508556424771484,
+        82
+      ],
+      [
+        "u16-xor-lz4",
+        9.754387457134039,
+        -22.29233731488865,
+        82
+      ],
+      [
+        "u16-sub-lz4",
+        9.837219997733813,
+        -22.63370946139047,
+        82
+      ],
+      [
+        "quant-moderate-bestpred-lz4",
+        10.79162111953977,
+        -24.06249498373582,
+        82
+      ],
+      [
+        "quant-mild-u16xor-lz4",
+        10.48944901212067,
+        -26.75536660377049,
+        82
+      ],
+      [
+        "quant-mild-u16sub-lz4",
+        10.52576145822346,
+        -27.596000695736517,
+        82
+      ],
+      [
+        "quant-shuffle-lz4",
+        8.934881539129083,
+        -28.340765421904035,
+        82
+      ],
+      [
+        "channel-xor-lz4",
+        9.754387457134039,
+        -33.398865915873834,
+        82
+      ],
+      [
+        "rle-lz4",
+        9.814409883799094,
+        -36.56200725430321,
+        82
+      ],
+      [
+        "channel-sub-lz4",
+        9.834812166713224,
+        -39.85429411971079,
+        82
+      ],
+      [
+        "qoir-lossy-l5",
+        12.734523485142441,
+        -61.0829970164664,
+        82
+      ],
+      [
+        "sub-byte-lz4",
+        9.799002989396026,
+        -66.88634979489117,
+        82
+      ],
+      [
+        "paeth-pixel-lz4",
+        10.301239808947672,
+        -91.96991148011674,
+        82
+      ],
+      [
+        "qoir-lossy-l3",
+        8.271416241887723,
+        -97.72043652740578,
+        82
+      ],
+      [
+        "qoir-lossless",
+        6.154919551392352,
+        -109.02295505403197,
+        82
+      ],
+      [
+        "qoi",
+        4.608652092990714,
+        -146.46822997359607,
+        82
+      ],
+      [
+        "paeth-byte-lz4",
+        10.22635406419217,
+        -152.70697509237908,
+        82
+      ],
+      [
+        "med-lz4",
+        10.215367047043223,
+        -170.01867295870517,
+        82
+      ],
+      [
+        "quant-aggressive-raw",
+        2.0,
+        -351.51974380976634,
+        82
+      ],
+      [
+        "charls-near3",
+        8.651143362589485,
+        -364.24200845141564,
+        82
+      ],
+      [
+        "charls-lossless",
+        6.096143526309017,
+        -392.00813637160564,
+        82
+      ],
+      [
+        "charls-near1",
+        7.204741355524407,
+        -415.47408320188606,
+        82
+      ],
+      [
+        "raw",
+        1.0,
+        -732.7286997127712,
+        82
+      ],
+      [
+        "quant-mild-raw",
+        1.0,
+        -738.884920183217,
+        82
+      ]
+    ]
+  },
+  "record_counts": {
+    "frame_mode": 8062,
+    "sequence_mode": 192,
+    "damage_stream_mode": 29,
+    "total": 8283
+  }
+}

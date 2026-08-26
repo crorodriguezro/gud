@@ -1,0 +1,17 @@
+{
+  "device": "/dev/video10",
+  "driver": "bcm2835-codec",
+  "card": "bcm2835-codec-decode",
+  "width": 1920,
+  "pipeline_depth": 8,
+  "height": 1080,
+  "jpeg_bytes": 71046,
+  "source_change_event_seen": false,
+  "requested_duration_s": 10.000,
+  "actual_duration_s": 10.003,
+  "submitted_frames": 7,
+  "completed_frames": 0,
+  "decode_errors": 0,
+  "sustained_fps": 0.000,
+  "label": "MEASURED_PI_HW_JPEG_DECODE"
+}

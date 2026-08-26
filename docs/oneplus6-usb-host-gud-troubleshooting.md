@@ -7,6 +7,9 @@ for the Linux 4.9 GUD backport. It distinguishes USB enumeration from DRM/KMS
 validation so a later atomic-modeset problem is not misdiagnosed as a cable or
 host-mode failure.
 
+For the verified pre-benchmark hardware and pipeline baseline, see
+[benchmark/oneplus6-pi-zero2w-verification.md](</home/cristianr/Projects/linux-mobile/gud-benchmark/benchmark/oneplus6-pi-zero2w-verification.md>).
+
 Target phone ABI:
 
 ```text

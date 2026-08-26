@@ -1,0 +1,2 @@
+# BENCH-TEMP: gpu_mem bump for bcm2835-codec HW JPEG decode testing
+gpu_mem=128

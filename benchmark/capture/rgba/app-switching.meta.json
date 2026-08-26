@@ -1,0 +1,15 @@
+{
+  "scenario": "app-switching",
+  "capture_tool": "mirscreencast",
+  "compositor": "lomiri-system-compositor (Mir, ubports:android2 platform)",
+  "device": "OnePlus 6 (Ubuntu Touch 24.04 userspace, Halium/Ubuntu Touch kernel 4.9.112-g6b190d86b aarch64)",
+  "colorspace": "RGBA8888",
+  "width": 720,
+  "height": 1280,
+  "frame_bytes": 3686400,
+  "requested_frames": 8,
+  "actual_frames": 8,
+  "capture_note": "final-codec-benchmark re-acquisition; RGBA8888 originals preserved (not deleted after RGB565 ingest) specifically for JPEG/quality-sensitive comparisons, per PROJECT SPEC section 10.",
+  "content_description": "lomiri-dialer-app keypad (dark UI, large glyphs, flat color fill)",
+  "label": "MEASURED_LOMIRI_CAPTURE"
+}

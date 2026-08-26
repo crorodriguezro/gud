@@ -1,0 +1,36 @@
+{
+  "role": "receiver / decoder (real hardware, SSH-driven, native gcc)",
+  "hostname": "raspberrypi",
+  "ssh_target": "cristian@192.168.1.110",
+  "kernel": "6.12.47+rpt-rpi-v8-ffs-xfercompltrace #2 SMP PREEMPT Sun Aug 16 23:57:59 -05 2026 aarch64",
+  "os": "Debian GNU/Linux 13 (trixie)",
+  "cpu": "Broadcom BCM2710A1, 4x ARM Cortex-A53 (ARMv8-A)",
+  "cpu_cores": 4,
+  "cpu_governor": "ondemand",
+  "cpu_max_freq_observed_hz": 1000104000,
+  "temperature_c_at_start": 44.5,
+  "temperature_c_range_during_run": "40.2 - 47.2 (see per-test evidence)",
+  "throttled_status": "0x0 at every checkpoint (no under-voltage, no frequency capping)",
+  "compiler": "gcc (Debian 14.2.0-19) 14.2.0 (native, used directly -- unlike the OnePlus 6)",
+  "gpu_mem_split": {
+    "original_value_mb": 64,
+    "bench_value_mb_during_hw_jpeg_decode_testing": 128,
+    "final_value_mb_after_restoration": 64,
+    "changed_because": "bcm2835-codec-decode's video_decode MMAL/VCHIQ component failed to initialize at 64 MB (\"Not enough GPU mem?\", verified via dmesg), which is required by PROJECT SPEC section 8A/9 (real repeated hardware JPEG decode test). Temporarily raising gpu_mem to 128 in /boot/firmware/config.txt (one reboot) unblocked the hardware-JPEG-decode measurements reported in isolated/pi/jpeg-hw-decode/ and quality/.",
+    "restoration": "Per the governing task's hard restore-original-device-state requirement, the appended `gpu_mem=128` line (and its comment) was removed from /boot/firmware/config.txt after all hardware-JPEG-decode data collection was complete, and the Pi was rebooted a second time. Post-restoration verification: `vcgencmd get_mem gpu` reports `gpu=64M` (back to the original value); a full diff of the restored /boot/firmware/config.txt against the pre-benchmark snapshot showed zero differences; the gud-userspace.service descriptor log after this reboot again reports `transfer_format=rgb565 compression=1 max_buffer_size=1843200`, byte-identical to the pre-benchmark configuration.",
+    "change_method": "appended `gpu_mem=128` to /boot/firmware/config.txt, one reboot performed; later removed the same two lines and rebooted again to restore gpu_mem=64",
+    "label": "MEASURED, fully restored (see restoration note above)",
+    "residual_impact": "With gpu_mem restored to 64, bcm2835-codec-decode's video_decode component will again fail to initialize (the same 'Not enough GPU mem?' condition observed before the temporary change). Any future re-run of the hardware-JPEG-decode benchmark, or a future production rollout of the hardware-JPEG-decode candidate, needs to re-apply gpu_mem=128 (or higher) as an explicit prerequisite -- it is not a hidden permanent change, it is fully reverted."
+  },
+  "bcm2835_codec_decode_device": "/dev/video10 (Video Memory-to-Memory Multiplanar, card=bcm2835-codec-decode)",
+  "bcm2835_codec_decode_formats": {
+    "output(compressed)": ["MPG4", "H264", "MJPG", "H263"],
+    "capture(decoded)": ["YU12", "YV12", "NV12", "NV21", "NC12", "RGBP (RGB565)", "AB24", "BGR4"]
+  },
+  "gud_gadget_service": "gud-userspace.service (systemd, active/enabled at boot)",
+  "gud_gadget_max_buffer_size_bytes": 1843200,
+  "gud_gadget_current_transfer_format": "rgb565",
+  "gud_gadget_current_compression": "lz4",
+  "gud_gadget_binary": "/home/cristian/gud-drm-e3-b01-functionfs-epoch",
+  "label": "MEASURED"
+}

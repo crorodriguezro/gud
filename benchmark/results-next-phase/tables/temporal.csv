@@ -1,0 +1,55 @@
+scenario,lz4_bytes_mean,xor_lz4_bytes_mean,saving_percent,keyframe_interval_or_policy,keyframe_count,delta_count,total_bytes,adaptive_delta_wins,total_frames,label
+app-launch-close,377514.6,56634.0,85.0,"always-delta (T1, no keyframe cadence)",,,,,90,MEASURED_PI
+app-launch-close,,,,adaptive,10,80,3057425,80,90,MEASURED_PI
+app-launch-close,,,,ki0,1,89,5096966,,90,MEASURED_PI
+app-launch-close,,,,ki120,1,89,5096966,,90,MEASURED_PI
+app-launch-close,,,,ki30,3,87,6086818,,90,MEASURED_PI
+app-launch-close,,,,ki60,2,88,6033111,,90,MEASURED_PI
+app-switching,217744.9,44183.4,79.71,"always-delta (T1, no keyframe cadence)",,,,,90,MEASURED_PI
+app-switching,,,,adaptive,9,81,2531216,81,90,MEASURED_PI
+app-switching,,,,ki0,1,89,3976416,,90,MEASURED_PI
+app-switching,,,,ki120,1,89,3976416,,90,MEASURED_PI
+app-switching,,,,ki30,3,87,4001282,,90,MEASURED_PI
+app-switching,,,,ki60,2,88,3987696,,90,MEASURED_PI
+fullscreen-animation,20393.4,10397.8,49.01,"always-delta (T1, no keyframe cadence)",,,,,60,MEASURED_PI
+fullscreen-animation,,,,adaptive,1,59,623805,59,60,MEASURED_PI
+fullscreen-animation,,,,ki0,1,59,623805,,60,MEASURED_PI
+fullscreen-animation,,,,ki120,1,59,623805,,60,MEASURED_PI
+fullscreen-animation,,,,ki30,2,58,634597,,60,MEASURED_PI
+fullscreen-animation,,,,ki60,1,59,623805,,60,MEASURED_PI
+idle-desktop,60942.8,7838.6,87.14,"always-delta (T1, no keyframe cadence)",,,,,180,MEASURED_PI
+idle-desktop,,,,adaptive,1,179,1357064,179,180,MEASURED_PI
+idle-desktop,,,,ki0,1,179,1357064,,180,MEASURED_PI
+idle-desktop,,,,ki120,2,178,1410775,,180,MEASURED_PI
+idle-desktop,,,,ki30,6,174,1625619,,180,MEASURED_PI
+idle-desktop,,,,ki60,3,177,1464486,,180,MEASURED_PI
+mixed-web-content,149196.1,271858.7,-82.22,"always-delta (T1, no keyframe cadence)",,,,,60,MEASURED_PI
+mixed-web-content,,,,adaptive,60,0,8951768,0,60,MEASURED_PI
+mixed-web-content,,,,ki0,1,59,16311464,,60,MEASURED_PI
+mixed-web-content,,,,ki120,1,59,16311464,,60,MEASURED_PI
+mixed-web-content,,,,ki30,2,58,16216129,,60,MEASURED_PI
+mixed-web-content,,,,ki60,1,59,16311464,,60,MEASURED_PI
+photo-viewer,167814.0,11254.4,93.29,"always-delta (T1, no keyframe cadence)",,,,,40,MEASURED_PI
+photo-viewer,,,,adaptive,1,39,450135,39,40,MEASURED_PI
+photo-viewer,,,,ki0,1,39,450135,,40,MEASURED_PI
+photo-viewer,,,,ki120,1,39,450135,,40,MEASURED_PI
+photo-viewer,,,,ki30,2,38,610710,,40,MEASURED_PI
+photo-viewer,,,,ki60,1,39,450135,,40,MEASURED_PI
+scrolling-list,180365.8,294457.8,-63.26,"always-delta (T1, no keyframe cadence)",,,,,60,MEASURED_PI
+scrolling-list,,,,adaptive,60,0,10821947,0,60,MEASURED_PI
+scrolling-list,,,,ki0,1,59,17667407,,60,MEASURED_PI
+scrolling-list,,,,ki120,1,59,17667407,,60,MEASURED_PI
+scrolling-list,,,,ki30,2,58,17514384,,60,MEASURED_PI
+scrolling-list,,,,ki60,1,59,17667407,,60,MEASURED_PI
+typing-terminal,67331.9,8976.2,86.67,"always-delta (T1, no keyframe cadence)",,,,,60,MEASURED_PI
+typing-terminal,,,,adaptive,1,59,538514,59,60,MEASURED_PI
+typing-terminal,,,,ki0,1,59,538514,,60,MEASURED_PI
+typing-terminal,,,,ki120,1,59,538514,,60,MEASURED_PI
+typing-terminal,,,,ki30,2,58,597489,,60,MEASURED_PI
+typing-terminal,,,,ki60,1,59,538514,,60,MEASURED_PI
+video-playback,70173.7,55322.2,21.16,"always-delta (T1, no keyframe cadence)",,,,,90,MEASURED_PI
+video-playback,,,,adaptive,1,89,4978907,89,90,MEASURED_PI
+video-playback,,,,ki0,1,89,4978907,,90,MEASURED_PI
+video-playback,,,,ki120,1,89,4978907,,90,MEASURED_PI
+video-playback,,,,ki30,3,87,5011765,,90,MEASURED_PI
+video-playback,,,,ki60,2,88,4995330,,90,MEASURED_PI

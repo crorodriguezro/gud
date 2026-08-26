@@ -1,0 +1,42 @@
+BSD 2-Clause License
+
+Copyright (C) 2011-2012, Yann Collet.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.
+
+Embedded upstream provenance:
+
+- Upstream repository: https://github.com/lz4/lz4
+- Exact revision: 0774d05537f9762f838f7ab541b7765f1a729cb5
+- Vendored files: vendor/lz4-1.10.0/lz4.c and lz4.h
+- Original file SHA-256:
+  - lz4.c: 53debdc44985bddbe4805e7f385ceae743598e90424b87798def5056363a6845
+  - lz4.h: 774f26afe507c3ea4e781faca51dfcad719f60804526cef7fe223e3c3e534eef
+
+The files have small, documented kernel-adaptation changes: Linux 4.9 type
+headers replace unavailable libc headers; all upstream symbols are local to
+gud.ko; stack-allocating entry points are excluded; and the external-state
+bounded-output entry point is retained. See UPSTREAM.md.
+
+The diagnostic source retains the full BSD notice and is linked into a
+GPL-licensed kernel module.

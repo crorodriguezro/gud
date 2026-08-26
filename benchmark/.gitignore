@@ -1,0 +1,38 @@
+# Real captured pixel data (RGB565LE frame corpora, and the raw RGBA
+# mirscreencast originals if not yet cleaned up) is large (single-digit
+# GiB) and is not committed to the repository, the same policy already
+# applied to backport-4.9/env/local/assets/. The small per-scenario
+# metadata sidecars (*.meta.json, *.index.json, *.stderr.log) and the
+# derived dedup_stats.json ARE committed -- they are the evidence trail
+# (capture parameters, per-frame timestamps, dedup statistics) without the
+# bulky pixel payloads.
+capture/raw/*.rgba
+capture/raw/*.rgb565le
+
+# Broad-benchmark quality-comparison PNGs (original/reconstructed/diff,
+# ~207 MiB across the corpus/resolution sweep) are reproducible by
+# re-running scripts/run_benchmark.sh and are not committed; every other
+# broad-benchmark artifact (results.json/csv, summary.md, environment.json,
+# residual-analysis.json, raw/*.json) is committed and preserved.
+results/quality/
+
+# Local scratch space for scp/tar staging; never committed.
+.scratch/
+
+# Final-codecs benchmark: real RGBA8888 originals reacquired for
+# quality-sensitive JPEG comparisons (PROJECT SPEC section 10) are large
+# raw pixel dumps, same policy as capture/raw/ above. The small
+# *.meta.json sidecars (capture parameters, content description) and the
+# *.frame0.rgba single-frame extracts' PNG previews ARE committed as the
+# evidence trail; the bulky multi-frame *.rgba/*.frame0.rgba payloads are
+# not.
+capture/rgba/*.rgba
+capture/rgba/*.frame0.rgba
+
+# Final-codecs benchmark: raw decoded RGB565 frame dumps used transiently
+# to compute quality.json (~1.8 MiB each, reproducible by re-running
+# scripts/quality_eval.py against the committed JPEG artifacts and a
+# fresh Pi hardware-decode pass) are not committed; the JSON timing
+# results, PNG visual-comparison previews, and quality.json itself ARE
+# committed.
+results-final-codecs/quality/hw-decode-interop/*.rgb565

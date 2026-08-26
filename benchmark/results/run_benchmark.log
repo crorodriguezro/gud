@@ -1,0 +1,24 @@
+== building fbcodec-bench ==
+make: Entering directory '/home/cristianr/Projects/linux-mobile/gud/benchmark/tools/fbcodec-bench'
+make: Nothing to be done for 'all'.
+make: Leaving directory '/home/cristianr/Projects/linux-mobile/gud/benchmark/tools/fbcodec-bench'
+== running unit tests ==
+make: Entering directory '/home/cristianr/Projects/linux-mobile/gud/benchmark/tools/fbcodec-bench'
+build/test_transforms
+test_transforms: all checks passed
+build/test_temporal
+test_temporal: all checks passed
+make: Leaving directory '/home/cristianr/Projects/linux-mobile/gud/benchmark/tools/fbcodec-bench'
+== capturing environment ==
+wrote /home/cristianr/Projects/linux-mobile/gud/benchmark/results/environment.json
+== primary landscape sweep: 1280x720 1920x1080 ==
+== supplementary portrait sweep (rect=full only): 720x1280 1080x1920 ==
+== sequence mode (spatial vs temporal, section 41) ==
+== damage-stream replay (section 22), derived from the real asset ==
+damage-stream: 10408 events, 1280x720
+== residual/entropy analysis (sections 42-43) ==
+== done: 285 fbcodec-bench invocations ==
+results.csv: /home/cristianr/Projects/linux-mobile/gud/benchmark/results/results.csv
+raw per-run JSON: /home/cristianr/Projects/linux-mobile/gud/benchmark/results/raw
+quality images: /home/cristianr/Projects/linux-mobile/gud/benchmark/results/quality
+residual analysis: /home/cristianr/Projects/linux-mobile/gud/benchmark/results/residual-analysis.json
