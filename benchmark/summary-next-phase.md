@@ -781,10 +781,9 @@ python3 benchmark/scripts/aggregate_next_phase.py
 - `2068f09` — `bench: preserve broad results, add real Lomiri capture + temporal policy`
   (Phase 1 preservation, capture tooling, `NO_CHARLS` build mode,
   `temporal_policy` module + tests, comma-separated `--codec`).
-- (this phase's remaining work: QOIR conversion-breakdown instrumentation,
-  real capture corpus + dedup stats already included in `2068f09`'s
-  tree at commit time or committed as a follow-up — see the final commit
-  hash reported at the end of this session for the exact split.)
+- `124001b` — `bench: run narrowed finalists + temporal policy on real Pi Zero 2 W`
+  (QOIR conversion-breakdown instrumentation, the full
+  `results-next-phase/` artifact tree, this report).
 
 ## 17. Deliverables checklist
 
