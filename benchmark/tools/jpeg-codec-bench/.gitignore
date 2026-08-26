@@ -1,0 +1,7 @@
+# Build artifacts are reproducible from the vendored source; see README.md
+# for the exact build commands. Not committed to keep the repository lean.
+vendor/libjpeg-turbo/build-musl-static/
+build_test
+build/
+*.o
+*.a
