@@ -1,13 +1,8 @@
 #include <linux/kernel.h>
+#include <linux/slab.h>
 
 #include "gud_internal.h"
-
-#ifdef GUD_XDISP_FULL_UPDATE
-static bool xdisp_test_1080p;
-module_param_named(xdisp_test_1080p, xdisp_test_1080p, bool, 0644);
-MODULE_PARM_DESC(xdisp_test_1080p,
-	"Test-only: advertise the CEA 1920x1080@60 GUD mode instead of 1280x720");
-#endif
+#include "gud_protocol.h"
 
 static enum drm_connector_status
 gud_connector_detect(struct drm_connector *connector, bool force)
@@ -30,47 +25,69 @@ gud_connector_detect(struct drm_connector *connector, bool force)
 static int gud_connector_get_modes(struct drm_connector *connector)
 {
 	struct gud_device *gud = container_of(connector, struct gud_device, connector);
-	struct drm_display_mode *mode;
+	struct gud_display_mode_req *req_modes;
+	u8 request_type = USB_TYPE_VENDOR | USB_RECIP_INTERFACE | USB_DIR_IN;
+	u8 ifnum = gud->intf->cur_altsetting->desc.bInterfaceNumber;
+	unsigned int i, num_modes;
+	int ret;
 
 	dev_info(&gud->intf->dev, "GUD connector: get_modes enter\n");
-	mode = drm_mode_create(connector->dev);
-	if (!mode)
+	req_modes = kcalloc(GUD_CONNECTOR_MAX_NUM_MODES, sizeof(*req_modes),
+			    GFP_KERNEL);
+	if (!req_modes)
 		return 0;
-	dev_info(&gud->intf->dev, "GUD connector: mode created\n");
 
-	#ifdef GUD_XDISP_FULL_UPDATE
-	if (xdisp_test_1080p) {
-		/* CEA-861 1920x1080@60, matching the Pi HDMI catalog entry. */
-		mode->clock = 148500;
-		mode->hdisplay = 1920;
-		mode->hsync_start = 2008;
-		mode->hsync_end = 2052;
-		mode->htotal = 2200;
-		mode->vdisplay = 1080;
-		mode->vsync_start = 1084;
-		mode->vsync_end = 1089;
-		mode->vtotal = 1125;
-	} else
-	#endif
-	{
-		mode->clock = 74250;
-		mode->hdisplay = 1280;
-		mode->hsync_start = 1390;
-		mode->hsync_end = 1430;
-		mode->htotal = 1650;
-		mode->vdisplay = 720;
-		mode->vsync_start = 725;
-		mode->vsync_end = 730;
-		mode->vtotal = 750;
+	mutex_lock(&gud->lock);
+	if (gud->disconnected) {
+		ret = -ENODEV;
+	} else {
+		ret = usb_control_msg(gud->usb, usb_rcvctrlpipe(gud->usb, 0),
+				      GUD_REQ_GET_CONNECTOR_MODES, request_type,
+				      0, ifnum, req_modes,
+				      GUD_CONNECTOR_MAX_NUM_MODES * sizeof(*req_modes),
+				      USB_CTRL_GET_TIMEOUT);
 	}
-	mode->flags = DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC;
-	mode->type = DRM_MODE_TYPE_DRIVER | DRM_MODE_TYPE_PREFERRED;
-	drm_mode_set_name(mode);
-	drm_mode_probed_add(connector, mode);
-	dev_info(&gud->intf->dev, "GUD connector: mode probed\n");
+	mutex_unlock(&gud->lock);
+	if (ret <= 0)
+		goto out;
+	if (ret % sizeof(*req_modes)) {
+		dev_err(&gud->intf->dev, "invalid GUD mode array size: %d\n", ret);
+		ret = 0;
+		goto out;
+	}
 
-	dev_info(&gud->intf->dev, "GUD connector: get_modes complete\n");
-	return 1;
+	num_modes = ret / sizeof(*req_modes);
+	for (i = 0; i < num_modes; i++) {
+		struct gud_display_mode_req *req = &req_modes[i];
+		struct drm_display_mode *mode;
+		u32 flags = le32_to_cpu(req->flags);
+
+		mode = drm_mode_create(connector->dev);
+		if (!mode)
+			break;
+		mode->clock = le32_to_cpu(req->clock);
+		mode->hdisplay = le16_to_cpu(req->hdisplay);
+		mode->hsync_start = le16_to_cpu(req->hsync_start);
+		mode->hsync_end = le16_to_cpu(req->hsync_end);
+		mode->htotal = le16_to_cpu(req->htotal);
+		mode->vdisplay = le16_to_cpu(req->vdisplay);
+		mode->vsync_start = le16_to_cpu(req->vsync_start);
+		mode->vsync_end = le16_to_cpu(req->vsync_end);
+		mode->vtotal = le16_to_cpu(req->vtotal);
+		mode->flags = flags & GUD_DISPLAY_MODE_FLAG_USER_MASK;
+		mode->type = DRM_MODE_TYPE_DRIVER;
+		if (flags & GUD_DISPLAY_MODE_FLAG_PREFERRED)
+			mode->type |= DRM_MODE_TYPE_PREFERRED;
+		drm_mode_set_name(mode);
+		drm_mode_probed_add(connector, mode);
+	}
+
+	ret = i;
+out:
+	kfree(req_modes);
+	dev_info(&gud->intf->dev, "GUD connector: get_modes complete count=%d\n",
+		 ret < 0 ? 0 : ret);
+	return ret < 0 ? 0 : ret;
 }
 
 static const struct drm_connector_helper_funcs gud_connector_helper_funcs = {
