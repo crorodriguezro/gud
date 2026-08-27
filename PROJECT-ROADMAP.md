@@ -9,6 +9,20 @@ Date: 2026-08-26
 Coordination repository: `gud`
 Component repositories: `gud`, `gud-gadget`, `mir-android2-platform-gud`
 
+## Canonical branch policy
+
+The active integration branch in all three component repositories is
+`development`:
+
+- `gud`: `development`
+- `gud-gadget`: `development`
+- `mir-android2-platform-gud`: `development`
+
+The pre-T06 synthetic Android2 Mir history is preserved as
+`legacy/pre-t06-android2-synthetic-gud-fork`. Existing
+`pixel-format-benchmark` branches remain historical references and are not
+canonical integration branches.
+
 This document is the product-level source of truth for scope, priorities,
 epics, and delivery order. `PROJECT-STATUS.md` remains the evidence journal
 and cross-repository status board. Component backlogs and runbooks retain
@@ -34,6 +48,11 @@ actual low-entropy desktop workload and keeps future experiments explicitly
 labeled as future work.
 
 Immediate roadmap item: **E4-T02 — fix full-width content and channel correctness**. E4-T07 selected PASS-B.
+
+The clean upstream-based Mir reconstruction is now the canonical
+`mir-android2-platform-gud` development history. The pre-T06 synthetic
+Android2 fork is preserved under
+`legacy/pre-t06-android2-synthetic-gud-fork`.
 
 E3 reconnect reliability remains partially deferred as a OnePlus/Qualcomm
 same-boot host limitation tracked by GitHub issues #3 and #4; the existing
