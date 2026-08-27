@@ -1,5 +1,16 @@
 # XDISP-P2.1 Dynamic Physical Mode Matching Design
 
+> **SUPERSEDED TRANSPORT ASSUMPTIONS**
+>
+> The 12,800-byte host logical-payload ceiling and 16-KiB logical
+> FunctionFS ceiling described below are historical qualification constraints
+> and are no longer production limits. Current architecture uses one
+> negotiated logical GUD update. Qualified examples are 1280x720 RGB565 =
+> 1,843,200 bytes and 1920x1080 RGB565 = 4,147,200 bytes. Pi internal
+> FunctionFS/DWC2 request chunking remains an implementation detail below the
+> logical GUD transaction boundary. Historical commands and evidence remain
+> unchanged; do not use their limits to characterize current production.
+
 ## Purpose
 
 Remove avoidable Raspberry Pi software scaling when a committed GUD mode is

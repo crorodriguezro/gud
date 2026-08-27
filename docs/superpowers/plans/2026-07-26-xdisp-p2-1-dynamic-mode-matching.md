@@ -1,5 +1,16 @@
 # XDISP-P2.1 Dynamic Physical Mode Matching Plan
 
+> **SUPERSEDED TRANSPORT ASSUMPTIONS**
+>
+> The 12,800-byte host logical-payload ceiling and 16-KiB logical
+> FunctionFS ceiling described below are historical qualification constraints
+> and are no longer production limits. Current architecture uses one
+> negotiated logical GUD update. Qualified examples are 1280x720 RGB565 =
+> 1,843,200 bytes and 1920x1080 RGB565 = 4,147,200 bytes. Pi internal
+> FunctionFS/DWC2 request chunking remains an implementation detail below the
+> logical GUD transaction boundary. Historical commands and evidence remain
+> unchanged; do not use their limits to characterize current production.
+
 **Goal:** Prefer direct native scanout for an exact committed physical timing
 while preserving the existing full-screen scaled fallback for the
 OnePlus/fixed-panel and other non-exact modes.
