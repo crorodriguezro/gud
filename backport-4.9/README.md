@@ -114,74 +114,34 @@ grep -E '\b(vmap|vunmap|vm_insert_page)\b' env/local/capture/kallsyms.txt
 The generated module must reference only target-exported GEM and VM symbols.
 The `gud_gem_4_9.o` object is expected in the module link.
 
-## XDISP-P0.1 Adaptive-LZ4 Diagnostic Variant
+## E4-T07 Upstream-Style Full-Update Variant
 
-The test-only OnePlus variant is built separately from the normal module:
+The OnePlus production candidate is built separately from the early raw-only
+module:
 
 ```bash
 cd backport-4.9
-make MANIFEST="$PWD/env/target-manifest.env" xdisp-lz4-12800
+make MANIFEST="$PWD/env/target-manifest.env" xdisp-full-update
 ./tests/test-xdisp-lz4.sh
 ./tests/test-xdisp-lz4-contract.sh
 ```
 
 Its artifact is `variants/xdisp-lz4-12800/gud.ko`; the normal artifact remains
 the separate root `gud.ko`. Both intentionally have the internal module name
-`gud`, so the kernel cannot load the diagnostic beside the normal driver. The
-diagnostic compresses the largest permitted complete-row RGB565
-rectangle, adaptively reduces height when needed, and checks immediately before
-submission that the actual bulk length is no larger than 12,800 bytes. If the
-gadget does not advertise LZ4, it uses complete-row raw rectangles that obey
-the same cap.
+`gud`, so they cannot be loaded together. The historical directory name is
+retained temporarily for artifact-script compatibility; neither its compiled
+driver name nor its update policy contains a 12,800-byte limit.
 
-### Bounded-output frame planning
+The transfer path follows upstream GUD: the negotiated descriptor
+`max_buffer_size` is the bulk capacity; damage larger than that capacity is
+split into the largest complete-line rectangles that fit; each rectangle gets
+one exact LZ4 attempt; and a failed or non-beneficial attempt sends the same
+rectangle raw. A 1,843,200-byte advertised capacity therefore makes a complete
+1280x720 RGB565 frame eligible for one `SET_BUFFER` and one logical bulk
+payload. There is no row-fit discovery, ratio cache, predictive planner, or
+project payload-limit parameter.
 
-With the test-only `xdisp_bounded_discovery=1` parameter, the driver uses
-bounded LZ4 only to choose a complete-row rectangle that can fit safely. It
-rounds a partial result down to RGB565 scanlines and validates the final
-compressed rectangle before `SET_BUFFER` and bulk submission.
-
-For incompressible content, the first discovery can legitimately choose a raw
-five-row (12,800-byte at 1280 pixels) rectangle. The driver then marks only
-that **current framebuffer update** as raw-backoff: its remaining rectangles
-are sent directly as the same cap-safe complete rows without attempting LZ4
-again. The next framebuffer update begins with a fresh discovery attempt, so
-compression resumes automatically when the content becomes compressible.
-
-This feature avoids repeatedly scanning a wide incompressible input while
-preserving the actual-payload safety invariant. It does not change the normal
-module or remove the underlying cost of roughly 144 serial control/bulk pairs
-for a fully incompressible 1280x720 RGB565 frame. The optional frame-stat log
-reports `raw_backoff_rectangles`, compression attempts, source bytes planned,
-and phase timings. The design and qualification evidence are in
-`variants/xdisp-lz4-12800/UPSTREAM.md` and
-`env/local/evidence/xdisp-p2.1-bounded-backoff-2026-07-27T1440COT/RESULTS.md`.
-
-### Test-only predictive bounded LZ4 policy
-
-`xdisp_predictive_bounded=1` is an experimental comparison policy. It never
-changes the normal module or raises the 12,800-byte actual-payload limit. After
-a verified compressed rectangle, it keeps a recent input/output ratio for the
-current mode and predicts a conservative complete-row candidate targeting 95%
-of the cap. It first attempts to compress that exact candidate once with a
-strict 12,800-byte output bound.
-
-Success sends the candidate only after the existing adjacent submission check.
-If a candidate is not beneficial or does not fit, no partial output is sent:
-the driver falls through to the existing bounded-output discovery and
-full-row validation path. That single miss places the rest of the current
-frame in prediction cooldown, so changing desktop content cannot cause a
-series of speculative retries. A raw discovery result continues to activate
-the existing frame-local raw backoff.
-
-The intent is to reduce two-pass discovery/validation work on stable video or
-desktop content while retaining bounded discovery as the correctness fallback.
-It must remain test-only until repeated raw-video, desktop, scroll, and
-incompressible tests show the same cap safety and no material desktop
-regression. Per-frame `predictive_hits` and `predictive_fallbacks` counters
-make the comparison auditable.
-
-The target kernel does not export an LZ4 compressor. The variant therefore
+The target kernel does not export the compressor, so the variant
 embeds a pinned modern upstream LZ4 block compressor in `gud.ko`, in
 freestanding external-state mode. It is not a separate `lz4.ko`; its symbols
 remain private to this module. See `variants/xdisp-lz4-12800/UPSTREAM.md`.
@@ -192,19 +152,25 @@ if nm -u variants/xdisp-lz4-12800/gud.ko | grep -qi lz4; then exit 1; fi
 if nm -g variants/xdisp-lz4-12800/gud.ko | grep -q ' LZ4_'; then exit 1; fi
 ```
 
-Stage only with a commit-qualified separate path. This runner refuses the
-normal module path and never loads or unloads a module:
+The intentional upstream deviation is USB submission: Linux 4.9 on the
+OnePlus rejects remapping the coherent bounce allocation, so the backport uses
+an explicit URB with the DMA address from `usb_alloc_coherent()` and
+`URB_NO_TRANSFER_DMA_MAP`. The pre-bulk `SET_BUFFER -EBUSY` retry and accepted
+I/O containment rules remain the proven E1 safety boundary.
 
-```bash
-REMOTE_MODULE_PATH=/home/phablet/gud.xdisp-p0.1-adaptive-12800-<commit>.ko \
-  ./env/stage-xdisp-module.sh
-```
+The variant also carries upstream GUD's optional async-flush shape. It is
+disabled by default and can be enabled with `async_flush=1` (or the matching
+sysfs module parameter). One lazily allocated shadow framebuffer, one retained
+framebuffer reference, one bounding damage rectangle, and one `work_struct` on
+`system_long_wq` bound pending work while producer commits return after the
+shadow copy. Disable, format/mode transition, disconnect, and unload explicitly
+quiesce the worker because the Linux 4.9 DRM core lacks upstream's current
+device-lifetime helpers. The ordinary framebuffer-flip state check and
+controller/state/display ordering otherwise follow the pinned upstream code.
 
-Do not use `deploy-test.sh`, `probe-test.sh`, or the unchanged KMS stage runner
-for this artifact because their normal workflow targets
-`/home/phablet/gud.ko`. Follow
-`../docs/superpowers/plans/2026-07-26-xdisp-p0-1-oneplus-adaptive-lz4.md`
-for activation, evidence, failure containment, and rollback.
+Keep async flush default-off unless its lossy newest-state semantics are wanted:
+when USB is slower than producers, intermediate submitted frames are
+intentionally coalesced rather than replayed.
 
 ## Ticket 5 First-Pixels Test
 

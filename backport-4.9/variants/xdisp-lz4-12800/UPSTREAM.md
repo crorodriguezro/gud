@@ -1,75 +1,62 @@
-# Upstream LZ4 embedding
+# Upstream-aligned LZ4 integration
 
-`gud.ko` embeds the upstream LZ4 block compressor. It does not depend on,
-export, or load a separate `lz4.ko` kernel module.
+`gud.ko` embeds an upstream LZ4 block compressor because the target Linux 4.9
+kernel does not export one. It does not depend on or export a separate LZ4
+kernel module.
 
 ## Provenance
 
 - Repository: `https://github.com/lz4/lz4`
-- Pinned revision: `0774d05537f9762f838f7ab541b7765f1a729cb5`
-- Vendored source: `vendor/lz4-1.10.0/lz4.c`, `vendor/lz4-1.10.0/lz4.h`
-- License: BSD-2-Clause; see `LICENSE.lz4` and the retained notices in both
-  source files.
+- Revision: `0774d05537f9762f838f7ab541b7765f1a729cb5`
+- Files: `vendor/lz4-1.10.0/lz4.c`, `vendor/lz4-1.10.0/lz4.h`
+- License: BSD-2-Clause; see `LICENSE.lz4`
 
-## Linux 4.9 integration boundary
+The wrapper uses caller-provided compression state and keeps all upstream LZ4
+symbols local to the module.
 
-`gud_xdisp_lz4_upstream.c` supplies the kernel memory operations and embeds
-the upstream source in freestanding mode. It retains only caller-provided
-state: `LZ4_compress_destSize_extState()`. The ordinary APIs that allocate a
-16 KiB state frame on the kernel stack are compiled out. All upstream symbols
-have internal linkage; `nm -g gud.ko` must contain only the small
-`gud_xdisp_lz4_*` wrapper surface.
+## GUD semantics
 
-The wrapper exposes two operations:
+The E4-T07 path mirrors current upstream GUD:
 
-- `gud_xdisp_lz4_compress()` accepts only a complete supplied rectangle. A
-  partial bounded-output result is rejected.
-- `gud_xdisp_lz4_compress_dest_size()` reports the exact source prefix that
-  fitted the requested output target.
+1. The device descriptor's `max_buffer_size` determines bulk capacity.
+2. An update larger than that capacity is split on complete scanlines before
+   compression.
+3. Each resulting rectangle is compressed once with output capacity equal to
+   its raw length.
+4. A failed or non-beneficial compression attempt sends the same rectangle
+   raw.
+5. One rectangle produces one logical `SET_BUFFER` plus bulk payload.
 
-## Bounded planner safety rule
+There is no bounded-prefix discovery, row-fit loop, ratio cache, predictive
+policy, target percentage, or 12,800-byte submission guard. The historical
+directory name remains only so existing build and evidence scripts can locate
+the artifact while E4-T07 is qualified.
 
-The opt-in `xdisp_bounded_discovery=1` module parameter uses the latter call
-only to discover a candidate. If upstream stops in the middle of a scanline,
-the planner rounds the source length down to full RGB565 rows and recompresses
-that aligned rectangle against the hard 12,800-byte cap. If it is not
-beneficial or fails validation, it sends the largest cap-safe raw row
-rectangle instead.
+## Linux 4.9 / OnePlus delta
 
-Consequently every actual `SET_BUFFER` bulk payload still passes the existing
-adjacent `payload_length <= GUD_XDISP_PAYLOAD_LIMIT` check. The default policy
-is unchanged until this opt-in path has hardware evidence.
+Current upstream sends a scatter-gather bulk request. The OnePlus 6 Linux 4.9
+xHCI path instead requires a DMA-coherent bounce allocation submitted through
+an explicit URB with `URB_NO_TRANSFER_DMA_MAP`; using `usb_bulk_msg()` caused
+the USB core to remap the coherent allocation and fail with `-EAGAIN`.
 
-## Measured incompressible-content limitation
+The different host USB mechanism does not change GUD framing: internal USB or
+gadget request chunking never creates additional `SET_BUFFER` transactions.
 
-The policy remains test-only while its mixed-workload behavior is qualified.
-The 2026-07-27 implementation adds frame-local backoff: the first
-non-beneficial discovery returns the existing complete-row raw rectangle and
-sets its caller-owned frame state; later chunks bypass `destSize()` and use
-the known cap-safe raw-row size. A fresh framebuffer update recreates state
-and retries normal discovery. The exact complete-row `<= 12,800` validation
-remains at the adjacent submission path. The repeat noise gate reduced planner
-work from 78.98 to 3.506 ms/frame and reached 6.528 FPS without a transport or
-kernel fault. See
-`backport-4.9/env/local/evidence/xdisp-p2.1-bounded-backoff-2026-07-27T1440COT/RESULTS.md`.
+## Async flush
 
-## First hardware gate
+The optional `async_flush` path also follows upstream's single-shadow,
+single-framebuffer-reference, bounding-damage, single-work-item design and
+defaults off. Linux 4.9 has no `drm_dev_enter()`/`drm_dev_exit()` pair, so the
+backport explicitly marks disconnect and synchronously cancels work before DRM
+or device teardown. That lifetime adaptation and the OnePlus coherent-URB
+transport are the intentional platform deltas; they do not add a frame queue.
 
-On 2026-07-27, the opt-in policy completed a OnePlus/Pi static-frame gate and
-a 300-frame 1280x720 raw RGB565 clip. The clip reached 29.972 paced updates/s
-against a 30-fps target, with a maximum actual payload of 12,797 bytes and no
-new phone/Pi transport or kernel fault. This establishes only a candidate
-bounded-planner result; it does not replace the default policy, prove a
-controlled performance gain, or complete XDISP-P0.1. See the committed
-evidence record below.
-
-## Gates
-
-Run before hardware deployment:
+## Offline gates
 
 ```sh
 backport-4.9/tests/test-xdisp-lz4.sh
 SANITIZE=1 backport-4.9/tests/test-xdisp-lz4.sh
-make -C backport-4.9 xdisp-lz4-12800
-nm -g backport-4.9/variants/xdisp-lz4-12800/gud.ko
+backport-4.9/tests/test-xdisp-lz4-contract.sh
+backport-4.9/tests/test-xdisp-async-contract.sh
+make -C backport-4.9 xdisp-full-update
 ```

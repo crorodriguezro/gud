@@ -2,9 +2,9 @@
 
 ## Product scope, epics, and delivery roadmap
 
-Status: E2 COMPLETE FOR V1; codec benchmark closed; default transport is direct Mir RGB565 + LZ4; E3 NEXT
+Status: E2 COMPLETE FOR V1; E4-T01, E4-T06, and E4-T07 PASS-B verified; default transport is direct Mir RGB565 + LZ4
 
-Date: 2026-08-17
+Date: 2026-08-26
 
 Coordination repository: `gud`
 Component repositories: `gud`, `gud-gadget`, `mir-android2-platform-gud`
@@ -33,7 +33,12 @@ not reopen codec exploration; it keeps the production decision anchored to the
 actual low-entropy desktop workload and keeps future experiments explicitly
 labeled as future work.
 
-Immediate next roadmap item: **E3 — hotplug/reconnect and output recovery**.
+Immediate roadmap item: **E4-T02 — fix full-width content and channel correctness**. E4-T07 selected PASS-B.
+
+E3 reconnect reliability remains partially deferred as a OnePlus/Qualcomm
+same-boot host limitation tracked by GitHub issues #3 and #4; the existing
+discovery/lifecycle work is substantially proven and E4-T06 does not reopen
+that investigation.
 
 ## 1. Final goal
 
@@ -473,11 +478,28 @@ User stories:
 
 | Ticket | P | State | Depends on | Deliverable and acceptance |
 | --- | --- | --- | --- | --- |
-| `E4-T01` Define the end-to-end mode contract | P1 | planned | E2-T06 | Record selected timing, logical size, source size/stride/format, GUD state, and Pi physical mode under one correlation ID. |
-| `E4-T02` Fix full-width content and channel correctness | P1 | planned | E4-T01 | Deterministic grids, ramps, and color patterns prove geometry, crop, stride, row order, and channel order on the physical monitor. |
+| `E4-T01` Define the end-to-end mode contract | P1 | verified | E2 stable | Record selected timing, logical size, source size/stride/format, GUD state, and Pi physical mode under one correlation ID. |
+| `E4-T07` Restore upstream-style GUD full-update and async semantics | P1 | verified (PASS-B) | E1 stable, E2 complete, E4-T06 | Configuration B is hardware-qualified at negotiated capacity and selected for production: upstream-style synchronous full-payload GUD plus `LatestFramePresenter`. The default-off kernel async path passes normal, 3.5-second-stall, and active-detach gates with one pending slot, but optional Mir direct mode still lacks the established AArch64/live Mir gate, so the already-qualified presenter is retained. |
+| `E4-T02` Fix full-width content and channel correctness | P1 | planned | E4-T01, E4-T07 | Deterministic grids, ramps, and color patterns prove geometry, crop, stride, row order, and channel order on the physical monitor. |
 | `E4-T03` Implement dynamic Pi physical mode matching | P1 | in progress | E1 stable | Exact timing activates native scanout once; scaling remains a safe fallback when exact activation is unavailable. |
 | `E4-T04` Persist Lomiri placement policy | P1 | planned | E3-T04 | External position, primary/internal roles, and pointer transitions remain correct across enable/disable and reconnect. |
 | `E4-T05` Repeated geometry and placement matrix | P1 | planned | E4-T02..T04 | Ten enable/disable and ten reconnect cycles retain full-screen correct output and window placement. |
+
+**E4 integration guardrail (2026-08-26):** E4-T06 is verified after the
+already-qualified E4-T01 mode contract and before further implementation-heavy
+E4 work. The production path is standalone `xdispd` plus `mirgud`, using public
+Mir client/Virtual/screencast APIs and the existing GUD DRM/KMS boundary. The
+current upstream Android2 runtime is unchanged: the clean reconstruction has
+zero GUD-specific files under `src/platforms/android/server/`. Any new
+Android2-side GUD/HWC/GL change requires ticket-local proof that a public Mir
+interface cannot satisfy the requirement, together with an updated fork delta
+and focused evidence. Existing ticket IDs and history are preserved.
+
+**E4-T07 decision rules:** Pi-internal USB request chunking must not be
+exposed as multiple logical GUD `SET_BUFFER` transactions unless the
+negotiated GUD buffer capability requires it. Prefer upstream GUD update and
+backpressure semantics over project-specific host planners when Linux 4.9 and
+OnePlus compatibility can preserve the same E1 safety guarantees.
 
 ### E5 — Meet a measured performance and quality SLO
 
@@ -506,12 +528,12 @@ User stories:
 | `E5-T02` Establish full-pipeline baseline | P1 | planned | E2-T06, E4-T03 | Measure FPS, p50/p95 latency, drops, phone/Pi CPU, USB throughput, memory, FDs, and fences for controlled desktop, scroll, video, and noise workloads. |
 | `E5-T03` Decide RGB565 versus XRGB8888 | P1 | planned | E5-T02 | Apples-to-apples hardware data records conversion path, payload count, latency, CPU, throughput, and objective image-quality metrics; decision and rollback are documented. |
 | `E5-T04` Evaluate damage-aware updates | P1 | planned | E5-T02, release-SLO need | Add changed-region updates only if the measured simple path misses the SLO; otherwise record that they are unnecessary. Any adopted path must have no stale pixels, rectangle gaps, or payload-cap violations. |
-| `E5-T05` Evaluate the compression planner | P1 | planned | E5-T02, release-SLO need | Compare bounded, ratio-cache, backoff, and raw policies only if measurements show compression is needed; otherwise retain the simplest policy. Any adopted path retains the 12,800-byte final submission guard. |
+| `E5-T05` Evaluate compression policy beyond upstream GUD | P1 | planned | E5-T02, release-SLO need | Start from upstream's one LZ4 attempt with same-rectangle raw fallback. Add a custom planner or prediction policy only if full-pipeline measurements show the simple path misses the release SLO; any adopted split is bounded by negotiated GUD capacity, not the obsolete 12,800-byte host policy. |
 | `E5-T06` Set and verify the release SLO | P1 | planned | E5-T03, any required E5-T04/T05 | Record final FPS/latency/drop/responsiveness targets and pass them in a repeated 30-minute mixed workload. |
 
-Optimization stops when the release SLO is met. Raising the transport cap,
-zero-copy, speculative planners, and other transport complexity remain P2
-unless measurements show they are necessary. The selected simplest
+Optimization stops when the release SLO is met. Changing negotiated transport
+capacity, zero-copy, speculative planners, and other transport complexity
+remain P2 unless measurements show they are necessary. The selected simplest
 implementation becomes the v1 default; further optimization requires a new
 measured release-SLO need.
 
@@ -580,17 +602,23 @@ offline preparation in parallel, but must not bypass its dependency gate.
 7. `E1-T05` and `E2-T03` — lifecycle matrix and compositor responsiveness.
 8. `E2-T04` and `E2-T05` — resource plateau and error containment.
 9. `E2-T06` — hardware alpha qualification.
-10. `E3-T01` through `E3-T05` — dynamic discovery and reconnect.
-11. `E4-T01` through `E4-T05` — mode, geometry, and placement correctness.
-12. `E5-T01` through `E5-T06` — measurement, format/default decision, and SLO.
-13. `E6-T01` through `E6-T06` — product packaging and v1 qualification.
-14. `E1-T07`, `E1-T08`, and E7 — research/upstream work after v1 needs are
+10. `E4-T01` — verified end-to-end mode contract.
+11. `E4-T06` — verified minimal public-Mir integration guardrail.
+12. `E4-T07` — upstream-style full-update first, then separately qualify async
+    flush as a possible kernel backpressure boundary.
+13. `E4-T02` through `E4-T05` — geometry, channel correctness, mode matching,
+    placement, and repeated correctness matrix.
+14. `E5-T01` through `E5-T06` — measurement, format/default decision, and SLO.
+15. `E6-T01` through `E6-T06` — product packaging and v1 qualification.
+16. E3 reconnect follow-up — deferred OnePlus/Qualcomm same-boot limitation;
+    retain as a separate recovery gate and do not reopen it inside E4-T06.
+17. `E1-T07`, `E1-T08`, and E7 — research/upstream work after v1 needs are
     known.
 
 ### Immediate focus
 
-The current focus is **E1 production-safe transport**, starting E1-T04 from the
-verified E1-T03 architecture decision.
+The current focus is **E4-T02**, following E4-T07 PASS-B and using the verified
+E4-T01 mode contract plus the E4-T06 public-Mir integration boundary.
 The only parallel implementation work that should proceed is offline E2-T01
 in `mir-android2-platform-gud`; it must not trigger a phone/Pi transfer until
 the E1 hardware gate is safe and scheduled.

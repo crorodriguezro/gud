@@ -24,8 +24,63 @@ xdispd's existing bounded containment force-terminates and reaps the managed
 child while the phone/compositor remains healthy. This is not graceful
 shutdown and is accepted for v1.
 
-Canonical closure details are in `docs/e2-v1-closure.md`. E3 — hotplug/
-reconnect is next and has not started.
+Canonical closure details are in `docs/e2-v1-closure.md`. E3 reconnect
+reliability is partially deferred as a OnePlus/Qualcomm same-boot platform
+limitation tracked by GitHub issues #3 and #4; the existing discovery/lifecycle
+work is substantially proven. E4-T01 is verified and E4-T02 is next.
+
+## E4-T06 architecture boundary — VERIFIED (2026-08-26)
+
+The production integration was reconstructed from upstream `main`
+(`72f96d2f69adcd1856295c36ee55ac03ad2860c5`) in a fresh worktree. The selected
+path is standalone `xdispd` plus `mirgud`, using public Mir client,
+Virtual/screencast, DRM, and GUD interfaces. The clean worktree contains zero
+GUD-specific files under `src/platforms/android/server/`; the Android2-side
+synthetic/offscreen HWC/GL experiment is classified as obsolete POC material
+and is not part of the production path. The AArch64 Noble/UBports build passed
+the focused 51-test suite. A short OnePlus 6 -> Pi Zero 2 W run proved direct
+RGB565 delivery, bounded presenter accounting, and electronic VC4 HDMI scanout
+with no new healthy-interval phone/Pi kernel faults or transport poisoning.
+The complete evidence bundle is retained under
+`../gud-gadget/evidence/xdisp-e4-t06-minimal-mir-integration-20260826T175315Z/`.
+
+Upstream strategy: **A** — no mir-android2-platform runtime patch is required;
+keep xdispd/mirgud as a separate component/package. The existing fork remains
+the already-qualified Mir 1.8.3/UBports deployment source, while Android2-side
+submissions remain out of scope unless a public Mir API gap is demonstrated.
+
+## E4-T07 upstream full-update and async semantics — VERIFIED PASS-B (2026-08-26)
+
+Current Linux upstream was pinned at
+`502d45774af09f1c681c754c4b7cdfb5d7f72fd9`. Configuration B now follows its
+negotiated-capacity split and one-shot LZ4/raw fallback behavior. The host
+12,800-byte cap, adaptive row-fit planner, bounded discovery, ratio cache,
+predictive policy, and associated production module parameters were removed.
+The OnePlus DMA-coherent explicit-URB path and E1 pre-bulk `-EBUSY` safety rule
+remain.
+
+The target-kernel build, module-symbol audit, full-frame LZ4/raw unit tests,
+sanitizer run, source contract, and PM-test build pass. Configuration B also
+passes live RGB565 compressed/raw, 100-frame incompressible, controlled-stall,
+and in-flight-detach gates at the advertised 1,843,200-byte capacity.
+
+The upstream-shaped kernel `async_flush` backport is implemented and remains
+default-off. A 100-frame incompressible run returned producer commits at
+395.587 FPS with 0.271 ms average latency and coalesced into five worker
+transfers with one pending slot. A 3.5-second worker stall kept producer
+latency bounded at 0.285 ms average, and active-stream physical detach produced
+no UAF, warning, oops, or hung task. A final live run after matching upstream's
+state-commit ordering completed modeset and 20 RGB565 updates without fault.
+
+The Mir presenter now has an optional direct mode with no userspace pending
+queue or worker; `latest-frame` remains the default and has not been removed.
+The direct-mode component check passes locally, but the established AArch64
+Mir container build was denied execution approval, so live Mir stall/detach
+qualification remains pending. This selects valid outcome PASS-B: production
+uses upstream-style full-payload synchronous GUD with `LatestFramePresenter`.
+Kernel async and Mir direct mode remain optional follow-up evidence rather than
+blocking the planner removal. See
+`docs/e4-t07-upstream-full-update-audit.md`.
 
 ## Codec transport benchmark closure
 

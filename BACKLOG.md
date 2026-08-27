@@ -12,6 +12,10 @@ production accepts one `SET_BUFFER` and owns one transaction at a time, using
 explicit `Idle`, `Arming`, `InFlight`, `Processing`, and `Poisoned` states. Add
 queues, overlap, speculative buffering, larger transfers, zero-copy, or other
 genericity only if measurements show they are required for the v1 release SLO;
+the same restraint applies to Mir integration: use standalone `xdispd` plus
+`mirgud` through public Mir client/Virtual/screencast APIs, and do not add
+GUD-specific Android2/HWC/GL integration when those interfaces suffice. Any
+exception requires ticket-local proof and an updated fork-delta classification;
 otherwise they belong after v1.
 
 ## P0 — Establish the exact target build
@@ -140,13 +144,12 @@ validated. Damage tracking remains deferred as a performance improvement.
 
 ## P1 — Mir/Lomiri external-display integration
 
-Mir's Android-HWC platform does not enumerate the separately registered GUD
-card automatically. The selected approach is a separate
-`mir-android2-platform-gud` fork that advertises a software DisplayPort-like
-HWC output and presents that output through GUD. The feasibility POC exposed a
-real independent `DisplayPort-2` output in Lomiri, but it is rolled back and
-not usable yet: it performs a blocking USB update on the compositor commit
-path and hard-codes the DRM node. See `PROJECT-STATUS.md` (`XDISP-*`) for the
+The historical Android-HWC synthetic-output POC is superseded. The selected
+approach is standalone `xdispd` plus `mirgud`, which discovers the GUD DRM
+device and obtains frames through public Mir client/Virtual/screencast APIs.
+The current upstream Android2 runtime remains unchanged; the old synthetic
+HWC/offscreen path is classified as obsolete POC material and is not part of
+the production build. See `PROJECT-STATUS.md` (`XDISP-*`) for the
 cross-repository board and `docs/lomiri-gud-integration-options.md` for the
 architecture decision.
 
