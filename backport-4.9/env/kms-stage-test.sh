@@ -35,10 +35,10 @@ rm -f "$stdout" "$stderr" "$status" "$dmesg"
 remote_module=/home/phablet/gud.ko
 remote_stage=/home/phablet/gud-kms-stage
 
-"$scp_bin" -o BatchMode=yes "$module_path" "$stage_binary" \
+"$scp_bin" -F /dev/null -o BatchMode=yes "$module_path" "$stage_binary" \
 	"$phone_host:/home/phablet/"
 
-"$ssh_bin" -o BatchMode=yes "$phone_host" \
+"$ssh_bin" -F /dev/null -o BatchMode=yes "$phone_host" \
 	"printf '%s\\n' '$phone_password' | sudo -S dmesg -C; \
 	 printf '%s\\n' '$phone_password' | sudo -S sh -c 'printf host > /sys/bus/platform/devices/a600000.ssusb/mode'; \
 	 i=0; found_pi=0; \
@@ -65,13 +65,13 @@ remote_stage=/home/phablet/gud-kms-stage
 	 done; \
 	 test \$probed = 1 || { echo 'fresh GUD probe/card1 did not complete' >&2; exit 2; }"
 
-"$ssh_bin" -o BatchMode=yes -o ServerAliveInterval=2 -o ServerAliveCountMax=3 \
+"$ssh_bin" -F /dev/null -o BatchMode=yes -o ServerAliveInterval=2 -o ServerAliveCountMax=3 \
 	"$phone_host" "printf '%s\\n' '$phone_password' | sudo -S dmesg -w" \
 	>"$dmesg" 2>&1 &
 watcher=$!
 sleep 2
 set +e
-timeout 25s "$ssh_bin" -o BatchMode=yes -o ServerAliveInterval=2 \
+timeout 25s "$ssh_bin" -F /dev/null -o BatchMode=yes -o ServerAliveInterval=2 \
 	-o ServerAliveCountMax=3 "$phone_host" \
 	"timeout --signal=TERM --kill-after=2s 20s $remote_stage $stage /dev/dri/card1" \
 	>"$stdout" 2>"$stderr"

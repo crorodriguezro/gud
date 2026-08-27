@@ -9,7 +9,6 @@ phone_password=${PHONE_SUDO_PASSWORD:?PHONE_SUDO_PASSWORD is required}
 module_path=${MODULE_PATH:-$repo_dir/variants/xdisp-lz4-12800/gud.ko}
 stage_binary=${STAGE_BINARY:-$repo_dir/tests/gud-kms-stage}
 payload_length=${PAYLOAD_LENGTH:?PAYLOAD_LENGTH is required}
-payload_cap=${PAYLOAD_CAP:-12800}
 zero_packet=${ZERO_PACKET:-0}
 pre_bulk_pause_ms=${PRE_BULK_PAUSE_MS:-0}
 stage_timeout_seconds=10
@@ -21,11 +20,6 @@ evidence_dir=${EVIDENCE_DIR:-$script_dir/local/evidence/single-payload-$(date -u
 case "$payload_length" in *[!0-9]*|'') exit 2 ;; esac
 if (( payload_length < 1 || payload_length > 4194304 )); then
 	printf 'PAYLOAD_LENGTH must be in 1..4194304\n' >&2
-	exit 2
-fi
-case "$payload_cap" in *[!0-9]*|'') exit 2 ;; esac
-if (( payload_cap < payload_length || payload_cap > 4194304 )); then
-	printf 'PAYLOAD_CAP must be >= PAYLOAD_LENGTH and <= 4194304\n' >&2
 	exit 2
 fi
 case "$pre_bulk_pause_ms" in *[!0-9]*|'') exit 2 ;; esac
@@ -58,7 +52,7 @@ for i in \$(seq 1 15); do
 done
 test "\${found:-}" = 1 || exit 2
 rmmod gud 2>/dev/null || true
-insmod /tmp/gud.ko bulk_timeout_ms=3000 bulk_trace_limit=1 xdisp_payload_limit=$payload_cap xdisp_payload_timing=1 xdisp_probe_payload_length=$payload_length xdisp_probe_zero_packet=$zero_packet xdisp_probe_pre_bulk_pause_ms=$pre_bulk_pause_ms
+insmod /tmp/gud.ko bulk_timeout_ms=3000 bulk_trace_limit=1 xdisp_payload_timing=1 xdisp_probe_payload_length=$payload_length xdisp_probe_zero_packet=$zero_packet xdisp_probe_pre_bulk_pause_ms=$pre_bulk_pause_ms
 timeout "${stage_timeout_seconds}s" /tmp/gud-kms-stage atomic-commit /dev/dri/card1
 result=\$?
 echo XDISP_SINGLE_PAYLOAD_${payload_length}_END > /dev/kmsg

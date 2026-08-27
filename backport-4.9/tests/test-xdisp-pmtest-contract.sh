@@ -19,7 +19,7 @@ require() {
 }
 
 require "$pmtest/variant_drv.c" '#define GUD_XDISP_PM_TEST 1'
-require "$pmtest/Kbuild" 'variant_lz4.o variant_lz4_upstream.o'
+require "$pmtest/Kbuild" 'variant_lz4_upstream.o'
 require "$driver" 'GUD_PM_TEST suspend result=-EBUSY active_transfer=1'
 require "$driver" 'GUD_PM_TEST suspend result=0 active_transfer=0'
 require "$driver" 'GUD_PM_TEST resume result=0'

@@ -9,7 +9,6 @@ phone_password=${PHONE_SUDO_PASSWORD:?PHONE_SUDO_PASSWORD is required}
 module_path=${MODULE_PATH:-$repo_dir/variants/xdisp-lz4-12800/gud.ko}
 stage_binary=${STAGE_BINARY:-$repo_dir/tests/gud-kms-stage}
 payload_length=${PAYLOAD_LENGTH:?PAYLOAD_LENGTH is required}
-payload_cap=${PAYLOAD_CAP:-$payload_length}
 transaction_count=${TRANSACTION_COUNT:-100}
 ssh_bin=${SSH:-ssh}
 scp_bin=${SCP:-scp}
@@ -17,12 +16,10 @@ batch_mode=${BATCH_MODE:-yes}
 evidence_dir=${EVIDENCE_DIR:-$script_dir/local/evidence/raw-payload-repeat-$(date -u +%Y%m%d-%H%M%S)}
 
 case "$payload_length" in *[!0-9]*|'') exit 2 ;; esac
-case "$payload_cap" in *[!0-9]*|'') exit 2 ;; esac
 case "$transaction_count" in *[!0-9]*|'') exit 2 ;; esac
 if (( payload_length < 1 || payload_length > 4194304 ||
-      payload_cap < payload_length || payload_cap > 4194304 ||
       transaction_count < 1 )); then
-    printf 'payload length/cap/count out of range\n' >&2
+    printf 'payload length/count out of range\n' >&2
     exit 2
 fi
 if [[ ! -f "$module_path" || ! -x "$stage_binary" ]]; then
@@ -36,9 +33,8 @@ trap 'rm -f "$remote_script"' EXIT
 cat >"$remote_script" <<EOF
 set -u
 payload_length=$payload_length
-payload_cap=$payload_cap
 transaction_count=$transaction_count
-echo XDISP_RAW_REPEAT_BEGIN payload_bytes=\$payload_length payload_cap=\$payload_cap transaction_count=\$transaction_count > /dev/kmsg
+echo XDISP_RAW_REPEAT_BEGIN payload_bytes=\$payload_length transaction_count=\$transaction_count > /dev/kmsg
 printf host > /sys/bus/platform/devices/a600000.ssusb/mode
 found=
 for i in \$(seq 1 15); do
@@ -53,7 +49,7 @@ for i in \$(seq 1 15); do
 done
 test -n "\$found" || exit 2
 rmmod gud 2>/dev/null || true
-insmod /tmp/gud.ko bulk_timeout_ms=3000 bulk_trace_limit=100 xdisp_payload_limit=\$payload_cap xdisp_payload_timing=1 xdisp_probe_payload_length=\$payload_length
+insmod /tmp/gud.ko bulk_timeout_ms=3000 bulk_trace_limit=100 xdisp_payload_timing=1 xdisp_probe_payload_length=\$payload_length
 overall=0
 for transaction in \$(seq 1 \$transaction_count); do
   start_ns=\$(date +%s%N)
@@ -82,7 +78,6 @@ set -e
     printf 'host_runner=xdisp-raw-payload-repeat-100\n'
     printf 'configured_transaction_count=%s\n' "$transaction_count"
     printf 'configured_payload_bytes=%s\n' "$payload_length"
-    printf 'configured_payload_cap=%s\n' "$payload_cap"
     printf 'remote_runner_result=%s\n' "$remote_runner_result"
     grep -E 'XDISP_RAW_REPEAT_RESULT' "$evidence_dir/phone-stdout.log" || true
     grep -E 'XDISP_RAW_REPEAT_(BEGIN|TRANSACTION_[0-9]+_(START|END)|END)|XDISP_PROBE (start|complete)' \

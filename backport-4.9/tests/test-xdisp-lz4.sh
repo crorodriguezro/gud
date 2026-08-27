@@ -16,7 +16,6 @@ fi
 cc "${compiler_flags[@]}" \
 	-I"$repo_root/backport-4.9/variants/xdisp-lz4-12800" \
 	"$repo_root/backport-4.9/tests/test-xdisp-lz4.c" \
-	"$repo_root/backport-4.9/variants/xdisp-lz4-12800/gud_xdisp_lz4.c" \
 	"$repo_root/backport-4.9/variants/xdisp-lz4-12800/gud_xdisp_lz4_upstream.c" \
 	-Wl,-l:liblz4.so.1 \
 	-o "$build_dir/test-xdisp-lz4"

@@ -71,6 +71,14 @@ static uint64_t monotonic_ns(void)
 	return (uint64_t)now.tv_sec * 1000000000ULL + now.tv_nsec;
 }
 
+static int compare_u64(const void *left, const void *right)
+{
+	uint64_t a = *(const uint64_t *)left;
+	uint64_t b = *(const uint64_t *)right;
+
+	return (a > b) - (a < b);
+}
+
 static uint32_t next_random(uint32_t *state)
 {
 	uint32_t value = *state;
@@ -368,6 +376,7 @@ int main(int argc, char **argv)
 	uint64_t commit_total_ns = 0;
 	uint64_t commit_min_ns = UINT64_MAX;
 	uint64_t commit_max_ns = 0;
+	uint64_t *commit_durations = NULL;
 	uint64_t start_ns;
 	uint64_t end_ns;
 	uint64_t modeset_ns;
@@ -397,11 +406,16 @@ int main(int argc, char **argv)
 	}
 	card = argv[1];
 	workload_name = argv[2];
+	commit_durations = calloc(frames - 1U, sizeof(*commit_durations));
+	if (!commit_durations) {
+		report_errno("allocate commit timings");
+		return 1;
+	}
 	if (workload == WORKLOAD_RAW) {
 		raw_file = fopen(argv[5], "rb");
 		if (!raw_file) {
 			report_errno("open raw clip");
-			return 1;
+			goto out;
 		}
 	}
 
@@ -597,6 +611,7 @@ int main(int argc, char **argv)
 		duration = monotonic_ns() - before;
 		drmModeAtomicFree(request);
 		commit_total_ns += duration;
+		commit_durations[frame - 1U] = duration;
 		if (duration < commit_min_ns)
 			commit_min_ns = duration;
 		if (duration > commit_max_ns)
@@ -622,15 +637,22 @@ int main(int argc, char **argv)
 		}
 	}
 	end_ns = monotonic_ns();
+	qsort(commit_durations, frames - 1U, sizeof(*commit_durations),
+	      compare_u64);
 
 	printf("card=%s workload=%s width=%u height=%u frames=%u target_fps=%u\n",
 	       card, workload_name, WIDTH, HEIGHT, frames, target_fps);
 	printf("modeset_ms=%.3f update_elapsed_s=%.3f update_fps=%.3f "
-	       "commit_avg_ms=%.3f commit_min_ms=%.3f commit_max_ms=%.3f\n",
+	       "commit_avg_ms=%.3f commit_p50_ms=%.3f commit_p95_ms=%.3f "
+	       "commit_min_ms=%.3f commit_max_ms=%.3f\n",
 	       modeset_ns / 1000000.0,
 	       (end_ns - start_ns) / 1000000000.0,
 	       (frames - 1U) * 1000000000.0 / (end_ns - start_ns),
 	       commit_total_ns / (frames - 1U) / 1000000.0,
+	       commit_durations[((frames - 1U) * 50U + 99U) / 100U - 1U] /
+		1000000.0,
+	       commit_durations[((frames - 1U) * 95U + 99U) / 100U - 1U] /
+		1000000.0,
 	       commit_min_ns / 1000000.0,
 	       commit_max_ns / 1000000.0);
 	rc = 0;
@@ -654,5 +676,6 @@ out:
 		close(fd);
 	if (raw_file)
 		fclose(raw_file);
+	free(commit_durations);
 	return rc;
 }
