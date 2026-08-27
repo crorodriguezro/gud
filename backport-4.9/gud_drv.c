@@ -7,13 +7,6 @@
 #include "gud_protocol.h"
 #include "gud_reconnect.h"
 
-#ifdef GUD_XDISP_LZ4_12800
-unsigned int gud_xdisp_payload_limit = GUD_XDISP_DEFAULT_PAYLOAD_LIMIT;
-module_param_named(xdisp_payload_limit, gud_xdisp_payload_limit, uint, 0444);
-MODULE_PARM_DESC(xdisp_payload_limit,
-	"Diagnostic XDISP actual bulk payload cap in bytes (default: 12800; max: 4194304)");
-#endif
-
 static const struct file_operations gud_drm_fops = {
 	.owner = THIS_MODULE,
 	.open = drm_open,
@@ -32,9 +25,13 @@ static int gud_drm_unload(struct drm_device *drm)
 {
 	struct gud_device *gud = drm->dev_private;
 
+#ifdef GUD_XDISP_FULL_UPDATE
+	if (gud)
+		gud_async_stop(gud);
+#endif
 	drm_mode_config_cleanup(drm);
 	if (gud) {
-#ifdef GUD_XDISP_LZ4_12800
+#ifdef GUD_XDISP_FULL_UPDATE
 		gud_xdisp_buffers_fini(gud);
 #endif
 		usb_put_dev(gud->usb);
@@ -140,7 +137,7 @@ int gud_get_display_descriptor(struct gud_device *gud)
 
 	gud->protocol_version = desc.version;
 	gud->flags = le32_to_cpu(desc.flags);
-#ifdef GUD_XDISP_LZ4_12800
+#ifdef GUD_XDISP_FULL_UPDATE
 	gud->compression = desc.compression & GUD_COMPRESSION_LZ4;
 #endif
 	gud->max_buffer_size = le32_to_cpu(desc.max_buffer_size);
@@ -163,10 +160,10 @@ int gud_get_display_descriptor(struct gud_device *gud)
 		 gud->protocol_version, gud->bulk_out_endpoint, gud->max_buffer_size,
 		 desc.compression, gud->min_width, gud->max_width, gud->min_height,
 		 gud->max_height);
-#ifdef GUD_XDISP_LZ4_12800
+#ifdef GUD_XDISP_FULL_UPDATE
 	dev_info(&gud->intf->dev,
-		 "XDISP diagnostic variant: compression=0x%02x actual bulk payload cap=%u\n",
-		 gud->compression, gud_xdisp_payload_limit);
+		 "XDISP full-update variant: compression=0x%02x negotiated bulk capacity=%u\n",
+		 gud->compression, gud->max_buffer_size);
 #endif
 	return 0;
 }
@@ -186,6 +183,9 @@ static int gud_probe(struct usb_interface *intf,
 	gud->usb = usb_get_dev(interface_to_usbdev(intf));
 	gud->intf = intf;
 	mutex_init(&gud->lock);
+#ifdef GUD_XDISP_FULL_UPDATE
+	gud_async_init(gud);
+#endif
 
 	bulk_out = NULL;
 	for (i = 0; i < alt->desc.bNumEndpoints; i++) {
@@ -205,7 +205,7 @@ static int gud_probe(struct usb_interface *intf,
 	if (ret)
 		goto err_put_usb;
 
-#ifdef GUD_XDISP_LZ4_12800
+#ifdef GUD_XDISP_FULL_UPDATE
 	ret = gud_xdisp_buffers_init(gud);
 	if (ret)
 		goto err_put_usb;
@@ -227,7 +227,7 @@ static int gud_probe(struct usb_interface *intf,
 	return 0;
 
 err_free_xdisp:
-#ifdef GUD_XDISP_LZ4_12800
+#ifdef GUD_XDISP_FULL_UPDATE
 	gud_xdisp_buffers_fini(gud);
 #endif
 err_put_usb:
@@ -292,6 +292,9 @@ static void gud_disconnect(struct usb_interface *intf)
 	mutex_lock(&gud->lock);
 	gud->disconnected = true;
 	mutex_unlock(&gud->lock);
+#ifdef GUD_XDISP_FULL_UPDATE
+	gud_async_stop(gud);
+#endif
 	gud_reconnect_arm(gud->usb);
 
 	dev_info(&intf->dev, "GUD disconnected\n");
@@ -310,12 +313,12 @@ static const struct usb_device_id gud_id_table[] = {
 MODULE_DEVICE_TABLE(usb, gud_id_table);
 
 static struct usb_driver gud_usb_driver = {
-#ifdef GUD_XDISP_LZ4_12800
-	#ifdef GUD_XDISP_PM_TEST
-	.name = "gud_xdisp_lz4_12800_pmtest",
-	#else
-	.name = "gud_xdisp_lz4_12800",
-	#endif
+#ifdef GUD_XDISP_FULL_UPDATE
+#ifdef GUD_XDISP_PM_TEST
+	.name = "gud_xdisp_full_update_pmtest",
+#else
+	.name = "gud_xdisp_full_update",
+#endif
 #else
 	.name = "gud",
 #endif
@@ -354,14 +357,14 @@ static void __exit gud_exit(void)
 module_init(gud_init);
 module_exit(gud_exit);
 
-#ifdef GUD_XDISP_LZ4_12800
-	#ifdef GUD_XDISP_PM_TEST
+#ifdef GUD_XDISP_FULL_UPDATE
+#ifdef GUD_XDISP_PM_TEST
 MODULE_DESCRIPTION("TEST-ONLY OnePlus 6 GUD XDISP runtime-PM diagnostic");
-MODULE_VERSION("xdisp-p0.1-adaptive-12800-pmtest-v1");
-	#else
-MODULE_DESCRIPTION("OnePlus 6 GUD XDISP adaptive LZ4 12800-byte diagnostic");
-MODULE_VERSION("xdisp-p0.1-adaptive-12800-upstream-lz4-v2");
-	#endif
+MODULE_VERSION("e4-t07-full-update-pmtest-v1");
+#else
+MODULE_DESCRIPTION("OnePlus 6 GUD upstream-style full-update and async-flush backport");
+MODULE_VERSION("e4-t07-full-update-async-v1");
+#endif
 #else
 MODULE_DESCRIPTION("OnePlus 6 GUD USB probe backport");
 #endif

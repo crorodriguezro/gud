@@ -2,7 +2,7 @@
 
 #include "gud_internal.h"
 
-#ifdef GUD_XDISP_LZ4_12800
+#ifdef GUD_XDISP_FULL_UPDATE
 static bool xdisp_test_1080p;
 module_param_named(xdisp_test_1080p, xdisp_test_1080p, bool, 0644);
 MODULE_PARM_DESC(xdisp_test_1080p,
@@ -38,7 +38,7 @@ static int gud_connector_get_modes(struct drm_connector *connector)
 		return 0;
 	dev_info(&gud->intf->dev, "GUD connector: mode created\n");
 
-	#ifdef GUD_XDISP_LZ4_12800
+	#ifdef GUD_XDISP_FULL_UPDATE
 	if (xdisp_test_1080p) {
 		/* CEA-861 1920x1080@60, matching the Pi HDMI catalog entry. */
 		mode->clock = 148500;

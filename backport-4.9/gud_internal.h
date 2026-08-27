@@ -4,6 +4,7 @@
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/usb.h>
+#include <linux/workqueue.h>
 
 #include "gud_compat_4_9.h"
 
@@ -12,7 +13,7 @@ struct gud_device {
 	struct usb_interface *intf;
 	u8 bulk_out_endpoint;
 	u8 protocol_version;
-#ifdef GUD_XDISP_LZ4_12800
+#ifdef GUD_XDISP_FULL_UPDATE
 	u8 compression;
 	void *xdisp_lz4_workmem;
 	size_t xdisp_lz4_workmem_size;
@@ -22,18 +23,7 @@ struct gud_device {
 	void *xdisp_bulk_buffer;
 	dma_addr_t xdisp_bulk_dma;
 	struct urb *xdisp_bulk_urb;
-	/* Protected by lock; diagnostic cached-ratio planner state. */
-	u32 xdisp_ratio_width;
-	size_t xdisp_ratio_bytes_per_line;
-	size_t xdisp_ratio_source_bytes;
-	size_t xdisp_ratio_payload_bytes;
-	bool xdisp_ratio_valid;
-	/* Protected by lock; test-only predictive bounded-LZ4 state. */
-	u32 xdisp_predictive_width;
-	size_t xdisp_predictive_bytes_per_line;
-	size_t xdisp_predictive_source_bytes;
-	size_t xdisp_predictive_payload_bytes;
-	bool xdisp_predictive_valid;
+	size_t xdisp_bulk_buffer_size;
 #endif
 	u32 flags;
 	u32 max_buffer_size;
@@ -54,6 +44,17 @@ struct gud_device {
 	bool pm_suspended;
 #endif
 	struct mutex lock;
+#ifdef GUD_XDISP_FULL_UPDATE
+	struct work_struct async_work;
+	struct mutex damage_lock;
+	struct drm_framebuffer *async_fb;
+	struct drm_rect async_damage;
+	void *shadow_buf;
+	size_t shadow_buf_size;
+	bool async_stopping;
+	u64 async_submit_sequence;
+	u64 async_worker_sequence;
+#endif
 	struct drm_device *drm;
 	struct drm_simple_display_pipe pipe;
 	struct drm_connector connector;
@@ -90,9 +91,12 @@ int gud_connector_init(struct gud_device *gud);
 int gud_pipe_init(struct gud_device *gud);
 int gud_drm_init(struct gud_device *gud);
 void gud_drm_fini(struct gud_device *gud);
-#ifdef GUD_XDISP_LZ4_12800
+#ifdef GUD_XDISP_FULL_UPDATE
 int gud_xdisp_buffers_init(struct gud_device *gud);
 void gud_xdisp_buffers_fini(struct gud_device *gud);
+void gud_async_init(struct gud_device *gud);
+void gud_async_cancel(struct gud_device *gud);
+void gud_async_stop(struct gud_device *gud);
 #endif
 
 #ifdef GUD_XDISP_PM_TEST
