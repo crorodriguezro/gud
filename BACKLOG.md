@@ -1,400 +1,380 @@
-# Linux 4.9 GUD Backport Backlog
+# Linux Mobile GUD MVP Backlog
 
-For the cross-repository product goal, epic hierarchy, priority order, and
-GitHub-ready story tickets, see `PROJECT-ROADMAP.md`. This backlog retains
-host-driver implementation detail and historical acceptance evidence.
+This backlog is the active implementation queue for the OnePlus 6 → Raspberry Pi Zero 2 W → HDMI product path.
 
-**v1 architecture rule:** Keep GUD as the wire/protocol compatibility
-boundary and FunctionFS as the Pi implementation boundary. The Pi is a
-purpose-built, minimal GUD appliance for the OnePlus 6 → Pi Zero 2 W → HDMI
-path, not a generic GUD framework or full/reference gadget implementation:
-production accepts one `SET_BUFFER` and owns one transaction at a time, using
-explicit `Idle`, `Arming`, `InFlight`, `Processing`, and `Poisoned` states. Add
-queues, overlap, speculative buffering, larger transfers, zero-copy, or other
-genericity only if measurements show they are required for the v1 release SLO;
-the same restraint applies to Mir integration: use standalone `xdispd` plus
-`mirgud` through public Mir client/Virtual/screencast APIs, and do not add
-GUD-specific Android2/HWC/GL integration when those interfaces suffice. Any
-exception requires ticket-local proof and an updated fork-delta classification;
-otherwise they belong after v1.
+For product scope and milestone ordering, see `PROJECT-ROADMAP.md`.
+For detailed historical evidence, see `PROJECT-STATUS.md` and component evidence directories.
 
-## P0 — Establish the exact target build
+The old experiment-by-experiment backlog is preserved in git history. Do not reopen superseded transport/planner work unless a current MVP gate proves it necessary.
 
-- [ ] Identify the exact OnePlus 6 Ubuntu Touch kernel repository and commit.
-- [ ] Capture `uname -a` from the phone.
-- [ ] Capture `/proc/config.gz` from the phone.
-- [ ] Reproduce the matching `.config`.
-- [ ] Determine the compiler/toolchain used by the target build.
-- [ ] Generate or obtain matching `Module.symvers` and generated headers.
-- [ ] Build and load a trivial out-of-tree arm64 module as a sanity check.
+## Current product state
 
-**Done when:** a trivial `.ko` loads without `Invalid module format`.
+Verified/accepted for the MVP baseline:
 
-## P0 — Audit GUD against Linux 4.9 DRM
+- Linux 4.9 OnePlus GUD host module builds and runs.
+- Pi Zero 2 W FunctionFS GUD gadget works as the HDMI bridge.
+- Long-lived transport safety and containment are accepted.
+- `LatestFramePresenter` keeps one pending and one in-flight frame maximum.
+- Production Mir integration uses public APIs through standalone `xdispd` / `mirgud`.
+- Direct packed RGB565 + LZ4 is the production default.
+- 1280x720 pixel correctness is verified.
+- Exact physical 1280x720 and 1920x1080 modes route DirectExact.
+- Full logical GUD payload semantics are qualified; the obsolete 12,800-byte logical planner is not the production architecture.
+- Current performance is usable enough to proceed with product UX work:
+  - stable 720p live desktop: approximately 21–28 FPS;
+  - stable 1080p live desktop: approximately 19–20 FPS;
+  - raw/incompressible USB2 limits are already characterized;
+  - synthetic CPU scaling is known to be slow and is post-MVP.
 
-- [ ] Inventory every modern GUD API dependency.
-- [ ] Classify each dependency as available, wrapper-compatible, replacement-required, or deferred.
-- [ ] Confirm which required Linux 4.9 DRM/USB/GEM symbols are exported to modules.
-- [ ] Identify any unavoidable DRM core modifications.
+## NOW — MVP activation UX
 
-**Done when:** we can state whether a standalone `gud.ko` is possible with the target kernel.
+### [ ] E3-T02 — Event-driven GUD presence
 
-## P0 — Create standalone module skeleton
+**Priority:** P0
 
-- [ ] Add external-module Makefile.
-- [ ] Add the GUD protocol definitions needed by the host driver.
-- [ ] Implement USB ID matching and `usb_driver` registration.
-- [ ] Implement probe/disconnect skeleton.
-- [ ] Read and validate the GUD display descriptor.
+**Problem:** normal operation still relies on manual enumeration/bring-up steps.
 
-**Done when:** the module loads and recognizes a GUD USB device without registering DRM yet.
+**Goal:** the installed phone runtime notices the supported GUD device at boot or hot-add and owns discovery automatically.
 
-## P0 — Implement Linux 4.9 GEM/framebuffer layer
+Tasks:
 
-- [x] Define `struct gud_gem_object` around `struct drm_gem_object`.
-- [x] Implement allocation and destruction.
-- [x] Implement dumb-buffer creation.
-- [x] Implement CPU mapping using 4.9-era GEM/page APIs and `vmap()`.
-- [x] Implement mmap support required by DRM userspace.
-- [x] Handle imported buffers conservatively or reject unsupported imports in the MVP.
+- identify the correct stable event source for GUD device add/remove;
+- discover by driver/device identity, never by assumed `/dev/dri/card1`;
+- handle the device already being present when the service starts;
+- reject stale/removed device instances;
+- bound retries and log a useful reason when activation cannot proceed;
+- make repeated add notifications idempotent.
 
-Use the Linux 4.9 `udl` DisplayLink driver as the main reference for CPU-readable USB-display framebuffer memory.
+Done when:
 
-**Done when:** the page-backed local GEM layer builds using exported target-kernel symbols and provides the callback contract Ticket 4 needs to expose userspace buffers. The first userspace allocation/map/write test is Ticket 4 acceptance after `/dev/dri/cardX` exists.
+- boot with Pi attached reaches the discovered-ready state automatically;
+- plugging the Pi after boot reaches the same state automatically;
+- no operator enumeration command or DRM node selection is required.
 
-## P0 — Register DRM simple display pipe
+### [ ] E3-T03 — Automatic `xdispd` / `mirgud` lifecycle
 
-- [x] Initialize `drm_device` using 4.9 APIs.
-- [x] Initialize `drm_mode_config`.
-- [x] Register one `drm_simple_display_pipe`.
-- [x] Support RGB565 for the active USB-transfer MVP.
-- [x] Replace modern format helpers with a minimal local format layer.
-- [x] Implement atomic check/update callbacks compatible with 4.9.
+**Priority:** P0
 
-**Source/basic-ioctl evidence:** the Pi hardware test creates `/dev/dri/card1`;
-the GUD card passes caps, dumb-buffer map/write/destroy, XRGB8888 framebuffer,
-KMS enumeration, atomic-request build, atomic test-only validation, and a real
-state-applying atomic commit. The synchronous no-transfer completion path now
-passes on Linux 4.9 without `WARNING:` or `flip_done` timeout evidence.
-`modetest -M gud -c -p` reports one connected virtual connector, one CRTC and
-primary plane, `XR24` (XRGB8888), and preferred 1280x720@60; the full
-`gud-kms-smoke` run completes its atomic modeset. The matching `dmesg` interval
-contains no `BUG:`, `Oops`, `WARNING:`, `lockdep`, or `use-after-free` record.
-Ticket 4 hardware acceptance is complete for the earlier XRGB8888 build. The
-active Ticket 5 source has since changed the buffer and wire format to RGB565;
-that format change still needs its own phone runtime evidence.
+**Goal:** once GUD is ready, automatically start the exact userspace path needed for the external output and stop it safely on removal.
 
-## P0 — Connector and mode enumeration
+Tasks:
 
-- [ ] Read GUD connector descriptor(s).
-- [ ] Support one connector in the MVP.
-- [ ] Read EDID when supplied by the GUD device.
-- [ ] Fall back to GUD mode enumeration when needed.
-- [ ] Register connector and attach it to the simple-pipe encoder.
-- [ ] Implement 4.9-compatible detect/hotplug behavior.
+- determine the correct user/session ownership for the bridge process;
+- start only one managed instance;
+- pass discovered device identity/configuration without hard-coded nodes;
+- preserve `LatestFramePresenter` semantics;
+- make duplicate starts harmless;
+- stop/reap stale bridge processes after removal/failure;
+- keep bounded containment for known Mir release stalls;
+- expose concise lifecycle state for diagnostics.
 
-**Done when:** `modetest` or equivalent reports the external connector and valid modes.
+Done when normal connect produces a running production bridge without a shell command.
 
-## P0 — First framebuffer transfer (Ticket 5)
+### [ ] E3-T04 — Remove manual Lomiri bring-up sequence
 
-- [x] Implement GUD state check/commit requests.
-- [x] Implement display/controller enable requests.
-- [x] Map the current framebuffer for CPU access.
-- [x] Send a full framebuffer with `GUD_REQ_SET_BUFFER` plus USB bulk transfer.
-- [x] Split transfers on complete-row rectangles when the GUD device's maximum buffer size requires it.
-- [ ] Skip DRM damage helpers initially.
+**Priority:** P0
 
-**Current evidence:** the active RGB565 source builds and contract tests pass.
-The OnePlus host path uses an explicit DMA-mapped URB with
-`URB_NO_TRANSFER_DMA_MAP`; this replaced the earlier `usb_bulk_msg()` path,
-which discarded the DMA address of its coherent bounce buffer and failed with
-`-EAGAIN` on the phone xHCI controller.
+**Goal:** automate whatever enumeration/refresh/activation sequence is currently performed by hand so Lomiri sees and uses the external display.
 
-**2026-07-24 hardware acceptance:** after rebooting the Pi, deploying the
-FunctionFS fix, and forcing a clean OnePlus device-to-host transition, the
-phone freshly probed `1d50:614d` and created `/dev/dri/card1`. The GUD KMS
-fill test transferred the complete 1280x720 RGB565 update as complete-row
-rectangles. The Pi received each 512-byte bulk packet through FunctionFS,
-logged 5--11 ms receives for representative 64,000-byte tiles, copied/scaled
-every tile, and presented the back-buffer swap. The phone reported no new
-`GUD atomic update failed: -110` or bulk-transfer error. This is end-to-end
-host-driver, USB, FunctionFS, and Pi-DRM evidence; the FunctionFS incident is
-documented in the Pi gadget repository.
+Important:
 
-**Done:** full RGB565 framebuffer transfer and presentation are hardware
-validated. Damage tracking remains deferred as a performance improvement.
+- first document the current manual sequence exactly;
+- distinguish steps that are only diagnostic from steps truly required by Mir/Lomiri;
+- move required ordering into the product service;
+- do not merely wrap developer commands in an opaque script;
+- the sequence must be idempotent and safe when the device disappears halfway through.
 
-## P1 — Lifetime and hot-unplug safety
+Acceptance:
 
-- [ ] Replace modern `drm_dev_enter()` / `drm_dev_exit()` semantics with safe 4.9 handling.
-- [ ] Cancel pending work before freeing device state.
-- [ ] Test unplug during framebuffer transfer.
-- [ ] Test repeated disconnect/reconnect.
-- [ ] Test module unload after device removal.
+```text
+normal phone boot
+normal Pi boot
+connect supported USB topology
+        ↓
+external desktop appears
+```
 
-**Done when:** stress unplug/replug does not crash or use freed memory.
+No manual `ls`, enumeration helper, card selection, `xdispd`/`mirgud` start, compositor restart, or remembered development command in the successful path.
 
-## P1 — Ubuntu Touch hardware validation
+### [ ] E3-T05 — Connect/disconnect/reconnect UX matrix
 
-- [x] Deploy the module to the OnePlus 6 and load with `insmod`.
-- [x] Verify USB host/OTG mode.
-- [x] Verify GUD device probe in `dmesg`.
-- [x] Verify `/dev/dri/cardX` creation.
-- [x] Run an independent KMS test before involving Lomiri.
+**Priority:** P0
 
-## P1 — Mir/Lomiri external-display integration
+Test the automated path, not the development workflow.
 
-The historical Android-HWC synthetic-output POC is superseded. The selected
-approach is standalone `xdispd` plus `mirgud`, which discovers the GUD DRM
-device and obtains frames through public Mir client/Virtual/screencast APIs.
-The current upstream Android2 runtime remains unchanged; the old synthetic
-HWC/offscreen path is classified as obsolete POC material and is not part of
-the production build. See `PROJECT-STATUS.md` (`XDISP-*`) for the
-cross-repository board and `docs/lomiri-gud-integration-options.md` for the
-architecture decision.
+Minimum matrix:
 
-- [x] `XDISP-P0.1` — Pi FunctionFS first-transfer reliability is verified over
-  ten fresh rebind/reconnect cycles. Owner: `gud-gadget`.
-  - Laptop Gate A passed with LZ4; Gate B reproduced the impossible DWC2
-    residual on the first upstream-host uncompressed 61,440-byte URB. Gate C
-    then hung the Pi read at 15,360 bytes even though the host completed the
-    entire URB successfully. The OnePlus backport is not a necessary trigger,
-    and this is not a simple large-transfer threshold.
-  - Gate D passed 1,440/1,440 uncompressed transfers and a clean stop,
-    including 1,080 aligned 10,240-byte transfers with no ZLP or
-    `URB_ZERO_PACKET`. Exact maxpacket termination alone is not the trigger;
-    cancel the proposed OnePlus ZLP diagnostic.
-  - Gate E and two identical fresh-boot repeats each passed six full 1280
-    target frames at 12,800 bytes/25 packets and a clean stop: 2,592 target
-    transfers with zero error. The observed aligned boundary is
-    12,800 clean versus 15,360 failed.
-  - [ ] Investigate the origin of the current 12,800-byte actual-payload
-    safety boundary. Separate OnePlus host submission behavior from Pi
-    DWC2/FunctionFS receive and teardown behavior; vary aligned payload size,
-    read size, DMA mode, and gadget lifecycle under retained evidence. Do not
-    raise the driver cap or treat the boundary as a hardware specification
-    until a controlled matrix establishes a larger stable limit.
-  - Gate F proved that a 12,800-byte userspace prefix read does not safely
-    consume a larger host transfer under `g_dma=1`. The one-shot `g_dma=0`
-    Pi kernel then failed its first 16,274-byte compressed payload: the host
-    completed the full URB, but FunctionFS returned 3,986 bytes and left an
-    exact 12,288-byte DWC2 residual. Do not advance to OnePlus or the matrix.
-  - Review a separately preserved OnePlus module variant that dynamically
-    splits after compression and enforces an actual payload ceiling no larger
-    than 12,800 bytes. If that cannot retain usable cadence, targeted Pi DWC2
-    kernel work is required; do not ship the `g_dma=0` diagnostic.
-  - The host-only variant is now implemented as a separate build under
-    `variants/xdisp-lz4-12800/`. Offline LZ4 round-trip, payload-cap, row
-    coverage, and exact-kernel build gates passed. Its first OnePlus hardware
-    frame used four LZ4 payloads totaling 45,988 bytes, with a 12,380-byte
-    maximum under the 12,800-byte cap. All four Pi reads completed, physical
-    detach was clean, and the post-payload service restart exited zero without
-    DWC2/vc4 failure.
-  - Three fresh adaptive mini-cycles then passed. Their complete RGB565 frames
-    used 4, 3, and 4 compressed complete-row rectangles; maximum actual
-    payloads were 12,728, 12,718, and 12,347 bytes. Every payload completed in
-    one 16 KiB FunctionFS read and returned to `Idle`; all three detached
-    separate stop/start gates exited zero without host `-110`, DWC2/vc4
-    failure, or Pi Oops. Start a new ten-cycle matrix from cycle 1 with the
-    adaptive module. This does not yet unblock XDISP-P0.1.
-  - The first adaptive matrix attempt passed cycle 1 (Pi rebind, five
-    rectangles, 12,790-byte maximum) but failed cycle 2 before payload. On a
-    reconnect-only reset, the Pi safely tore down the detached gadget and
-    intentionally exited 1; containment's `Restart=no` left it failed, so the
-    phone could not re-enumerate.
-  - The userspace clean-detach repair and dedicated reconnect gate passed.
-    Only a proven-idle detach exits zero under `Restart=on-success`; nonzero,
-    poisoned, and crash outcomes remain contained. The service automatically
-    changed from PID 2739 to PID 2836 on the same Pi boot, the OnePlus
-    re-enumerated, and a fresh five-rectangle frame completed with a
-    12,735-byte maximum and every receive returned to `Idle`. Restart the
-    ten-cycle matrix from cycle 1; do not credit the old cycle-1 pass.
-  - The replacement matrix passed 10/10: five Pi rebind and five OnePlus
-    reconnect cycles, ten complete RGB565 frames, 45 matching payload
-    completions and `Idle` returns, and a 12,799-byte matrix maximum. All five
-    reconnects recreated the service automatically. No host `-110`, receive
-    anomaly, DWC2/vc4 fault, Oops, pstore record, watchdog event, or Pi reboot
-    occurred. This meets the adaptive diagnostic's technical matrix criteria,
-    but retain the blocked status and do not start P0.2 until the standing
-    no-verification instruction is explicitly lifted.
-  - **2026-07-27 decision:** the user explicitly lifted that standing block.
-    `XDISP-P0.1` is verified with the 12,800-byte actual-payload ceiling as
-    its operating constraint. The unexplained larger-payload boundary remains
-    a non-blocking reliability investigation; it does not reopen this item.
-- [ ] `XDISP-P0.2` — the Mir presentation path is asynchronous and protects
-  phone responsiveness when GUD stalls. Owner: `mir-android2-platform-gud`.
-- [ ] `XDISP-P0.3` — host/GUD card discovery and reconnect do not assume
-  `/dev/dri/card1`. Owners: `mir-android2-platform-gud`, `gud`.
-- [ ] `XDISP-P1.1` — the external desktop has correct geometry and window
-  placement at the selected mode. Owners: `mir-android2-platform-gud`,
-  `gud-gadget`.
+- Pi present before phone-side service starts;
+- Pi connected after normal phone boot;
+- clean disconnect while idle;
+- disconnect while frames are flowing;
+- reconnect on the same phone boot;
+- repeated connect/disconnect cycles;
+- device node/card number changes;
+- Pi service restart while cable remains attached;
+- phone bridge service restart while Pi remains attached.
 
-**Done when:** Lomiri uses the GUD monitor as a stable independent output with
-the acceptance evidence recorded for every `XDISP-P0.*` item. A POC that merely
-creates the output is not sufficient.
+Record only useful evidence:
 
-## P2 — Performance improvements
+- activation state transitions;
+- discovered device identity;
+- bridge PID/instance identity;
+- successful external presentation count;
+- safety counters;
+- failure-relevant kernel/service excerpts.
 
-- [ ] `XDISP-P2.1` — record end-to-end frame rate, latency, CPU use, and
-  frame-drop behavior for the extended-display path before claiming it is
-  usable.
-  - Run a controlled 512-byte versus 16 KiB FunctionFS read benchmark only
-    after `XDISP-P0.1` is stable; the user currently reports no noticeable
-    subjective difference.
-  - Hold host, mode, compression, content, and duration constant; record
-    presented FPS, dropped frames, median/tail latency, Pi and host CPU, USB
-    throughput, and errors.
-  - Quantify the actual performance gain from fewer rectangles/transfers.
-    Compare safe fixed-row splitting against adaptive splitting while keeping
-    every submitted payload at or below 12,800 bytes. Record rectangles and
-    SET_BUFFER/bulk pairs per frame alongside FPS, latency, CPU, and USB
-    throughput; do not infer causality from the earlier subjective
-    one-frame-per-five-seconds observation.
-  - Instrument the adaptive planner with per-frame compression-attempt,
-    rejected-attempt, source-bytes-compressed, and compression-time counters.
-    Before promoting this into the normal driver, target 90--95% of the
-    payload cap instead of doubling the previous row count, reuse the recent
-    measured compression ratio to predict the next rectangle, and benchmark
-    video, scrolling, desktop activity, and incompressible patterns. Compare
-    that recent-ratio/target-margin policy with the current doubling row hint.
-    Report both the CPU cost of discarded compression attempts and whether
-    fewer retries change end-to-end frame cadence.
-  - A pinned upstream LZ4 bounded-output embedding is available behind
-    the test-only `xdisp_bounded_discovery=1` module parameter. It uses
-    `LZ4_compress_destSize_extState()` to discover a candidate, rounds it down
-    to complete RGB565 rows, and validates the aligned rectangle against the
-    unchanged 12,800-byte cap. Offline round-trip, guard, sanitizer, exact
-    OnePlus-kernel build, and private-symbol gates passed. Its first hardware
-    gate also completed one static frame and the 300-frame raw RGB565 clip at
-    29.972 paced updates/s, with a 12,797-byte maximum, no host/Pi fault, and
-    every Pi payload completed in one 16 KiB read. This is one candidate gate,
-    not a comparative performance claim or `XDISP-P0.1` verification. Compare
-    it with the current ratio-cache policy under the existing raw video,
-    scrolling, desktop, and noise gates.
-  - **2026-07-27 unpaced A/B result:** with the same 1280x720 RGB565 raw clip,
-    the test-only bounded-output policy averaged 31.644 FPS / 26.678-ms commit
-    time across three 300-frame runs, versus ratio-cache's 23.717 FPS /
-    37.065 ms. It reduced the last-900-frame mean from 15.356 to 9.987
-    rectangles/frame, planner time from 21.662 to 15.704 ms/frame, and
-    `SET_BUFFER` plus bulk wait time from 12.943 to 9.094 ms/frame. Desktop
-    motion also improved (61.306 versus 57.318 FPS). Do not call it a general
-    default yet: one 120-frame scroll sample and a 10-frame incompressible
-    sample regressed. On noise, bounded discovery repeatedly scanned a wide
-    source candidate before each five-row raw fallback, consuming 78.98 ms of
-    planning per frame and yielding 3.908 FPS; ratio-cache reached 6.372 FPS.
-    **Implemented and gated:** frame-local bounded state records the first raw
-    fallback, then sends the remaining chunks of that frame as direct cap-safe
-    raw rows with zero compression work; a fresh update retries discovery. The
-    adjacent `<= 12,800` submission guard is unchanged. The random-frame unit
-    test proves one discovery plus 143 direct raw chunks. On a repeat 10-frame
-    noise gate, planner time fell from 78.98 to 3.506 ms/frame and cadence
-    rose from 3.908 to 6.528 FPS, with one attempt and 143 backoff rectangles
-    per frame. The raw 300-frame clip remained at 32.348 FPS. Keep it
-    test-only and repeat all four workloads with multiple trials before
-    changing any default. Evidence:
-    `backport-4.9/env/local/evidence/xdisp-p2.1-bounded-backoff-2026-07-27T1440COT/RESULTS.md`.
-  - **2026-07-27 predictive-bounded 1080p test:** a separate test-only
-    `xdisp_predictive_bounded=1` policy attempted one exact, 95%-targeted
-    limited-output LZ4 rectangle from a recent verified ratio, then fell back
-    to bounded discovery and frame-local raw backoff on a miss. It preserved
-    the 12,800-byte cap and had no host/Pi fault. It improved one desktop
-    sample (52.182 versus 45.513 FPS), but did not improve the video target:
-    a global ratio did not describe successive horizontal video bands, causing
-    about one fallback per frame (32.75 versus 31.00 attempts and 28.197
-    versus 27.392 ms planner time). Keep it disabled and test-only; do not
-    promote it without a separately benchmarked frame-local or vertical-band
-    predictor. Evidence:
-    `backport-4.9/env/local/evidence/xdisp-p2.1-predictive-bounded-1080p-2026-07-27T1037COT/RESULTS.md`.
-  - [ ] Post-v1 upstream Linux GUD follow-up: evaluate contributing a generic optional
-    bounded-output / complete-row LZ4 planner. Current upstream
-    `drivers/gpu/drm/gud/gud_pipe.c` splits damage before compression using the
-    advertised `bulk_len`, then calls `LZ4_compress_default()` with the source
-    rectangle length as both input and output capacity, falling back to raw on
-    compression failure. It has no `LZ4_compress_destSize()` discovery,
-    post-compression adaptive splitting, or recent-ratio policy. Do not port
-    the Pi-specific 12,800-byte cap directly: first define a generic device
-    capability, transport limit, or quirk, retain the upstream SG bulk path,
-    and validate on compliant and constrained GUD devices. This is roadmap E7
-    work, not a v1 performance task.
-  - A short 2026-07-26 direct-KMS hardware characterization passed without a
-    transport or kernel fault: desktop reached 9.015 synchronous updates/s,
-    scrolling 4.671 updates/s, and two incompressible frames 0.165 updates/s.
-    The Pi matched all 367 `InFlight` entries with 367 `Idle` returns. Each
-    noise frame required 144 rectangles and 287 compression attempts; one
-    rejected all 287 attempts. Treat these as characterization numbers, not a
-    completed P2.1 benchmark.
-  - Replace or supplement the rate-limited per-frame diagnostic summaries
-    with non-rate-limited cumulative counters before the comparison benchmark.
-    The short run retained only 22 of 26 host frame summaries (353 of 367
-    transfers), so its sampled attempt/rejection totals are lower bounds.
-    Evidence:
-    `backport-4.9/env/local/evidence/xdisp-p2.1-oneplus-motion-2026-07-26T1611COT/RESULTS.md`.
-  - The same gate played ten predecoded 1280x720 RGB565 video frames through
-    direct KMS at 2.015 synchronous updates/s. The frames produced 113 matching
-    Pi transfers, 918,595 payload bytes, 246 compression attempts, and 133
-    rejected attempts, with a 12,793-byte maximum and every receive returned
-    to `Idle`. This proves raw-frame playback through GUD, not phone decoding
-    or Lomiri/Mir video presentation.
-  - The corrected native-scanout comparison repeated that exact clip with the
-    Pi's physical HDMI mode at 1280x720. It retained 113 transfers, about
-    0.919 MB of payload, and a 12,793-byte maximum, but removed scaling from
-    every payload. Update rate reached the configured ceiling at 4.999 fps and
-    average commit latency fell from 489.394 ms to 50.097 ms. All 113
-    `InFlight` entries returned to `Idle`; the mean of logged whole-millisecond
-    Pi `total_ms` values was 0.504 ms per payload and neither kernel recorded a
-    new fault. This isolates per-rectangle Pi full-frame
-    scaling/presentation as the prior bottleneck.
-    Evidence:
-    `backport-4.9/env/local/evidence/xdisp-p2.1-native-scanout-2026-07-26T1707COT/RESULTS.md`.
-  - Replace the test-only physical-mode environment override with dynamic
-    matching on successful GUD state commit: select an exact physical
-    connector timing, recreate matching scanout buffers once, use native
-    rectangle copies, and retain scaling when no exact mode exists or an exact
-    activation fails. Keep USB advertised preference independent of physical
-    mode selection.
-    Formal design:
-    `docs/superpowers/specs/2026-07-26-xdisp-p2-1-dynamic-mode-matching-design.md`.
-    Ordered implementation plan:
-    `docs/superpowers/plans/2026-07-26-xdisp-p2-1-dynamic-mode-matching.md`.
-    Component gate:
-    `../gud-gadget/docs/XDISP-P2.1-DYNAMIC-MODE-MATCHING-TEST.md`.
-  - After dynamic mode matching, run an unpaced native comparison. The paced
-    result proves at least 5 fps but does not establish maximum throughput,
-    CPU use, dropped frames, tearing, or Mir/Lomiri/video-decode behavior.
-  - The 2026-07-26 adaptive raw-30 transport gate restored the normal Pi
-    descriptor maximum while retaining the OnePlus module's 12,800-byte actual
-    bulk-payload guard. A static frame fell from 144 to five rectangles; two
-    300-frame raw RGB565 runs completed at 19.481 and 22.871 fps without a
-    host `-110` or Pi DWC2/vc4 fault. Treat that as a transport result, not
-    30-fps acceptance: it lacks CPU, latency-percentile, drop/tear, and safe
-    post-payload restart measurements. Evidence:
-    `backport-4.9/env/local/evidence/xdisp-p2.1-adaptive-raw30-2026-07-26T2244COT/RESULTS.md`.
-  - Align the 4.9 backport's mode serializer with upstream by translating
-    `DRM_MODE_TYPE_PREFERRED` into `GUD_DISPLAY_MODE_FLAG_PREFERRED` when real
-    gadget mode enumeration replaces the current fixed diagnostic mode. This
-    is an out-of-tree module correction, not a full phone-kernel build.
-  - Implement any 512-byte comparison with the current poison/teardown
-    containment; do not redeploy the old artifact or treat it as the
-    reliability fallback or normal default.
-- [ ] Evaluate damage tracking / partial framebuffer transfers only if the
-  measured baseline shows they are needed for the v1 release SLO.
-- [x] Use RGB565 for the active MVP to reduce USB-transfer bandwidth.
-- [ ] Evaluate LZ4 compression only if measurements show it is needed for the
-  v1 release SLO.
-- [ ] Benchmark CPU usage and frame rate on OnePlus 6.
-- [ ] Investigate asynchronous USB transfers only if measurements show the
-  sequential bounded path prevents the v1 release SLO.
+Do not generate giant evidence bundles for successful repetitions.
 
-## P2 — Feature parity
+## NEXT — package the known-good path
 
-Full/reference GUD gadget feature parity, portability, upstreaming, and
-optional transport complexity are post-v1 work owned by roadmap Epic E7; they
-must not displace the measured minimal appliance path.
+Do not design packaging around today's manual workflow. Finish the automatic activation path first, then package it.
 
-- [ ] PRIME/dma-buf support.
-- [ ] Rotation.
-- [ ] Backlight.
-- [ ] Multiple connectors.
-- [ ] TV properties.
-- [ ] Suspend/resume hardening.
-- [ ] Generalize beyond the OnePlus 6 vendor 4.9 kernel.
+### [ ] E6-T01 — Freeze the shipped bundle
+
+**Priority:** P0
+
+Create one compatibility manifest containing:
+
+Phone:
+
+- supported kernel ABI;
+- `gud.ko` artifact + hash;
+- `mirgud` / `xdispd` artifacts + hashes;
+- activation/service files;
+- configuration files genuinely required at runtime.
+
+Pi:
+
+- gadget binary + hash;
+- service/configuration files;
+- FunctionFS/configfs/bootstrap requirements;
+- waiting/error presentation assets if required;
+- supported base image/kernel assumptions.
+
+Global:
+
+- source commit for every artifact;
+- bundle version;
+- phone/Pi compatibility pair;
+- rollback version/artifacts.
+
+Done when a release candidate can be reconstructed without referring to a developer's build directory.
+
+### [ ] E6-T02 — One-entry-point phone installer/update/rollback
+
+**Priority:** P0
+
+Requirements:
+
+- starts from the supported Ubuntu Touch image;
+- validates kernel ABI before replacing/loading `gud.ko`;
+- installs the bridge binaries and activation integration;
+- preserves recovery/SSH access;
+- is safe to rerun;
+- does not overwrite an unknown incompatible install silently;
+- records installed bundle version;
+- supports uninstall/rollback to the previous known version;
+- reports a clear success/failure summary.
+
+Implementation can initially be a well-structured installer if native packaging would slow the MVP. Do not lock the design to `.deb`, Click, or another format before confirming what best fits the target image.
+
+Done when a fresh supported phone can be prepared through one documented entry point without copying files manually one by one.
+
+### [ ] E6-T03 — One-entry-point Pi installer or supported image
+
+**Priority:** P0
+
+Requirements:
+
+- starts from the supported Raspberry Pi OS/base image or a documented prepared image;
+- installs the gadget runtime and exact service configuration;
+- enables required boot-time pieces;
+- brings up FunctionFS/GUD automatically at boot;
+- owns the HDMI waiting/error screen lifecycle;
+- validates prerequisites and refuses incompatible state;
+- is safe to rerun;
+- supports update and rollback.
+
+Done when a fresh Pi becomes the appliance without manual configfs/FunctionFS/service setup commands.
+
+### [ ] E6-T04 — Boot/session orchestration
+
+**Priority:** P0
+
+Verify installation produces the intended runtime automatically:
+
+```text
+Pi boot
+  → gadget service ready
+
+Phone boot/session
+  → activation service ready
+
+USB connect
+  → GUD discovered
+  → bridge starts
+  → Lomiri external output appears
+```
+
+Handle ordering races:
+
+- phone first / Pi later;
+- Pi first / phone later;
+- service restart;
+- temporary unavailable device;
+- stale bridge instance.
+
+No infinite polling loops and no unbounded restart storm.
+
+## THEN — supportability and release gate
+
+### [ ] E6-T05 — `doctor` / health report
+
+**Priority:** P1
+
+Provide one concise supported diagnostic entry point (one per device is fine initially) that reports only actionable state.
+
+Phone report should include:
+
+- bundle version and artifact hashes;
+- kernel ABI and loaded GUD module version;
+- discovered GUD device/node;
+- connector/mode summary;
+- activation/bridge service state;
+- bridge PID and current presentation state;
+- recent host errors relevant to GUD/USB/Mir.
+
+Pi report should include:
+
+- bundle version;
+- gadget service state;
+- UDC/configuration state;
+- current physical HDMI mode;
+- FunctionFS transaction state;
+- Poisoned/timeouts/processing failures;
+- throttling/temperature;
+- recent DWC2/VC4 errors.
+
+Output should end with a coarse classification such as:
+
+- READY;
+- PHONE_GUD_NOT_FOUND;
+- PI_GADGET_NOT_READY;
+- BRIDGE_NOT_RUNNING;
+- MIR_ACTIVATION_FAILED;
+- TRANSPORT_CONTAINED;
+- PI_DISPLAY_FAILED.
+
+### [ ] E6-T06 — Fresh-install MVP qualification
+
+**Priority:** P0
+
+Start from supported clean images, not existing development devices.
+
+A tester following only release instructions must be able to:
+
+1. install phone bundle;
+2. install/provision Pi bundle;
+3. reboot as requested;
+4. connect HDMI/USB;
+5. obtain external desktop automatically;
+6. use 720p and 1080p DirectExact modes as automatically selected by the current policy;
+7. disconnect/reconnect;
+8. run health diagnostics;
+9. update or roll back;
+10. uninstall/recover.
+
+Fail the gate if success requires:
+
+- source checkout;
+- manual DRM enumeration;
+- selecting `/dev/dri/cardX` by hand;
+- manually starting `xdispd` or `mirgud`;
+- benchmark-only tools;
+- undocumented service restarts;
+- compositor restart as a routine step.
+
+### [ ] E6-T07 — Compact operator runbook/release bundle
+
+**Priority:** P1
+
+Keep it short and user-facing:
+
+- supported hardware/software;
+- install;
+- connect/use;
+- status/doctor;
+- update;
+- rollback/uninstall;
+- known limitations.
+
+Do not expose internal benchmark procedures as normal operating instructions.
+
+## Post-MVP backlog
+
+These are deliberately not on the current critical path.
+
+### Display configuration
+
+- [ ] `E4-T04` investigate/implement user-visible resolution selection, placement, and persistence in Lomiri.
+- [ ] `E4-T05` full configurable geometry/placement/reconnect matrix.
+
+MVP accepts Lomiri's automatic mode/layout policy as long as the output is usable.
+
+### Performance
+
+- [ ] damage-aware updates if real UX shows a need;
+- [ ] reduce full-frame LZ4 CPU cost;
+- [ ] deterministic Mir desktop workload qualification;
+- [ ] compare VC4/HVS hardware scaling with current CPU ScaledFallback;
+- [ ] USB3-capable transport/hardware investigation if higher incompressible 1080p throughput becomes a product requirement.
+
+### Reliability/research
+
+- [ ] deeper diagnosis of any remaining OnePlus same-boot reconnect limitation after the automated recovery path is implemented;
+- [ ] generic FunctionFS/AIO upstream work;
+- [ ] generic Linux 4.9 compatibility cleanup;
+- [ ] generic GUD gadget feature parity;
+- [ ] other host OS/platform ports.
+
+## Do not work on now
+
+Unless a current P0 gate fails because of it, do not spend MVP time on:
+
+- old 12,800-byte logical payload planner work;
+- new codecs;
+- logical GUD pipelining;
+- increasing presenter queue depth;
+- Mir core patches;
+- Android2 GUD-specific integration;
+- user-configurable resolution/placement;
+- scaler optimization;
+- USB3;
+- upstreaming/generalization.
+
+## MVP definition of done
+
+The project is ready for an MVP release when a fresh operator can take supported phone/Pi base images and reach this flow:
+
+```text
+install phone
+install/provision Pi
+reboot if requested
+connect HDMI + USB
+external desktop appears automatically
+use it
+disconnect/reconnect
+run doctor if needed
+update/rollback safely
+```
+
+with:
+
+- no manual enumeration;
+- no hard-coded DRM card number;
+- no manual bridge start;
+- correct DirectExact output;
+- bounded presenter/transport ownership;
+- no phone freeze on external-display failure;
+- clean normal safety counters;
+- compact release artifacts and documentation.
