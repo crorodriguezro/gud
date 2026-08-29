@@ -1,264 +1,157 @@
 # OnePlus 6 to Raspberry Pi GUD External Display
 
-## Product scope, epics, and delivery roadmap
+## Product roadmap
 
-Status: E2 COMPLETE FOR V1; E4-T01, E4-T06, and E4-T07 PASS-B verified; default transport is direct Mir RGB565 + LZ4
+Status: core display path is working; MVP focus has moved to user experience, automatic activation, installation, and recovery.
 
-Date: 2026-08-26
+Updated: 2026-08-28
 
 Coordination repository: `gud`
 Component repositories: `gud`, `gud-gadget`, `mir-android2-platform-gud`
+Canonical integration branch in all repositories: `development`
 
-## Canonical branch policy
+`PROJECT-STATUS.md` is the detailed evidence journal. This roadmap is intentionally concise and records current product priorities rather than repeating historical experiment detail. Historical acceptance data remains available in `PROJECT-STATUS.md`, component evidence directories, and git history.
 
-The active integration branch in all three component repositories is
-`development`:
+## 1. MVP product goal
 
-- `gud`: `development`
-- `gud-gadget`: `development`
-- `mir-android2-platform-gud`: `development`
+Ship an installable external-display stack where a OnePlus 6 running Ubuntu Touch/Lomiri uses a Raspberry Pi Zero 2 W as a USB GUD-to-HDMI bridge.
 
-The pre-T06 synthetic Android2 Mir history is preserved as
-`legacy/pre-t06-android2-synthetic-gud-fork`. Existing
-`pixel-format-benchmark` branches remain historical references and are not
-canonical integration branches.
+The MVP user journey is:
 
-This document is the product-level source of truth for scope, priorities,
-epics, and delivery order. `PROJECT-STATUS.md` remains the evidence journal
-and cross-repository status board. Component backlogs and runbooks retain
-their implementation detail.
+1. Install the phone bundle.
+2. Install the Pi bundle or provision the supported Pi image.
+3. Reboot when the installer requires it.
+4. Connect HDMI and the documented USB topology.
+5. The Pi exposes GUD automatically.
+6. The phone discovers the GUD device automatically.
+7. The Mir/Lomiri external-display path starts automatically.
+8. The external desktop appears without running enumeration commands, selecting `/dev/dri/cardX`, or manually starting development tools.
+9. Disconnect/reconnect is recovered automatically when the platform allows it, with a clear bounded failure state otherwise.
+10. Update, diagnostics, uninstall, and rollback are documented and repeatable.
 
-No GitHub issues have been created from this roadmap yet.
+A developer checkout and manual benchmark workflow are not acceptable as the normal MVP installation or activation path.
 
-## Benchmark closure and production default
-
-The full-frame codec benchmark is closed and retained under `benchmark/` for
-historical evidence. The production transport default is now fixed to the
-measured real-hardware winner:
-
-- **Default:** direct Mir RGB565 + LZ4
-- **Optional low-bandwidth mode:** RGB332 + LZ4
-- **Rejected:** R4G4B4 + LZ4
-- **Deferred:** JPEG, for photographic/video tests only
-
-The measured real path was approximately 22-24 presented FPS on live UI, with a
-USB2 plateau around 37-38 MiB/s at realistic payload sizes. That evidence does
-not reopen codec exploration; it keeps the production decision anchored to the
-actual low-entropy desktop workload and keeps future experiments explicitly
-labeled as future work.
-
-Immediate roadmap item: **E4-T02 — fix full-width content and channel correctness**. E4-T07 selected PASS-B.
-
-The clean upstream-based Mir reconstruction is now the canonical
-`mir-android2-platform-gud` development history. The pre-T06 synthetic
-Android2 fork is preserved under
-`legacy/pre-t06-android2-synthetic-gud-fork`.
-
-E3 reconnect reliability remains partially deferred as a OnePlus/Qualcomm
-same-boot host limitation tracked by GitHub issues #3 and #4; the existing
-discovery/lifecycle work is substantially proven and E4-T06 does not reopen
-that investigation.
-
-## 1. Final goal
-
-Deliver an installable and recoverable external-display stack in which a
-OnePlus 6 Ubuntu Touch phone, retaining its existing Linux 4.9 kernel, uses a
-Raspberry Pi Zero 2 W as a USB GUD peripheral and HDMI bridge, and Lomiri
-exposes the attached monitor as a stable independent desktop output.
-
-The intended user experience is:
-
-1. Boot the phone and Pi normally.
-2. Connect the documented USB topology.
-3. The phone discovers the live GUD device without assuming a DRM card number.
-4. Lomiri exposes a correctly sized external desktop, not a mirrored capture.
-5. Windows and the pointer can move between the phone and external monitor.
-6. Phone input and the internal display remain responsive when the Pi is slow,
-   disconnected, or reports an error.
-7. Disconnect and reconnect recover without rebooting the phone or editing
-   device paths.
-8. Failures are contained, observable, and recoverable without filesystem or
-   kernel damage.
-
-### Product completion criteria
-
-The first usable release is complete only when all of the following pass with
-retained evidence:
-
-- **Independent output:** Lomiri exposes and uses a real extended desktop at
-  1280x720 or another explicitly selected common mode.
-- **Correct presentation:** the output fills the monitor with correct channel
-  order, geometry, stride, orientation, and window placement.
-- **Responsive UI:** GUD copy, KMS, and USB waits never run on Mir's compositor
-  commit path; slow, missing, or failed GUD output does not freeze phone input
-  or the internal display.
-- **Bounded resources:** worker depth, buffers, fences, file descriptors, and
-  memory remain bounded during a 30-minute mixed desktop workload.
-- **Reliable transport:** all actual OnePlus-to-Pi bulk payloads remain within
-  the qualified safe operating envelope, every accepted receive completes or
-  enters explicit containment, and normal operation creates no kernel Oops,
-  allocator corruption, DWC2 stop timeout, or pstore record.
-- **Reconnect:** ten consecutive detach/reconnect cycles recover the output
-  even when the DRM card number changes, without a compositor or phone reboot.
-- **Usable performance:** the measured desktop workload meets the release SLO
-  selected in Epic E5. Until the baseline is measured, the draft target is at
-  least 20 presented frames/s with p95 end-to-end presentation latency no more
-  than 150 ms at 1280x720, while preserving phone responsiveness.
-- **Operable release:** a fresh operator can install, validate, roll back, and
-  collect diagnostics using versioned instructions and hashed artifacts.
-
-The performance figures are product targets, not claims about the current
-implementation. E5 may revise them once an apples-to-apples full-pipeline
-baseline exists, but it must record the decision explicitly.
-
-## 2. Scope boundaries
-
-### In scope for the first usable release
-
-- OnePlus 6 running the installed Ubuntu Touch / Halium Linux 4.9 kernel.
-- A standalone out-of-tree host `gud.ko`; no phone DRM-core patch.
-- Raspberry Pi Zero 2 W userspace GUD gadget over FunctionFS and DWC2.
-- The verified actual bulk-payload ceiling of 12,800 bytes unless stronger
-  hardware evidence safely replaces it.
-- One independent Lomiri external output.
-- Dynamic GUD DRM discovery, hot removal, and re-add.
-- Bounded asynchronous presentation with newest-frame coalescing.
-- XRGB8888 and/or RGB565, with the default selected from measurements.
-- Correct mode selection, geometry, scaling fallback, and presentation.
-- Safe lifecycle, diagnostics, installation, rollback, and recovery.
-
-### Explicitly out of scope for the first usable release
-
-- Implementing the full or reference GUD gadget feature set. For v1, the Pi
-  implements only the GUD behavior required by the OnePlus 6 → Pi Zero 2 W →
-  HDMI product path.
-- USB-C DisplayPort Alt Mode; the transport is USB GUD.
-- Screen mirroring as the final product. It may be used only as a diagnostic
-  or performance control.
-- Replacing or flashing the OnePlus kernel.
-- Patching Linux 4.9 DRM core without a separately proven hard blocker.
-- Arbitrary Android phones, arbitrary vendor 4.9 kernels, or generic distro
-  support.
-- 4K, HDR, multiple external connectors, rotation, TV properties, backlight,
-  PRIME/dma-buf zero-copy, or suspend feature parity unless required by a P0
-  acceptance gate.
-- Removing the 12,800-byte limit merely for elegance. Its root cause is a
-  research item unless the verified limit prevents the release SLO.
-- Upstreaming before the product path is stable and measured.
-
-## 3. Verified baseline as of 2026-08-17
-
-| Capability | State | Evidence-backed conclusion |
-| --- | --- | --- |
-| Exact OnePlus 6 module build and ABI | verified | The standalone module builds for and loads on `4.9.112-g6b190d86b`. |
-| USB probe and DRM/KMS registration | verified | `1d50:614d` probes and creates a GUD DRM card with a connector, CRTC, plane, and mode. |
-| Direct KMS first pixels | verified | State check/commit and framebuffer transfer have produced complete physical output. |
-| Safe actual payload envelope | verified | Repeated adaptive tests qualify actual bulk payloads at or below 12,800 bytes. |
-| Native FunctionFS STATUS_ON_SET transaction | verified for two guarded diagnostic transactions | Two ordered, uncompressed 12,800-byte XRGB8888 transactions each accepted exact AIO before GET_STATUS=OK, completed through DWC2, FunctionFS, userspace, and framebuffer processing, and returned both guards to Idle before the next transaction. |
-| Production sequential native-AIO transport | planned | The bounded two-transaction diagnostic intentionally detaches and has not proven a long-lived multi-frame lifecycle. |
-| Independent Lomiri external output | feasibility proven, rolled back | The POC exposed `DisplayPort-2` and an extended desktop, but the implementation is not stable or deployable. |
-| Nonblocking Mir presentation | in progress | A newest-frame worker exists at source/component-test level; the synthetic render target and hardware resource lifecycle remain unresolved. |
-| Dynamic DRM card discovery/re-add | planned | Current experiments can scan by driver, but complete remove/re-add and Mir output recreation are not verified. |
-| Pixel-format capability/default | E2 v1 candidate selected; E2 qualified; release default undecided | The deployed Mir 1.8.3 Android2 screencast accepts true packed RGB565 and RGB888, rejects XRGB8888, and supplies ABGR8888 under `auto`. Direct Mir RGB565 + LZ4 achieved 22.62 presented fps at 1280x720 against the >=20 target; RGB565 RAW achieved 18.16 fps and remains the fallback. The final release default remains open in E5-T03. |
-| Persistent phone SSH | verified on current system image | The lower-root `ssh.service` boot link survives reboot and key-only SSH starts without manual activation. |
-
-The one-transaction STATUS_ON_SET foundation evidence is retained at
-`../gud-gadget/evidence/functionfs-status-on-set-hs-20260817T165632Z/`. The
-guarded sequential gate is retained at
-`../gud-gadget/evidence/functionfs-status-on-set-e1-t02-hs-corrected-20260817T192939Z/`.
-
-### Pixel-format capability audit — VERIFIED
-
-Deployed Mir 1.8.3 Android2 screencast on the OnePlus 6:
-
-- XRGB8888: not advertised; request rejected.
-- RGB888: true packed 24-bpp buffer supported.
-- RGB565: true packed 16-bpp buffer supported.
-- RGB565 can be consumed directly by `mirgud`.
-
-Decision: **Direct Mir RGB565 + LZ4 is the selected E2 v1 transport candidate
-for sustained qualification.** At 1280x720 it achieved 22.62 presented fps,
-exceeding the >=20 fps target, while preserving E1 transport safety. RGB565
-RAW achieved 18.16 fps and remains the simpler fallback. The deployed Mir
-1.8.3 screencast path supplies true packed RGB565 directly, so no
-XRGB8888-to-RGB565 conversion is required in mirgud. Do not treat this as the
-final production default before T04 and T05.
-
-Canonical evidence:
-`../gud-gadget/evidence/xdisp-mir-format-capability-20260824T003458Z/`.
-
-This verifies deployed source capability and records the selected E2 v1
-candidate. E2-T04 and E2-T05 are now qualified for v1; E5-T03 remains
-responsible for the final release-default and image-quality decision.
-
-### E2 v1 transport selection — VERIFIED FOR NEXT GATE
-
-The four measured paths are recorded in the canonical evidence bundles under
-`../gud-gadget/evidence/`:
-
-- `xdisp-mir-format-capability-20260824T003458Z/`
-- `xdisp-e1-fullframe-managed-scaling-20260823T223143Z/`
-- `xdisp-e2-bandwidth-damage-20260823T232018Z/`
-- `xdisp-e2-direct-mir-rgb565-20260824T010040Z/`
-
-The selected architecture is:
+## 2. Current architecture
 
 ```text
-Lomiri -> unmodified Mir 1.8.3 -> direct packed RGB565 screencast
-  -> mirgud (no XRGB8888 conversion) -> GUD RGB565 -> LZ4 -> USB
-  -> Pi Zero 2 W FunctionFS GUD gadget -> RGB565 framebuffer/VC4 -> HDMI
+Lomiri / Mir
+    ↓ public Mir/MirClient APIs
+xdispd / mirgud
+    ↓ LatestFramePresenter
+GUD DRM host driver on OnePlus 6
+    ↓ USB 2.0 High Speed
+Pi Zero 2 W userspace FunctionFS GUD gadget
+    ↓ VC4 DRM
+HDMI monitor
 ```
 
-This is the selected E2 v1 transport candidate; it is not an installed final
-production default. Preserve one logical accepted/inflight
-GUD payload, no payload pipelining, explicit retry only for explicit
-pre-bulk SET_BUFFER BUSY, and Poisoned containment for ambiguous accepted I/O.
+Production invariants:
 
-## 4. Priority and lifecycle model
+- direct packed RGB565 from Mir;
+- LZ4 with same-frame RAW fallback;
+- `LatestFramePresenter` with max pending = 1 and max in-flight = 1;
+- one logical accepted/in-flight GUD transaction on the gadget;
+- no hard-coded `/dev/dri/card1` in production discovery;
+- no Mir core patch;
+- no GUD-specific Android2 backend patch while public Mir APIs remain sufficient;
+- slow or failed external presentation must never freeze the phone UI.
 
-### Priorities
+## 3. Verified baseline
 
-- **P0 — release blocker:** required for a stable external display; work on
-  these before feature or performance expansion.
-- **P1 — release quality:** required before calling the result usable, but can
-  begin after its P0 dependencies have stable interfaces.
-- **P2 — post-release improvement:** valuable optimization, portability, or
-  deeper diagnosis that is not required by the current product envelope.
-- **P3 — research/optional:** upstreaming and feature parity after the product
-  is stable.
+The following are no longer active research questions for the MVP:
 
-### Lifecycle states
+| Area | State | Current conclusion |
+| --- | --- | --- |
+| E1 transport safety | verified | Long-lived single-transaction FunctionFS transport and containment model are accepted for v1. |
+| E2 bounded presenter | verified | `LatestFramePresenter` protects the Mir producer; pending/in-flight depth remains 1/1. |
+| Mir integration | verified | Standalone `xdispd` + `mirgud` through public Mir APIs is sufficient. |
+| Full-frame GUD semantics | verified | Full logical payload transport replaced the obsolete project-specific 12,800-byte logical planner. |
+| Pixel correctness | verified | 1280x720 RGB565 geometry, stride, row order, channel order, and physical output are correct. |
+| Physical modes | verified | Exact physical HDMI timings route DirectExact at 1280x720 and 1920x1080; synthetic modes use ScaledFallback. |
+| 720p performance | characterized | Stable live desktop observations are approximately 21–28 FPS; incompressible content is USB-bound around 17 FPS. |
+| 1080p performance | characterized | Stable live desktop is approximately 19–20 FPS with ~645 KB LZ4 payloads; host LZ4 plus GUD/USB presentation dominates. Raw/incompressible 1080p is USB-bound around 8 FPS. |
+| Synthetic scaling | characterized | Current Pi CPU scaler is the dominant cost around 152 ms/frame and is post-MVP unless synthetic modes become required. |
 
-Use only `planned`, `in progress`, `blocked`, `verified`, and `rolled back`, as
-defined in `docs/superpowers/CROSS-REPOSITORY-WORKFLOW.md`.
+The last production-path performance run remains formally PARTIAL because the live desktop scene was not a deterministic injected workload. That does not block the present UX/productization phase. Re-open deep performance work only for a measured product need or regression.
 
-### Focus and work-in-progress rules
+## 4. MVP scope
 
-- Keep one primary P0 implementation ticket active per repository.
-- Run at most one hardware experiment at a time across the project.
-- Every experiment must map to a ticket and predeclared acceptance gate.
-- A failure opens or updates a ticket; it does not silently expand the active
-  experiment.
-- Do not start a P1 hardware gate while a prerequisite P0 gate is unsafe or
-  ambiguous.
-- Preserve prior evidence. New runs always use new evidence directories.
-- A visible frame, compile, or simulation is not hardware verification unless
-  the ticket's acceptance criteria explicitly say so.
+### In scope
 
-## 5. Milestones and critical path
+- OnePlus 6 on the current Ubuntu Touch/Halium Linux 4.9 target.
+- Raspberry Pi Zero 2 W GUD-to-HDMI appliance.
+- One external display.
+- Automatic GUD discovery and activation.
+- Automatic start/stop of the userspace display bridge.
+- Correct 720p and 1080p DirectExact physical modes.
+- Bounded presentation and transport failure containment.
+- Normal connect/disconnect/reconnect lifecycle.
+- Phone installer/update/rollback.
+- Pi installer/image/update/rollback.
+- Version/compatibility manifest.
+- Simple health/diagnostic command.
+- Short operator documentation.
+- Fresh-install MVP qualification from supported base images.
 
-| Milestone | Outcome | Required epics | State |
+### Explicitly post-MVP
+
+- Lomiri UI for choosing resolution.
+- User-controlled monitor placement.
+- Persisting custom Lomiri placement/layout policy.
+- Full multi-monitor geometry/placement matrix beyond the automatic MVP policy.
+- Damage-aware updates unless needed to fix an MVP performance regression.
+- Alternative compression codecs.
+- VC4/HVS scaling optimization.
+- USB3 transport work.
+- Generic Android/macOS/Windows host support.
+- Multiple external connectors, rotation, HDR, 4K, PRIME/dma-buf zero-copy, and generic GUD parity.
+- Upstreaming work that does not directly unblock the MVP.
+
+For MVP, accept Lomiri's automatic mode/layout behavior as long as the external output is usable and correct. Resolution/placement configuration is deliberately deferred.
+
+## 5. Milestones
+
+| Milestone | Outcome | State |
+| --- | --- | --- |
+| M0 — Technical foundation | Module build, probe, first pixels, safe transport | verified |
+| M1 — Responsive production path | Bounded Mir presenter + long-lived GUD path | verified |
+| M2 — Correct physical display | RGB565 correctness + 720p/1080p DirectExact modes | verified |
+| M3 — Performance characterization | 720p/1080p bottlenecks understood well enough to proceed | verified for MVP planning |
+| M4 — Plug-and-display beta | Connect cable and external output appears without manual enumeration/start commands | planned — current focus |
+| M5 — Installable MVP | Phone + Pi installation/update/rollback and clean-device qualification | planned |
+| M6 — Post-MVP polish | User layout controls, scaling/performance expansion, portability/upstreaming | planned |
+
+Current critical path:
+
+```text
+M4 automatic activation
+    ↓
+M5 phone/Pi packaging + fresh-install qualification
+    ↓
+MVP release
+```
+
+## 6. Active epics and tickets
+
+### E3 — Automatic discovery, activation, and lifecycle
+
+Priority: P0
+State: partially verified; activation UX remains incomplete
+Owners: `mir-android2-platform-gud`, `gud`, coordination
+
+Outcome: the user connects the supported Pi and the external output appears without manual DRM/Mir enumeration or developer commands.
+
+| Ticket | P | State | Deliverable and acceptance |
 | --- | --- | --- | --- |
-| M0 — Technical foundation | Build, probe, direct KMS, first pixels, and safe payload envelope | E0 | verified |
-| M1 — Production-safe transport | Sequential protocol-native receives and lifecycle are safe within the qualified envelope | E1 | verified |
-| M2 — Responsive external-output alpha | Lomiri external output presents through a bounded worker without freezing or leaking resources | E2 | planned/in progress |
-| M3 — Reconnectable and correct beta | Dynamic discovery, reconnect, mode, geometry, and window placement pass repeated gates | E3, E4 | planned |
-| M4 — Usable v1 | Performance SLO, soak, installer, rollback, diagnostics, and operator docs pass | E5, E6 | planned |
-| M5 — Portability and upstream work | Generalization and upstream-quality improvements begin from a stable baseline | E7 | planned |
+| `E3-T01` Discover GUD DRM by identity | P0 | verified | Production selects the live GUD DRM device dynamically rather than assuming a card number. |
+| `E3-T02` Event-driven device presence | P0 | planned | Boot-time presence and later add/remove events drive bounded discovery; no manual enumeration command is required. |
+| `E3-T03` Automatic bridge lifecycle | P0 | planned | The supported session automatically starts/stops the required `xdispd`/`mirgud` path when GUD becomes usable or disappears. No operator shell command is required in the normal path. |
+| `E3-T04` Automatic Lomiri output activation | P0 | planned | The sequence currently performed manually to make Lomiri see/use the external display is owned by the product service and is idempotent across boot and reconnect. |
+| `E3-T05` Connect/disconnect/reconnect UX matrix | P0 | planned | Starting from a normal boot, repeated cable connect/disconnect cycles do not require DRM node selection, enumeration commands, service restarts, or compositor restart. Known platform limitations must be automatically recovered where possible and clearly diagnosed otherwise. |
 
-Critical path:
+Do not hide the manual workflow behind a single undocumented script and call it complete. The product service must own ordering, retries, instance identity, stale-resource cleanup, and bounded failure behavior.
 
-`E1 safe transport -> E2 bounded presentation -> E3 reconnect -> E4 correctness -> E5 release SLO -> E6 v1 qualification`
+### E4 — Display correctness and mode policy
 
 E6 documentation and packaging work may proceed offline in parallel, but its
 release gate depends on E1 through E5. E7 must not distract from this path.
@@ -496,225 +389,128 @@ platform, or HWC2 GUD changes were made.
 Priority: P1
 
 State: planned
+Priority: P1 for verified basics; P2 for user configuration
+State: MVP basics verified
 Owners: `mir-android2-platform-gud`, `gud-gadget`, `gud`
 
-Legacy mapping: `XDISP-P1.1` plus the mode-matching portion of
-`XDISP-P2.1`.
+| Ticket | P | State | Deliverable and acceptance |
+| --- | --- | --- | --- |
+| `E4-T01` End-to-end mode contract | P1 | verified | Selected timing, source geometry/format, GUD state, and Pi physical mode are traceable. |
+| `E4-T02` Pixel/geometry correctness | P1 | verified | Deterministic RGB565 reference pattern proves full geometry and channel correctness. |
+| `E4-T03` Physical-mode routing | P1 | verified | Exact physical timings map to DirectExact; synthetic timings use ScaledFallback. |
+| `E4-T06` Public-Mir integration guardrail | P1 | verified | Production stays outside Mir core/Android2 modifications while public APIs suffice. |
+| `E4-T07` Full-update GUD semantics | P1 | verified | Full logical payload path preserves E1 safety and presenter backpressure. |
+| `E4-T04` Lomiri resolution/placement policy and persistence | P2 | planned — post-MVP | Investigate and implement user-visible configuration/persistence only after MVP. |
+| `E4-T05` Full geometry/placement matrix | P2 | planned — post-MVP | Validate configurable placement/orientation/reconnect policy after E4-T04. |
 
-Outcome: the external desktop consistently fills the selected monitor mode
-with correct pixels and predictable Lomiri placement.
+### E5 — Performance and quality
 
-User stories:
-
-- As a user, the external desktop is full-width, correctly oriented, and not
-  cropped or squeezed.
-- As a user, enabling or reconnecting the monitor restores the same layout.
-- As a developer, advertised mode, Mir buffer, GUD state, and Pi scanout are
-  traceably consistent.
-
-| Ticket | P | State | Depends on | Deliverable and acceptance |
-| --- | --- | --- | --- | --- |
-| `E4-T01` Define the end-to-end mode contract | P1 | verified | E2 stable | Record selected timing, logical size, source size/stride/format, GUD state, and Pi physical mode under one correlation ID. |
-| `E4-T07` Restore upstream-style GUD full-update and async semantics | P1 | verified (PASS-B) | E1 stable, E2 complete, E4-T06 | Configuration B is hardware-qualified at negotiated capacity and selected for production: upstream-style synchronous full-payload GUD plus `LatestFramePresenter`. The default-off kernel async path passes normal, 3.5-second-stall, and active-detach gates with one pending slot, but optional Mir direct mode still lacks the established AArch64/live Mir gate, so the already-qualified presenter is retained. |
-| `E4-T02` Fix full-width content and channel correctness | P1 | verified | E4-T01, E4-T07 | Deterministic RGB565 reference pattern proved full geometry, stride, row/channel order, and physical monitor correctness at 1280x720; 11/11 frames presented with no transport failures. |
-| `E4-T03` Align Rust gadget physical-mode behavior with original C GUD gadget semantics | P1 | verified | E1 stable | The gadget advertises exact physical connector timings, maps a selected real GUD timing back to its corresponding VC4 DRM mode, and performs an exact physical modeset/direct scanout. Only synthetic nonphysical modes use scaled fallback. Hardware-qualified at exact 1280x720 and 1920x1080 with five round trips, same-mode idempotence, and synthetic fallback. |
-| `E4-T04` Persist Lomiri placement policy | P1 | planned | E3-T04 | External position, primary/internal roles, and pointer transitions remain correct across enable/disable and reconnect. |
-| `E4-T05` Repeated geometry and placement matrix | P1 | planned | E4-T02..T04 | Ten enable/disable and ten reconnect cycles retain full-screen correct output and window placement. |
-
-**E4 integration guardrail (2026-08-26):** E4-T06 is verified after the
-already-qualified E4-T01 mode contract and before further implementation-heavy
-E4 work. The production path is standalone `xdispd` plus `mirgud`, using public
-Mir client/Virtual/screencast APIs and the existing GUD DRM/KMS boundary. The
-current upstream Android2 runtime is unchanged: the clean reconstruction has
-zero GUD-specific files under `src/platforms/android/server/`. Any new
-Android2-side GUD/HWC/GL change requires ticket-local proof that a public Mir
-interface cannot satisfy the requirement, together with an updated fork delta
-and focused evidence. Existing ticket IDs and history are preserved.
-
-**E4-T07 decision rules:** Pi-internal USB request chunking must not be
-exposed as multiple logical GUD `SET_BUFFER` transactions unless the
-negotiated GUD buffer capability requires it. Prefer upstream GUD update and
-backpressure semantics over project-specific host planners when Linux 4.9 and
-OnePlus compatibility can preserve the same E1 safety guarantees.
-
-### E5 — Meet a measured performance and quality SLO
-
-Priority: P1
-
-State: in progress at instrumentation level
+Priority: P1 baseline, P2 optimization
+State: baseline characterized; optimization paused for UX work
 Owners: all repositories
 
-Legacy mapping: `XDISP-P2.1` and the pixel-format benchmark.
+| Ticket | P | State | Deliverable and acceptance |
+| --- | --- | --- | --- |
+| `E5-T01` Performance accounting | P1 | verified | Distinguish source, presenter, USB, Pi receive/process, and page-flip submission rates. |
+| `E5-T02` 720p/1080p baseline | P1 | verified for MVP planning | Raw USB ceiling, LZ4 cost, bulk timing, and stable live-desktop production rates are measured. |
+| `E5-T03` RGB565 production default | P1 | verified | Direct Mir RGB565 + LZ4 remains the MVP default. |
+| `E5-T04` Damage-aware updates | P2 | planned — post-MVP | Evaluate only if UX testing shows current desktop performance is insufficient. |
+| `E5-T05` Compression/transport optimization | P2 | planned — post-MVP | Optimize LZ4/update policy only from measured need. |
+| `E5-T06` Deterministic workload/release performance expansion | P2 | planned — post-MVP | Add controlled workload qualification if needed for a later performance SLO. |
 
-Outcome: choose the simplest transport, format, mode, and update policy that
-meets a documented full-pipeline responsiveness and visual-quality target.
+### E6 — MVP installation, operation, and recovery
 
-User stories:
-
-- As a user, desktop motion feels responsive and text/gradients have acceptable
-  quality.
-- As a maintainer, format and compression defaults come from comparable data,
-  not a single visual trial.
-- As an investigator, latency and CPU time are attributed to capture,
-  conversion, planning, USB, Pi processing, and presentation.
-
-| Ticket | P | State | Depends on | Deliverable and acceptance |
-| --- | --- | --- | --- | --- |
-| `E5-T01` Freeze benchmark semantics and accounting | P1 | in progress | E2 stable interfaces | Final reports account for received, submitted, presented, dropped, cancelled, failed, and in-flight frames with non-overlapping timing fields. |
-| `E5-T02` Establish full-pipeline baseline | P1 | planned | E2-T06, E4-T03 | Measure FPS, p50/p95 latency, drops, phone/Pi CPU, USB throughput, memory, FDs, and fences for controlled desktop, scroll, video, and noise workloads. |
-| `E5-T03` Decide RGB565 versus XRGB8888 | P1 | planned | E5-T02 | Apples-to-apples hardware data records conversion path, payload count, latency, CPU, throughput, and objective image-quality metrics; decision and rollback are documented. |
-| `E5-T04` Evaluate damage-aware updates | P1 | planned | E5-T02, release-SLO need | Add changed-region updates only if the measured simple path misses the SLO; otherwise record that they are unnecessary. Any adopted path must have no stale pixels, rectangle gaps, or payload-cap violations. |
-| `E5-T05` Evaluate compression policy beyond upstream GUD | P1 | planned | E5-T02, release-SLO need | Start from upstream's one LZ4 attempt with same-rectangle raw fallback. Add a custom planner or prediction policy only if full-pipeline measurements show the simple path misses the release SLO; any adopted split is bounded by negotiated GUD capacity, not the obsolete 12,800-byte host policy. |
-| `E5-T06` Set and verify the release SLO | P1 | planned | E5-T03, any required E5-T04/T05 | Record final FPS/latency/drop/responsiveness targets and pass them in a repeated 30-minute mixed workload. |
-
-Optimization stops when the release SLO is met. Changing negotiated transport
-capacity, zero-copy, speculative planners, and other transport complexity
-remain P2 unless measurements show they are necessary. The selected simplest
-implementation becomes the v1 default; further optimization requires a new
-measured release-SLO need.
-
-### E6 — Productize installation, operation, and recovery
-
-Priority: P1
-
-State: planned, with some verified building blocks
+Priority: P0/P1
+State: planned — current productization phase
 Owners: all repositories
 
-Outcome: the stack can be installed and operated repeatedly without relying
-on session memory, unsafe commands, or untracked artifacts.
+Outcome: shipping the project means shipping a supported bundle, not a development checkout plus remembered commands.
 
-User stories:
+Required shipped pieces include, as applicable:
 
-- As an operator, I can install or roll back each component independently.
-- As a user, the phone retains network recovery access after reboot.
-- As a support engineer, one command bundle captures enough state to classify
-  discovery, compositor, host-driver, transport, or Pi failures.
+- OnePlus `gud.ko` built for the supported kernel ABI;
+- `mirgud` / `xdispd` runtime pieces;
+- automatic activation/service integration;
+- Pi gadget binary and service configuration;
+- FunctionFS/configuration/bootstrap pieces needed by the supported Pi image;
+- waiting/error presentation assets needed for normal appliance behavior;
+- version/compatibility manifest and hashes;
+- installer, updater, uninstall/rollback path;
+- health/diagnostic command and concise runbook.
 
-| Ticket | P | State | Depends on | Deliverable and acceptance |
-| --- | --- | --- | --- | --- |
-| `E6-T01` Versioned artifact manifest and compatibility matrix | P1 | planned | chosen E1/E2 candidates | Record source commits, hashes, ABI, config, cross-component compatibility, and rollback artifact for every release candidate. |
-| `E6-T02` Guarded installers and rollback | P1 | planned | E6-T01 | Phone module, Mir plugin, and Pi service install atomically, preserve prior versions, refuse mismatched inputs, and roll back without data loss. |
-| `E6-T03` Service and boot orchestration | P1 | planned | E1, E2, E3 | Normal boot ordering, SSH persistence, USB role, Pi service policy, and compositor/plugin startup recover without manual races. |
-| `E6-T04` Unified health and evidence collector | P1 | planned | stable log schema | Collect hashes, versions, states, counters, kernel excerpts, pstore, and lifecycle markers into a new immutable evidence directory. |
-| `E6-T05` Operator runbook | P1 | planned | E6-T02..T04 | A fresh operator completes install, connection, validation, common recovery, and rollback from the document alone. |
-| `E6-T06` Release qualification matrix | P1 | planned | E1..E5 | Cold boot, connect, 30-minute use, disconnect, reconnect, error injection, and rollback all pass with retained evidence. |
+Do not prematurely mandate `.deb`, Click, system image, or shell-script packaging. First satisfy the user journey and atomic/idempotent installation requirements; choose the smallest maintainable packaging mechanism compatible with Ubuntu Touch and Raspberry Pi OS.
 
-### E7 — Portability, upstreaming, and optional features
-
-Priority: P2/P3
-
-State: planned
-Owners: component-specific
-
-Outcome: own generic GUD feature parity, portability, upstreaming, and other
-optional complexity after v1, converting proven local behavior into
-maintainable generic work without delaying the OnePlus/Pi product.
-
-User stories:
-
-- As a maintainer, local compatibility code has clear deletion or upstream
-  paths.
-- As another device owner, the design can be adapted without inheriting
-  OnePlus- or Pi-specific constants as fake protocol rules.
-
-| Ticket | P | State | Depends on | Deliverable and acceptance |
-| --- | --- | --- | --- | --- |
-| `E7-T01` Generalize the Linux 4.9 host compatibility layer | P2 | planned | v1 | Separate target ABI data from reusable 4.9 DRM/USB compatibility code and validate a second kernel only when available. |
-| `E7-T02` Propose generic bounded GUD compression planning | P2 | planned | v1, E5 decision | Upstream-facing design uses a capability/quirk model rather than hard-coding the Pi's 12,800-byte observation. |
-| `E7-T03` Upstream FunctionFS/AIO improvements | P2 | planned | v1, E1 decision | Produce minimal kernel/userspace reproducer, documented semantics, and upstream-quality tests for any required AIO change. |
-| `E7-T04` Generic GUD feature parity and optional complexity | P3 | planned | v1 | Evaluate the full/reference GUD gadget feature set, rotation, backlight, connector properties, multiple connectors, PRIME/dma-buf, deeper suspend/resume, larger transfers, zero-copy, and receive concurrency individually. |
+| Ticket | P | State | Deliverable and acceptance |
+| --- | --- | --- | --- |
+| `E6-T01` Define shipped bundle and compatibility manifest | P0 | planned | One release manifest pins all source commits, artifacts, kernel ABI, Pi requirements, hashes, and cross-component compatibility. |
+| `E6-T02` Phone install/update/rollback | P0 | planned | A fresh supported phone can install all phone-side runtime pieces through one documented entry point; rerun is idempotent; update and rollback preserve recovery access. |
+| `E6-T03` Pi install/image/update/rollback | P0 | planned | A fresh supported Pi can become the GUD-HDMI appliance through one documented entry point or supported image; boot brings up the gadget automatically. |
+| `E6-T04` Boot/session orchestration | P0 | planned | After installation, phone and Pi services come up in the correct order and E3 activation works without manual races or shell commands. |
+| `E6-T05` Health/doctor and diagnostics | P1 | planned | One short command/report identifies versions, GUD presence, active mode, bridge state, Pi gadget state, safety counters, and common failure class. |
+| `E6-T06` Fresh-install MVP qualification | P0 | planned | Starting from supported clean phone/Pi images, follow only release instructions: install, reboot as required, connect, obtain external desktop, use it, disconnect/reconnect, collect diagnostics, update/rollback. No source checkout or manual enumeration is needed. |
+| `E6-T07` Operator runbook and release bundle | P1 | planned | Concise install/use/recovery/uninstall documentation ships with hashed artifacts and known limitations. |
 
 ## 7. Prioritized execution queue
 
-This is the order to use when choosing the next ticket. A lower item may do
-offline preparation in parallel, but must not bypass its dependency gate.
+Use this order unless a concrete blocker requires a local detour:
 
-1. `E1-T01` — gracefully drain the trailing one-shot status.
-2. `E1-T02` — prove two sequential native-AIO transactions.
-3. `E1-T03` — select the production receive architecture.
-4. `E2-T01` — finish the bounded synthetic offscreen render target.
-5. `E1-T04` — implement the selected long-lived receive path.
-6. `E2-T02` — integrate the bounded newest-frame worker with that path.
-7. `E1-T05` and `E2-T03` — lifecycle matrix and compositor responsiveness.
-8. `E2-T04` and `E2-T05` — resource plateau and error containment.
-9. `E2-T06` — hardware alpha qualification.
-10. `E4-T01` — verified end-to-end mode contract.
-11. `E4-T06` — verified minimal public-Mir integration guardrail.
-12. `E4-T07` — upstream-style full-update first, then separately qualify async
-    flush as a possible kernel backpressure boundary.
-13. `E4-T02` through `E4-T05` — geometry, channel correctness, mode matching,
-    placement, and repeated correctness matrix.
-14. `E5-T01` through `E5-T06` — measurement, format/default decision, and SLO.
-15. `E6-T01` through `E6-T06` — product packaging and v1 qualification.
-16. E3 reconnect follow-up — deferred OnePlus/Qualcomm same-boot limitation;
-    retain as a separate recovery gate and do not reopen it inside E4-T06.
-17. `E1-T07`, `E1-T08`, and E7 — research/upstream work after v1 needs are
-    known.
+1. `E3-T02` + `E3-T03` — event-driven discovery and automatic bridge lifecycle.
+2. `E3-T04` — remove the manual sequence currently required for Lomiri to see/use the display.
+3. `E3-T05` — connect/disconnect/reconnect UX matrix.
+4. `E6-T01` — freeze the exact set of artifacts/configuration we ship.
+5. `E6-T02` + `E6-T03` — one-entry-point phone and Pi installation/update/rollback.
+6. `E6-T04` — boot/session orchestration tying installation to automatic activation.
+7. `E6-T05` — health/doctor command.
+8. `E6-T06` — fresh-install MVP qualification.
+9. `E6-T07` — final concise operator/release documentation.
+10. Post-MVP: `E4-T04/T05`, `E5-T04/T05/T06`, HVS scaling, USB3, portability, upstreaming.
 
 ### Immediate focus
 
-The current focus is **E4-T02**, following E4-T07 PASS-B and using the verified
-E4-T01 mode contract plus the E4-T06 public-Mir integration boundary.
-The only parallel implementation work that should proceed is offline E2-T01
-in `mir-android2-platform-gud`; it must not trigger a phone/Pi transfer until
-the E1 hardware gate is safe and scheduled.
+**Next job: E3-T02/E3-T03 — make GUD presence automatically start the usable external-display path.**
 
-## 8. GitHub-ready issue model
+The acceptance test is intentionally user-facing:
 
-When this local roadmap is accepted:
+```text
+supported phone + installed runtime
+supported Pi + installed runtime
+        ↓
+normal boot
+        ↓
+connect the documented USB cable
+        ↓
+external desktop appears
+```
 
-- Create one GitHub issue per epic and one issue per ticket.
-- Use the ticket ID at the start of every title, for example
-  `[E1-T01] Gracefully drain trailing STATUS_ON_SET status`.
-- Link tickets to their epic and list explicit dependencies in the issue body.
-- Keep cross-repository IDs identical in all repositories.
-- Close historical foundation tickets as `verified`; do not reopen them to
-  hold new work.
-- Put raw hardware evidence in the owning local evidence tree and link only
-  the safe summary/hash from GitHub.
+No `ls /dev/dri`, manual card selection, enumeration helper, manual `xdispd`/`mirgud` start, or remembered recovery command is allowed in the successful normal path.
 
-Recommended labels:
+Once that works, package exactly that known-good path instead of designing an installer around the current manual development workflow.
 
-- `type:epic`, `type:story`, `type:investigation`;
-- `priority:P0`, `priority:P1`, `priority:P2`, `priority:P3`;
-- `component:host-driver`, `component:pi-gadget`, `component:mir-lomiri`,
-  `component:operations`;
-- `state:planned`, `state:in-progress`, `state:blocked`, `state:verified`,
-  `state:rolled-back`;
-- `needs:hardware`, `needs:design`, `needs:evidence`, `safety-critical`.
+## 8. MVP release gate
 
-Every ticket body should contain:
+Call the first release MVP only when all are true:
 
-1. outcome/user story;
-2. context and evidence links;
-3. in-scope and out-of-scope boundaries;
-4. dependencies;
-5. implementation tasks;
-6. tests and exact hardware acceptance evidence;
-7. stop/containment conditions;
-8. rollback plan;
-9. definition of done.
+- supported clean phone and Pi can be installed from versioned release artifacts;
+- normal boot does not require a development checkout;
+- connecting the supported Pi causes automatic GUD discovery and display activation;
+- 720p and 1080p DirectExact remain correct;
+- phone remains responsive during slow/failing external presentation;
+- presenter remains bounded at pending <= 1 and in-flight <= 1;
+- transport safety counters remain clean in normal operation;
+- normal disconnect/reconnect requires no manual enumeration or compositor restart;
+- `doctor`/diagnostic output can classify a failed activation;
+- update/uninstall/rollback are documented and tested;
+- known post-MVP limitations, including user-controlled resolution/placement, are explicit.
 
-## 9. Decision rules that protect the horizon
+## 9. Decision rules
 
-- **v1 architecture rule:** GUD remains the wire/protocol compatibility
-  boundary, and FunctionFS remains the Pi implementation boundary. The Pi is
-  a purpose-built, minimal GUD appliance for the OnePlus 6 → Pi Zero 2 W →
-  HDMI path, not a generic GUD framework: it accepts one `SET_BUFFER` and
-  owns one transaction at a time, using explicit `Idle`, `Arming`, `InFlight`,
-  `Processing`, and `Poisoned` states. Generic GUD parity, transport
-  flexibility, extra connectors, larger transfers, zero-copy, and additional
-  concurrency are post-v1 unless measurements show they are necessary to meet
-  the release SLO.
-- The product is a usable independent external desktop, not a transport
-  research program.
-- The verified 12,800-byte envelope is a valid product constraint until data
-  proves it prevents the SLO.
-- A deeper kernel investigation competes for priority only when a P0/P1 ticket
-  demonstrates that the current envelope cannot deliver the product.
-- Mir responsiveness and bounded ownership are release blockers even when the
-  USB transport is perfect.
-- Reconnect and geometry are product behavior, not polish.
-- Performance work begins with measurement and stops when the agreed SLO is
-  met.
-- Optional features and upstreaming cannot displace the P0 critical path.
+- Product usability now outranks additional transport research.
+- Do not reopen codec, full-frame, mode-routing, or raw-USB investigations without a measured regression or release need.
+- Do not add queues or logical GUD pipelining; preserve E1 ownership semantics.
+- Do not sacrifice phone responsiveness for higher external FPS.
+- Do not hard-code DRM card numbers in an installer or service.
+- Do not make the operator reproduce internal enumeration or benchmark commands.
+- Prefer boring, observable service orchestration over clever implicit state.
+- Installation must be idempotent and recoverable before it is made more sophisticated.
+- Resolution/layout UI and custom placement persistence are post-MVP.
+- Keep evidence for release gates compact: version manifest, result summary, safety state, and only failure-relevant raw logs.
