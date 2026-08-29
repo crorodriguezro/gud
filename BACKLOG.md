@@ -18,6 +18,21 @@ GUD-specific Android2/HWC/GL integration when those interfaces suffice. Any
 exception requires ticket-local proof and an updated fork-delta classification;
 otherwise they belong after v1.
 
+## Automatic Lomiri lifecycle implementation
+
+The MVP lifecycle owner is the always-running `xdispd` system service. It
+performs one bounded DRM startup scan, then waits on DRM/udev events; it starts
+one managed `mirgud` child only for an exact live GUD instance and tears that
+child down with the existing bounded containment. The Mir side remains the
+public screencast/virtual-output path. No root udev rule launches a Mir client,
+and no `/dev/dri/cardN` value is a selection policy.
+
+The implementation is in `mir-android2-platform-gud`; the phone module-load
+drop-in is `backport-4.9/systemd/modules-load.d/gud.conf`. Package details and
+the required OnePlus VID/PID/UDC acceptance gate are documented in
+`docs/xdisp-automatic-lifecycle.md`. Deploy the new artifact and run the
+hardware matrix before changing the E3 roadmap state to hardware-verified.
+
 ## P0 — Establish the exact target build
 
 - [ ] Identify the exact OnePlus 6 Ubuntu Touch kernel repository and commit.

@@ -474,6 +474,23 @@ User stories:
 | `E3-T04` Propagate output hotplug to Lomiri | P0 | planned | E3-T03 | The external output becomes disconnected/connected accurately without disturbing the internal output. |
 | `E3-T05` Dynamic-card reconnect matrix | P0 | planned | E3-T04 | Ten reconnects, including forced card-number changes, recover automatically with no stale descriptor, compositor restart, or phone reboot. |
 
+#### 2026-08-29 automatic lifecycle implementation
+
+The standalone `xdispd`/`mirgud` path now has one lifecycle owner, a bounded
+startup DRM scan followed by libudev add/remove monitoring, durable GUD card
+identity checks, automatic activation after first install, idempotent
+remove/add handling, and a lightweight `xdisp-status` command. The service
+remains idle without a GUD card and does not poll or create a Mir source.
+Explicit `Disable` remains persistent through a dedicated state marker.
+
+This is an implementation completion, not a new hardware qualification:
+E3-T01 is supported by source and retained dynamic-card evidence; E3-T02 and
+E3-T03 require deployment of the new artifact and the task's connect,
+disconnect, and changing-card-number matrix before they can be marked
+hardware-verified. Same-boot re-enumeration remains subject to the documented
+OnePlus/Qualcomm host-controller limitation. No Mir core, Android2 display
+platform, or HWC2 GUD changes were made.
+
 ### E4 — Make geometry, modes, and desktop placement correct
 
 Priority: P1
