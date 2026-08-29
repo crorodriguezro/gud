@@ -1,7 +1,11 @@
 # Automatic GUD display lifecycle
 
-Status: userspace implementation complete; hardware requalification of the
-new automatic-activation artifact is pending.
+Status: implementation complete; 2026-08-29 hardware qualification is
+partially complete. Startup activation, automatic add/remove, same-boot
+reconnect, and bounded teardown passed with the staged ARM64 artifact. The
+fresh reconnect run reached an active presenter, but its second Mir topology
+snapshot did not report the virtual output as connected; fresh qtmir/Lomiri
+observer logs and the full ten-cycle/card-number matrix remain open.
 
 ## Selected design
 
@@ -103,10 +107,18 @@ card before a KMS or display test.
 
 Offline lifecycle tests cover automatic activation, idempotent add events,
 re-add during bounded teardown, explicit deactivation, poison containment, and
-the existing presenter/child termination behavior. A full Mir build is not
-available in this workstation image because the Android/Boost build packages
-are absent. Existing hardware evidence is retained under
-`gud-gadget/evidence/xdisp-e3-b02-oneplus-usb-role-recovery-20260825T144602Z/`
-and the Mir/qtmir transition evidence under the archived E2 presentation
-captures. The new binary must be deployed and the matrix rerun before marking
-E3-T02/T03 hardware-verified.
+the existing presenter/child termination behavior. The reproducible ARM64
+container build is documented in the Mir repository and passed the complete
+five-target Debian test suite (including 53 xdisp tests). Because the phone
+rootfs is immutable, this qualification used staged binaries under
+`/home/phablet/`; the shipped package paths remain listed in the runtime
+manifest.
+
+The current hardware result is recorded in
+`gud-gadget/evidence/xdisp-auto-lifecycle-20260829T1418Z/`. E3-T02 and E3-T03
+are hardware-verified for the tested startup/add/remove/reconnect paths. E3-T04
+is partial until a fresh qtmir/Lomiri observer capture confirms the reconnect
+configuration, and E3-T05 is partial because ten cycles and a forced
+card-number change were not run. The Pi cleanup service restart also requires
+the physical HDMI sink to be connected; its final failed restart was caused by
+`HDMI-A-1 disconnected`, not by the phone lifecycle service.

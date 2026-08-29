@@ -136,7 +136,7 @@ MVP release
 ### E3 — Automatic discovery, activation, and lifecycle
 
 Priority: P0
-State: partially verified; activation UX remains incomplete
+State: partially hardware-verified; reconnect observer proof and full matrix remain
 Owners: `mir-android2-platform-gud`, `gud`, coordination
 
 Outcome: the user connects the supported Pi and the external output appears without manual DRM/Mir enumeration or developer commands.
@@ -144,10 +144,14 @@ Outcome: the user connects the supported Pi and the external output appears with
 | Ticket | P | State | Deliverable and acceptance |
 | --- | --- | --- | --- |
 | `E3-T01` Discover GUD DRM by identity | P0 | verified | Production selects the live GUD DRM device dynamically rather than assuming a card number. |
-| `E3-T02` Event-driven device presence | P0 | planned | Boot-time presence and later add/remove events drive bounded discovery; no manual enumeration command is required. |
-| `E3-T03` Automatic bridge lifecycle | P0 | planned | The supported session automatically starts/stops the required `xdispd`/`mirgud` path when GUD becomes usable or disappears. No operator shell command is required in the normal path. |
-| `E3-T04` Automatic Lomiri output activation | P0 | planned | The sequence currently performed manually to make Lomiri see/use the external display is owned by the product service and is idempotent across boot and reconnect. |
-| `E3-T05` Connect/disconnect/reconnect UX matrix | P0 | planned | Starting from a normal boot, repeated cable connect/disconnect cycles do not require DRM node selection, enumeration commands, service restarts, or compositor restart. Known platform limitations must be automatically recovered where possible and clearly diagnosed otherwise. |
+| `E3-T02` Event-driven device presence | P0 | verified* | Boot-time presence and later add/remove events drive bounded discovery; no manual enumeration command is required. |
+| `E3-T03` Automatic bridge lifecycle | P0 | verified* | The supported session automatically starts/stops the required `xdispd`/`mirgud` path when GUD becomes usable or disappears. No operator shell command is required in the normal path. |
+| `E3-T04` Automatic Lomiri output activation | P0 | partial* | First activation reports the virtual output connected and presents a frame; the reconnect topology snapshot needs fresh qtmir/Lomiri observer evidence. |
+| `E3-T05` Connect/disconnect/reconnect UX matrix | P0 | partial* | Startup, add, remove, and one same-boot reconnect passed; ten cycles and a forced card-number change remain outstanding. |
+
+`*` Hardware qualification is recorded in
+`gud-gadget/evidence/xdisp-auto-lifecycle-20260829T1418Z/`; see
+`gud/docs/xdisp-automatic-lifecycle.md` for the exact boundaries.
 
 Do not hide the manual workflow behind a single undocumented script and call it complete. The product service must own ordering, retries, instance identity, stale-resource cleanup, and bounded failure behavior.
 
@@ -344,7 +348,7 @@ Detailed closure, evidence references, and the unpushed-change audit are in
 
 Priority: P0
 
-State: planned
+State: partially hardware-verified; see the dated qualification note below
 Owners: `mir-android2-platform-gud`, `gud`
 
 Legacy mapping: `XDISP-P0.3`.
@@ -361,11 +365,11 @@ User stories:
 
 | Ticket | P | State | Depends on | Deliverable and acceptance |
 | --- | --- | --- | --- | --- |
-| `E3-T01` Discover DRM devices by driver identity | P0 | planned | E2-T02 | Bounded enumeration selects an accessible `gud` DRM device and validates connector/mode capabilities without a hard-coded node. |
-| `E3-T02` Subscribe to DRM/udev add and remove | P0 | planned | E3-T01 | Device removal invalidates the exact live instance; re-add triggers discovery without polling forever or reusing stale fds. |
-| `E3-T03` Recreate worker and KMS resources | P0 | planned | E3-T02 | Removal cancels pending work in order, and re-add creates fresh fd, buffers, mode blob, and atomic state. |
-| `E3-T04` Propagate output hotplug to Lomiri | P0 | planned | E3-T03 | The external output becomes disconnected/connected accurately without disturbing the internal output. |
-| `E3-T05` Dynamic-card reconnect matrix | P0 | planned | E3-T04 | Ten reconnects, including forced card-number changes, recover automatically with no stale descriptor, compositor restart, or phone reboot. |
+| `E3-T01` Discover DRM devices by driver identity | P0 | verified | E2-T02 | Bounded enumeration selects an accessible `gud` DRM device and validates connector/mode capabilities without a hard-coded node. |
+| `E3-T02` Subscribe to DRM/udev add and remove | P0 | verified | E3-T01 | Device removal invalidates the exact live instance; re-add triggers discovery without polling forever or reusing stale fds. |
+| `E3-T03` Recreate worker and KMS resources | P0 | verified | E3-T02 | Removal cancels pending work in order, and re-add creates fresh fd, buffers, mode blob, and atomic state. |
+| `E3-T04` Propagate output hotplug to Lomiri | P0 | partial | E3-T03 | First activation propagated a connected virtual output; reconnect reached active presentation but needs fresh qtmir/Lomiri observer capture. |
+| `E3-T05` Dynamic-card reconnect matrix | P0 | partial | E3-T04 | One same-boot reconnect passed with a dynamic USB path; ten reconnects and forced card-number changes remain. |
 
 #### 2026-08-29 automatic lifecycle implementation
 
@@ -376,13 +380,16 @@ remove/add handling, and a lightweight `xdisp-status` command. The service
 remains idle without a GUD card and does not poll or create a Mir source.
 Explicit `Disable` remains persistent through a dedicated state marker.
 
-This is an implementation completion, not a new hardware qualification:
-E3-T01 is supported by source and retained dynamic-card evidence; E3-T02 and
-E3-T03 require deployment of the new artifact and the task's connect,
-disconnect, and changing-card-number matrix before they can be marked
-hardware-verified. Same-boot re-enumeration remains subject to the documented
-OnePlus/Qualcomm host-controller limitation. No Mir core, Android2 display
-platform, or HWC2 GUD changes were made.
+The 2026-08-29 qualification deployed a container-built ARM64 artifact by
+staging it on the immutable phone image. Pi-present startup, automatic add,
+automatic remove, and one same-boot reconnect passed without manually starting
+`xdispd`/`mirgud`, selecting a DRM node, or restarting Lomiri. The service
+remained resident and idle while GUD was absent. The reconnect reached an
+active presenter, but its second Mir topology snapshot did not report the
+virtual output as connected, so qtmir/Lomiri propagation is conservatively
+partial until a fresh observer capture is collected. The ten-cycle and forced
+card-number matrix is also still open. No Mir core, Android2 display platform,
+or HWC2 GUD changes were made.
 
 ### E4 — Make geometry, modes, and desktop placement correct
 

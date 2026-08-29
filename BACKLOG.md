@@ -19,8 +19,11 @@ and no `/dev/dri/cardN` value is a selection policy.
 The implementation is in `mir-android2-platform-gud`; the phone module-load
 drop-in is `backport-4.9/systemd/modules-load.d/gud.conf`. Package details and
 the required OnePlus VID/PID/UDC acceptance gate are documented in
-`docs/xdisp-automatic-lifecycle.md`. Deploy the new artifact and run the
-hardware matrix before changing the E3 roadmap state to hardware-verified.
+`docs/xdisp-automatic-lifecycle.md`. The 2026-08-29 qualification is recorded
+in `../gud-gadget/evidence/xdisp-auto-lifecycle-20260829T1418Z/`. Startup,
+add/remove, and one same-boot reconnect passed with a staged container-built
+artifact; qtmir/Lomiri reconnect observation and the full ten-cycle/card-number
+matrix remain open before E3 can be fully closed.
 
 ## P0 — Establish the exact target build
 
@@ -45,11 +48,13 @@ Verified/accepted for the MVP baseline:
 
 ## NOW — MVP activation UX
 
-### [ ] E3-T02 — Event-driven GUD presence
+### [x] E3-T02 — Event-driven GUD presence
 
 **Priority:** P0
 
-**Problem:** normal operation still relies on manual enumeration/bring-up steps.
+**Result (2026-08-29):** the deployed staged artifact handled startup,
+hot-add, and removal from a resident service without a manual enumeration
+command. See the dated evidence bundle for the exact matrix boundary.
 
 **Goal:** the installed phone runtime notices the supported GUD device at boot or hot-add and owns discovery automatically.
 
@@ -68,7 +73,7 @@ Done when:
 - plugging the Pi after boot reaches the same state automatically;
 - no operator enumeration command or DRM node selection is required.
 
-### [ ] E3-T03 — Automatic `xdispd` / `mirgud` lifecycle
+### [x] E3-T03 — Automatic `xdispd` / `mirgud` lifecycle
 
 **Priority:** P0
 
@@ -82,7 +87,10 @@ evidence. The 2026-08-29 ordered run found the Pi dynamically at `1-1.3` as
 modeset and one compressed framebuffer transfer. The phone and Pi evidence
 contains no `BUG:`, `Oops`, `WARNING:`, `lockdep`, `use-after-free`, GUD state,
 or atomic-update failure record.
-**Goal:** once GUD is ready, automatically start the exact userspace path needed for the external output and stop it safely on removal.
+**Result (2026-08-29):** once GUD was ready, the service automatically started
+the managed bridge, and removal left the resident service healthy with no child
+or stale DRM identity. The known bounded SIGKILL containment behavior remains
+documented as an E2 Mir 1.8.3 caveat.
 
 Tasks:
 
@@ -97,7 +105,7 @@ Tasks:
 
 Done when normal connect produces a running production bridge without a shell command.
 
-### [ ] E3-T04 — Remove manual Lomiri bring-up sequence
+### [~] E3-T04 — Remove manual Lomiri bring-up sequence
 
 **Priority:** P0
 
@@ -123,7 +131,11 @@ external desktop appears
 
 No manual `ls`, enumeration helper, card selection, `xdispd`/`mirgud` start, compositor restart, or remembered development command in the successful path.
 
-### [ ] E3-T05 — Connect/disconnect/reconnect UX matrix
+**Qualification note:** first activation produced a connected 1280x720 virtual
+output and first presented frame. The reconnect reached active presentation,
+but its Mir topology snapshot needs fresh qtmir/Lomiri observer evidence.
+
+### [~] E3-T05 — Connect/disconnect/reconnect UX matrix
 
 **Priority:** P0
 
@@ -151,6 +163,10 @@ Record only useful evidence:
 - failure-relevant kernel/service excerpts.
 
 Do not generate giant evidence bundles for successful repetitions.
+
+**Qualification note:** startup, add, remove, and one same-boot reconnect were
+run. Ten cycles, forced card-number change, and Pi-service-restart cases remain
+to be completed with the HDMI sink connected.
 
 ## NEXT — package the known-good path
 

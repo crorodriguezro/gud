@@ -29,6 +29,24 @@ reliability is partially deferred as a OnePlus/Qualcomm same-boot platform
 limitation tracked by GitHub issues #3 and #4; the existing discovery/lifecycle
 work is substantially proven. E4-T01 is verified and E4-T02 is next.
 
+## E3 automatic activation qualification — PARTIAL (2026-08-29)
+
+The resident `xdispd` lifecycle implementation was built in the documented
+ARM64 Mir container and staged on the immutable OnePlus 6 image. Pi-present
+startup, add after login, automatic remove, absent-at-service-restart, and one
+same-boot reconnect passed without manually launching `xdispd`/`mirgud`,
+selecting a DRM node, or restarting Lomiri. The phone stayed healthy and the
+service left no managed child or stale identity while GUD was absent.
+
+The reconnect reached an active presenter, but its second Mir topology snapshot
+reported the virtual output disconnected and no fresh qtmir/Lomiri observer log
+was captured. E3-T04 is therefore partial, as is E3-T05 because the ten-cycle
+and forced-card-number matrix was not run. The complete report and checksummed
+handoff are in
+`../gud-gadget/evidence/xdisp-auto-lifecycle-20260829T1418Z/`. The final Pi
+service restart also requires a physically connected HDMI sink; its failure in
+this session was a test-rig condition (`HDMI-A-1 disconnected`).
+
 ## E4-T06 architecture boundary — VERIFIED (2026-08-26)
 
 The production integration was reconstructed from upstream `main`
