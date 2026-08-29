@@ -149,11 +149,12 @@ deployed into the live Mir path and cannot yet replace the qualified presenter.
 - ASan/UBSan round-trip gate: pass.
 - Full-update source contract: zero failures.
 - PM-test contract and exact-kernel build: pass.
-- Existing unrelated baseline contract failures remain in
-  `test-gud-kms-stage-contract.sh` (it expects RGB565 while its source is
-  XRGB8888) and `test-usb-probe-contract.sh` (it expects
+- At audit time, an unrelated baseline contract mismatch remained in
+  `test-gud-kms-stage-contract.sh` (the test expected RGB565 while its source
+  still used XRGB8888); the helper was corrected during the 2026-08-29 OnePlus
+  revalidation. `test-usb-probe-contract.sh` still expects
   `module_usb_driver()` while this backport uses explicit init/exit for
-  reconnect handling).
+  reconnect handling.
 
 Live OnePlus 6 / Pi Zero 2 W qualification used the gadget-advertised
 1,843,200-byte capacity:
@@ -179,10 +180,12 @@ Live OnePlus 6 / Pi Zero 2 W qualification used the gadget-advertised
   presenter, and screencast cleanup had completed; no kernel fault or Poisoned
   transport state occurred.
 
-The live contract is RGB565. The legacy stage helper's XRGB8888 atomic-test
-case correctly receives protocol status `0x04`; all preceding KMS resource and
-atomic-build stages pass. This is a test-helper format mismatch, not evidence
-that a 3,686,400-byte XRGB8888 framebuffer fits the advertised capacity.
+The live contract is RGB565. Before the 2026-08-29 revalidation, the legacy
+stage helper's XRGB8888 atomic-test case correctly received protocol status
+`0x04`; all preceding KMS resource and atomic-build stages passed. The helper
+now uses RGB565, matching the advertised capacity and the active production
+path. This was a test-helper format mismatch, not evidence that a 3,686,400-
+byte XRGB8888 framebuffer fits the advertised capacity.
 
 ## Configuration-C kernel results
 

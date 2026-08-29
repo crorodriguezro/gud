@@ -246,7 +246,7 @@ In particular, verify `drm_gem_get_pages`, `drm_gem_put_pages`,
 
 Ticket 3 has no `/dev/dri/cardX`, so it has no phone-side userspace test.
 Ticket 4 registers the DRM device and must create, map, write, and destroy a
-1280x720 XRGB8888 dumb buffer while retaining `dmesg` evidence with no kernel
+1280x720 RGB565 dumb buffer while retaining `dmesg` evidence with no kernel
 warning.
 
 Before the first Ticket 4 build, confirm required DRM symbols are exported by
@@ -293,7 +293,7 @@ Choose `cardX` from `modetest` as the card named `gud`. Save evidence under
 - `drm-kms-smoke.txt`
 - `drm-kms-dmesg.txt`
 
-Required evidence must show one connector/CRTC/encoder topology, XRGB8888,
+Required evidence must show one connector/CRTC/encoder topology, RGB565,
 preferred `1280x720@60`, and `atomic modeset succeeded`. Reject logs containing
 `BUG:`, `Oops`, `WARNING:`, `lockdep`, or `use-after-free`.
 

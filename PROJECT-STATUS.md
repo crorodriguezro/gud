@@ -956,9 +956,9 @@ and `1-1.4`. Do not conclude that enumeration failed from one empty scan.
 
 Ticket 4's earlier XRGB8888 result intentionally contained no GUD
 connector/EDID query, display-state request, framebuffer upload, USB bulk
-transfer, workqueue, asynchronous USB transfer, or visible output. Ticket 5
-adds the state and synchronous RGB565 transfer path and has now completed a
-full hardware framebuffer update to the Pi display pipeline.
+transfer, workqueue, asynchronous USB transfer, or visible output. The active
+RGB565 path has now completed the same-device KMS validation and a full
+hardware framebuffer update to the Pi display pipeline.
 
 ## Hardware Evidence
 
@@ -1071,11 +1071,13 @@ connector, CRTC, and plane state had not been initialized. Adding
 `drm_mode_config_reset()` after simple-pipe construction corrected that Linux
 4.9 initialization gap.
 
-Fresh phone evidence now passes these stages without a kernel failure record:
+Fresh 2026-08-29 phone evidence now passes these stages without a kernel
+failure record. The Pi was found dynamically at `1-1.3` as `1d50:614d`, and
+the active production format is RGB565:
 
 - `caps`: open the GUD DRM card and enable universal-plane and atomic clients.
-- `dumb`: create, map, write, unmap, and destroy a 1280x720 32-bpp dumb buffer.
-- `fb`: create and remove an XRGB8888 framebuffer.
+- `dumb`: create, map, write, unmap, and destroy a 1280x720 16-bpp dumb buffer.
+- `fb`: create and remove an RGB565 framebuffer.
 - `resources`, `connector`, `encoder-crtc`, `planes`, and `properties`: complete
   DRM/KMS object, fixed-mode, primary-plane, and property enumeration.
 - `atomic-build`: create the mode blob and build the atomic request.
@@ -1087,6 +1089,15 @@ The no-transfer pipe now consumes the pending DRM completion event
 synchronously from `gud_pipe_update()`. Fresh ordered phone evidence passes
 `atomic-commit` with exit code zero and contains no `WARNING:`, `flip_done timed
 out`, `BUG:`, `Oops`, `lockdep`, or `use-after-free` record.
+
+The first run after USB recovery stopped at `atomic-test` because the legacy
+`gud-kms-stage` helper created an XRGB8888 framebuffer. The Pi correctly
+returned GUD status `0x04` (`invalid parameter`) for that format. The helper
+was corrected to use RGB565; the contract test then passed with zero failures,
+all ordered stages passed, and `gud-kms-smoke` completed an RGB565 atomic
+modeset and transfer. Raw ignored evidence is retained under
+`backport-4.9/env/local/evidence/` as `drm-kms-stage-*`,
+`drm-kms-smoke-rgb565-20260829-*`, and `pi-gud-smoke-rgb565-20260829.log`.
 
 Do not confuse USB enumeration with DRM validation. At the beginning of every
 session, force controller host mode and poll all USB device paths for

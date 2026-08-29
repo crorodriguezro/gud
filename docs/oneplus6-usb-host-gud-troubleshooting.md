@@ -382,6 +382,12 @@ Do not skip directly to `atomic-commit`. Each invocation verifies the Pi by
 VID/PID, reloads the supplied module, confirms the probe and `/dev/dri/card1`,
 runs one bounded stage, and writes fresh evidence under `env/local/evidence/`.
 
+On 2026-08-29, the phone initially saw only its root hubs while the Pi
+service was active and its UDC was bound. Cycling the OnePlus controller
+through `device` and back to `host` recovered enumeration at the dynamic path
+`1-1.3`. The bounded poll then found `1d50:614d`, the Pi UDC became
+`configured`, and the rebuilt module created `/dev/dri/card1`.
+
 ## Verify GUD Probe And DRM Registration
 
 With `gud.ko` loaded before or after the Pi connection, the successful probe
@@ -417,6 +423,15 @@ Fresh phone evidence passes every ordered stage, including the state-applying
 `lockdep`, or `use-after-free` record. This result requires the rebuilt module;
 the runner's explicit `MODULE_PATH="$PWD/gud.ko"` prevents accidentally testing
 an older copy.
+
+The first 2026-08-29 `atomic-test` attempt returned `EINVAL` because the
+legacy `gud-kms-stage` helper created an XRGB8888 framebuffer, while the active
+Pi gadget advertises RGB565. The Pi's `GUD state check failed: -22` was
+therefore a correct format rejection, not a USB or kernel failure. After the
+helper was corrected to use 16-bpp `DRM_FORMAT_RGB565`, the contract test and
+all ordered KMS stages passed. The RGB565 `gud-kms-smoke` then completed the
+atomic modeset and one compressed 1280x720 transfer; Pi telemetry reported
+`processing_failed=0`, `poisoned_transactions=0`, and `aggregate_state=Idle`.
 
 ## Evidence Handling
 

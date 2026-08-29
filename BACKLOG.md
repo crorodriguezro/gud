@@ -87,17 +87,15 @@ Use the Linux 4.9 `udl` DisplayLink driver as the main reference for CPU-readabl
 - [x] Implement atomic check/update callbacks compatible with 4.9.
 
 **Source/basic-ioctl evidence:** the Pi hardware test creates `/dev/dri/card1`;
-the GUD card passes caps, dumb-buffer map/write/destroy, XRGB8888 framebuffer,
-KMS enumeration, atomic-request build, atomic test-only validation, and a real
-state-applying atomic commit. The synchronous no-transfer completion path now
-passes on Linux 4.9 without `WARNING:` or `flip_done` timeout evidence.
-`modetest -M gud -c -p` reports one connected virtual connector, one CRTC and
-primary plane, `XR24` (XRGB8888), and preferred 1280x720@60; the full
-`gud-kms-smoke` run completes its atomic modeset. The matching `dmesg` interval
-contains no `BUG:`, `Oops`, `WARNING:`, `lockdep`, or `use-after-free` record.
-Ticket 4 hardware acceptance is complete for the earlier XRGB8888 build. The
-active Ticket 5 source has since changed the buffer and wire format to RGB565;
-that format change still needs its own phone runtime evidence.
+the active GUD card passes caps, RGB565 dumb-buffer map/write/destroy, RGB565
+framebuffer creation, KMS enumeration, atomic-request build, atomic test-only
+validation, and a real state-applying atomic commit. The synchronous no-transfer
+completion path passes on Linux 4.9 without `WARNING:` or `flip_done` timeout
+evidence. The 2026-08-29 ordered run found the Pi dynamically at `1-1.3` as
+`1d50:614d`, and the matching RGB565 `gud-kms-smoke` run completed its atomic
+modeset and one compressed framebuffer transfer. The phone and Pi evidence
+contains no `BUG:`, `Oops`, `WARNING:`, `lockdep`, `use-after-free`, GUD state,
+or atomic-update failure record.
 
 ## P0 — Connector and mode enumeration
 
